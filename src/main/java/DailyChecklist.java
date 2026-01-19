@@ -95,25 +95,18 @@ public class DailyChecklist {
             while (true) {
                 try {
                     Thread.sleep(10000); // Check every 10 seconds
-                    List<Reminder> reminders = checklistManager.getReminders();
+                    // Use optimized method to get only due reminders
+                    List<Reminder> dueReminders = checklistManager.getDueReminders(5, openedChecklists);
                     LocalDateTime now = LocalDateTime.now();
-                    for (Reminder r : reminders) {
-                        // Skip reminders for checklists that have been opened in this session
-                        String checklistName = r.getChecklistName();
-                        if (checklistName != null && openedChecklists.contains(checklistName)) {
-                            continue;
-                        }
+                    
+                    for (Reminder r : dueReminders) {
+                        // These reminders are already filtered for opened checklists and time range
+                        reminderQueue.addReminder(r);
                         
+                        // Also check for old reminders to clean up (less frequent check)
                         LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-                        if (!reminderTime.isAfter(now)) { // Time has passed or is now
-                            // Only show reminders from the last 5 minutes to avoid showing very old ones
-                            // Automatically remove reminders older than 1 hour
-                            if (now.minusMinutes(5).isBefore(reminderTime)) {
-                                reminderQueue.addReminder(r);
-                            } else if (now.minusHours(1).isAfter(reminderTime)) {
-                                // Automatically remove reminders older than 1 hour
-                                checklistManager.removeReminder(r);
-                            }
+                        if (now.minusHours(1).isAfter(reminderTime)) {
+                            checklistManager.removeReminder(r);
                         }
                     }
                 } catch (InterruptedException e) {
