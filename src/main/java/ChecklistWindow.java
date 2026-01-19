@@ -17,10 +17,9 @@
  */
 import java.awt.BorderLayout;
 
-import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 
 public class ChecklistWindow extends JFrame {
     private CustomChecklistPanel checklistPanel;
@@ -38,33 +37,24 @@ public class ChecklistWindow extends JFrame {
     private void initialize() {
         setTitle("Checklist: " + checklistName);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(400, 600);
+        setSize(400, 700); // Increased height for split
         setLocationRelativeTo(null);
 
         checklistPanel = new CustomChecklistPanel(taskManager, new TaskUpdater(), checklistName);
+        JScrollPane checklistScroll = new JScrollPane(checklistPanel);
 
-        JButton addTaskButton = new JButton("Add Task");
-        addTaskButton.addActionListener(e -> openAddTaskWindow());
-
-        JPanel bottomPanel = new JPanel();
-        bottomPanel.add(addTaskButton);
-
-        setLayout(new BorderLayout());
-        add(checklistPanel, BorderLayout.CENTER);
-        add(bottomPanel, BorderLayout.SOUTH);
-
-        checklistPanel.updateTasks();
-    }
-
-    private void openAddTaskWindow() {
-        AddTaskPanel addPanel = new AddTaskPanel(taskManager, () -> {
+        CustomAddTaskPanel addPanel = new CustomAddTaskPanel(taskManager, () -> {
             checklistPanel.updateTasks();
             updateTasks.run();
         }, checklistName);
-        JFrame addFrame = new JFrame("Add Task to " + checklistName);
-        addFrame.add(addPanel);
-        addFrame.pack();
-        addFrame.setLocationRelativeTo(this);
-        addFrame.setVisible(true);
+
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, checklistScroll, addPanel);
+        splitPane.setDividerLocation(400); // Adjust as needed
+        splitPane.setResizeWeight(0.7); // More space for checklist
+
+        setLayout(new BorderLayout());
+        add(splitPane, BorderLayout.CENTER);
+
+        checklistPanel.updateTasks();
     }
 }

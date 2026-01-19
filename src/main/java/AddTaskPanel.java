@@ -44,7 +44,6 @@ public class AddTaskPanel extends JPanel {
     private String checklistName;
     private JRadioButton addMorningRadioButton;
     private JRadioButton addEveningRadioButton;
-    private JRadioButton addCustomRadioButton;
     private JPanel timePanel;
 
     public AddTaskPanel(TaskManager taskManager, Runnable updateTasks) {
@@ -84,16 +83,13 @@ public class AddTaskPanel extends JPanel {
         if (checklistName == null) {
             addMorningRadioButton = new JRadioButton("Morning");
             addEveningRadioButton = new JRadioButton("Evening");
-            addCustomRadioButton = new JRadioButton("Custom checklist");
             ButtonGroup timeGroup = new ButtonGroup();
             timeGroup.add(addMorningRadioButton);
             timeGroup.add(addEveningRadioButton);
-            timeGroup.add(addCustomRadioButton);
 
             timePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
             timePanel.add(addMorningRadioButton);
             timePanel.add(addEveningRadioButton);
-            timePanel.add(addCustomRadioButton);
         }
 
         if (timePanel != null) {
@@ -138,14 +134,6 @@ public class AddTaskPanel extends JPanel {
         add(weekdayComboBox, gbc);
         weekdayRadioButton.addActionListener(e -> weekdayComboBox.setEnabled(true));
         dailyRadioButton.addActionListener(e -> weekdayComboBox.setEnabled(false));
-        if (addCustomRadioButton != null) {
-            addCustomRadioButton.addActionListener(e -> {
-                frequencyLabel.setVisible(false);
-                frequencyPanel.setVisible(false);
-                weekdayLabel.setVisible(false);
-                weekdayComboBox.setVisible(false);
-            });
-        }
         if (addMorningRadioButton != null) {
             addMorningRadioButton.addActionListener(e -> {
                 frequencyLabel.setVisible(true);
@@ -164,7 +152,7 @@ public class AddTaskPanel extends JPanel {
         }
 
         JButton addButton = new JButton("Add tasks");
-        addButton.addActionListener(createAddMultipleTasksActionListener(taskField, addMorningRadioButton, addEveningRadioButton, addCustomRadioButton));
+        addButton.addActionListener(createAddMultipleTasksActionListener(taskField, addMorningRadioButton, addEveningRadioButton));
         gbc.gridx = 0;
         gbc.gridy = 4;
         gbc.gridwidth = 2;
@@ -172,17 +160,16 @@ public class AddTaskPanel extends JPanel {
         add(addButton, gbc);
     }
 
-    private ActionListener createAddMultipleTasksActionListener(JTextArea taskField, JRadioButton morningRadioButton, JRadioButton eveningRadioButton, JRadioButton customRadioButton) {
+    private ActionListener createAddMultipleTasksActionListener(JTextArea taskField, JRadioButton morningRadioButton, JRadioButton eveningRadioButton) {
         return e -> {
             String[] tasks = taskField.getText().split("\\n");
             for (String taskName : tasks) {
                 if (!taskName.trim().isEmpty()) {
                     boolean hasSelection = checklistName != null ||
                         (addMorningRadioButton != null && addMorningRadioButton.isSelected()) ||
-                        (addEveningRadioButton != null && addEveningRadioButton.isSelected()) ||
-                        (addCustomRadioButton != null && addCustomRadioButton.isSelected());
+                        (addEveningRadioButton != null && addEveningRadioButton.isSelected());
                     if (!hasSelection) {
-                        JOptionPane.showMessageDialog(this, "Please select a type (Morning, Evening, or Custom checklist).", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "Please select Morning or Evening.", "Validation Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
                     if (weekdayComboBox.isEnabled() && weekdayComboBox.getSelectedItem() == null) {
@@ -197,7 +184,8 @@ public class AddTaskPanel extends JPanel {
                     } else if (addEveningRadioButton.isSelected()) {
                         type = TaskType.EVENING;
                     } else {
-                        type = TaskType.CUSTOM;
+                        JOptionPane.showMessageDialog(this, "Invalid selection.", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
                     String selectedWeekday = (weekdayComboBox.isEnabled() && type != TaskType.CUSTOM) ? (String) weekdayComboBox.getSelectedItem() : null;
                     Task newTask = new Task(taskName.trim(), type, selectedWeekday, checklistName);
@@ -214,7 +202,7 @@ public class AddTaskPanel extends JPanel {
             } else if (addEveningRadioButton.isSelected()) {
                 taskType = "Evening";
             } else {
-                taskType = "Custom checklist";
+                taskType = "Unknown";
             }
             String frequencyType;
             if (weekdayComboBox.isEnabled() && taskType != "Custom checklist") {
@@ -226,9 +214,8 @@ public class AddTaskPanel extends JPanel {
             String message = String.format("Added %d %s tasks (%s) successfully.", tasks.length, taskType, frequencyType);
             JOptionPane.showMessageDialog(this, message, "Tasks Added", JOptionPane.INFORMATION_MESSAGE);
             taskField.setText("");
-            morningRadioButton.setSelected(false);
-            eveningRadioButton.setSelected(false);
-            customRadioButton.setSelected(false);
+            if (morningRadioButton != null) morningRadioButton.setSelected(false);
+            if (eveningRadioButton != null) eveningRadioButton.setSelected(false);
             weekdayComboBox.setEnabled(false);
             weekdayComboBox.setSelectedIndex(0);
             updateTasks.run();

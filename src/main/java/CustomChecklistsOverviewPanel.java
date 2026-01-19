@@ -26,13 +26,15 @@ import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.SwingUtilities;
+import javax.swing.JTextField;
 
 public class CustomChecklistsOverviewPanel extends JPanel {
     private JList<String> checklistList;
     private DefaultListModel<String> listModel;
     private TaskManager taskManager;
     private Runnable updateTasks;
+    private JTextField newChecklistField;
+    private JButton createButton;
 
     public CustomChecklistsOverviewPanel(TaskManager taskManager, Runnable updateTasks) {
         this.taskManager = taskManager;
@@ -55,28 +57,32 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             }
         });
 
-        JButton addButton = new JButton("+");
-        addButton.addActionListener(e -> addNewChecklist());
+        newChecklistField = new JTextField(20);
+        createButton = new JButton("Create Checklist");
+        createButton.addActionListener(e -> createNewChecklist());
 
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.add(addButton, BorderLayout.EAST);
+        topPanel.add(newChecklistField, BorderLayout.CENTER);
+        topPanel.add(createButton, BorderLayout.EAST);
 
         setLayout(new BorderLayout());
         add(topPanel, BorderLayout.NORTH);
         add(new JScrollPane(checklistList), BorderLayout.CENTER);
     }
 
-    private void addNewChecklist() {
-        String name = JOptionPane.showInputDialog(this, "Enter checklist name:");
-        if (name != null && !name.trim().isEmpty()) {
-            String trimmed = name.trim();
-            Set<String> existing = taskManager.getCustomChecklistNames();
-            if (existing.contains(trimmed)) {
-                JOptionPane.showMessageDialog(this, "Checklist name already exists.");
-                return;
-            }
-            openChecklistWindow(trimmed);
+    private void createNewChecklist() {
+        String name = newChecklistField.getText().trim();
+        if (name.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please enter a checklist name.");
+            return;
         }
+        Set<String> existing = taskManager.getCustomChecklistNames();
+        if (existing.contains(name)) {
+            JOptionPane.showMessageDialog(this, "Checklist name already exists.");
+            return;
+        }
+        newChecklistField.setText("");
+        openChecklistWindow(name);
     }
 
     private void openChecklistWindow(String checklistName) {
