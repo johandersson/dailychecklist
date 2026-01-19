@@ -58,7 +58,7 @@ public class ReminderDialog extends JDialog {
         // Create HTML-formatted message with better styling
         String htmlMessage = "<html><body style='font-family: Arial, sans-serif; font-size: 12px; padding: 10px;'>" +
             "<div style='text-align: center; margin-bottom: 15px;'>" +
-            "<h2 style='color: #2E86AB; margin: 0 0 5px 0; font-size: 16px;'>Reminder</h2>" +
+            "<h2 style='color: #2E86AB; margin: 0 0 5px 0; font-size: 16px;'>⏰ Reminder</h2>" +
             "<div style='font-size: 14px; font-weight: bold; color: #333; margin-bottom: 8px;'>" + checklistName + "</div>" +
             "<div style='color: #666; font-size: 11px;'>Scheduled for: " + timeString + " on " + dateString + "</div>" +
             "</div>" +
