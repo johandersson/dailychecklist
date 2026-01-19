@@ -1,0 +1,41 @@
+# Ignore compiled class files
+*.class
+*.jar
+*.war
+*.ear
+*.db
+*.class
+# Ignore temporary files and logs
+*.log
+*.tmp
+*.out
+
+# Ignore IDE-specific files
+.idea/
+.vscode/
+*.iml
+
+# Ignore Maven and Gradle build directories
+target/
+bin/
+build/
+.gradle/
+mvnw
+mvnw.cmd
+
+# Ignore dependency caches
+**/.classpath
+**/.project
+**/.settings
+
+# Ignore coverage reports
+coverage/
+jacoco.exec
+
+# Ignore OS-specific files
+Thumbs.db
+.DS_Store
+
+# Ignore user-specific configuration
+*.env
+*.properties

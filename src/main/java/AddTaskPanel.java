@@ -1,0 +1,169 @@
+/*
+ * Daily Checklist
+ * Copyright (C) 2025 Johan Andersson
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.ActionListener;
+
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+
+public class AddTaskPanel extends JPanel {
+    private final TaskManager taskManager;
+    private final Runnable updateTasks;
+    private JComboBox<String> weekdayComboBox;
+
+    public AddTaskPanel(TaskManager taskManager, Runnable updateTasks) {
+        this.taskManager = taskManager;
+        this.updateTasks = updateTasks;
+        initialize();
+    }
+
+    private void initialize() {
+        setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JTextArea taskField = new JTextArea(25, 40);
+        taskField.setLineWrap(true);
+        taskField.setWrapStyleWord(true);
+        JScrollPane taskScrollPane = new JScrollPane(taskField);
+        taskScrollPane.setBorder(BorderFactory.createTitledBorder("Task name(s) one per line"));
+        taskScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        taskScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        taskScrollPane.setPreferredSize(new Dimension(300, 200));
+        taskScrollPane.setMinimumSize(new Dimension(300, 200));
+        taskField.setFont(new Font("Yu Gothic UI", Font.PLAIN, 16));
+        taskField.setForeground(Color.BLACK);
+        taskField.setBackground(Color.WHITE);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        add(taskScrollPane, gbc);
+
+        JLabel timeLabel = new JLabel("Time of Day:");
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
+        add(timeLabel, gbc);
+
+        JRadioButton addMorningRadioButton = new JRadioButton("Morning");
+        JRadioButton addEveningRadioButton = new JRadioButton("Evening");
+        ButtonGroup timeGroup = new ButtonGroup();
+        timeGroup.add(addMorningRadioButton);
+        timeGroup.add(addEveningRadioButton);
+
+        JPanel timePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        timePanel.add(addMorningRadioButton);
+        timePanel.add(addEveningRadioButton);
+        gbc.gridx = 1;
+        gbc.gridy = 1;
+        add(timePanel, gbc);
+
+        JLabel frequencyLabel = new JLabel("Frequency:");
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        add(frequencyLabel, gbc);
+
+        JRadioButton dailyRadioButton = new JRadioButton("Daily");
+        JRadioButton weekdayRadioButton = new JRadioButton("Weekday");
+        ButtonGroup frequencyGroup = new ButtonGroup();
+        frequencyGroup.add(dailyRadioButton);
+        frequencyGroup.add(weekdayRadioButton);
+
+        JPanel frequencyPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        frequencyPanel.add(dailyRadioButton);
+        frequencyPanel.add(weekdayRadioButton);
+        gbc.gridx = 1;
+        gbc.gridy = 2;
+        add(frequencyPanel, gbc);
+
+        JLabel weekdayLabel = new JLabel("Weekday:");
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        add(weekdayLabel, gbc);
+        String[] weekdays = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+        weekdayComboBox = new JComboBox<>(weekdays);
+        weekdayComboBox.setEnabled(false);
+        gbc.gridx = 1;
+        gbc.gridy = 3;
+        add(weekdayComboBox, gbc);
+        weekdayRadioButton.addActionListener(e -> weekdayComboBox.setEnabled(true));
+        dailyRadioButton.addActionListener(e -> weekdayComboBox.setEnabled(false));
+
+        JButton addButton = new JButton("Add tasks");
+        addButton.addActionListener(createAddMultipleTasksActionListener(taskField, addMorningRadioButton, timeGroup));
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        add(addButton, gbc);
+    }
+
+    private ActionListener createAddMultipleTasksActionListener(JTextArea taskField, JRadioButton morningRadioButton, ButtonGroup group) {
+        return e -> {
+            String[] tasks = taskField.getText().split("\\n");
+            for (String taskName : tasks) {
+                if (!taskName.trim().isEmpty()) {
+                    if (!morningRadioButton.isSelected() && group.getSelection() == null) {
+                        JOptionPane.showMessageDialog(this, "Please select a time of day (Morning or Evening).", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    if (weekdayComboBox.isEnabled() && weekdayComboBox.getSelectedItem() == null) {
+                        JOptionPane.showMessageDialog(this, "Please select a valid weekday.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    TaskType type = morningRadioButton.isSelected() ? TaskType.MORNING : TaskType.EVENING;
+                    String selectedWeekday = weekdayComboBox.isEnabled() ? (String) weekdayComboBox.getSelectedItem() : null;
+                    Task newTask = new Task(taskName.trim(), type, selectedWeekday);
+                    taskManager.addTask(newTask);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Task name cannot be empty.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+            String taskType = morningRadioButton.isSelected() ? "Morning" : "Evening";
+            String frequencyType;
+            if (weekdayComboBox.isEnabled()) {
+                String selectedWeekday = (String) weekdayComboBox.getSelectedItem();
+                frequencyType = "Weekday: " + selectedWeekday;
+            } else {
+                frequencyType = "Daily";
+            }
+            String message = String.format("Added %d %s tasks (%s) successfully.", tasks.length, taskType, frequencyType);
+            JOptionPane.showMessageDialog(this, message, "Tasks Added", JOptionPane.INFORMATION_MESSAGE);
+            taskField.setText("");
+            morningRadioButton.setSelected(false);
+            weekdayComboBox.setEnabled(false);
+            weekdayComboBox.setSelectedIndex(0);
+            updateTasks.run();
+        };
+    }
+}
