@@ -41,6 +41,7 @@ public class DailyChecklist {
     private static JTabbedPane tabbedPane;
     private static FocusTimer focusTimerInstance = FocusTimer.getInstance();
     private static ReminderQueue reminderQueue;
+    private static java.util.Set<String> openedChecklists = new java.util.HashSet<>();
 
     public DailyChecklist() {
         settingsManager = new SettingsManager();
@@ -97,6 +98,12 @@ public class DailyChecklist {
                     List<Reminder> reminders = checklistManager.getReminders();
                     LocalDateTime now = LocalDateTime.now();
                     for (Reminder r : reminders) {
+                        // Skip reminders for checklists that have been opened in this session
+                        String checklistName = r.getChecklistName();
+                        if (checklistName != null && openedChecklists.contains(checklistName)) {
+                            continue;
+                        }
+                        
                         LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
                         if (!reminderTime.isAfter(now)) { // Time has passed or is now
                             // Only show reminders from the last 5 minutes to avoid showing very old ones
@@ -136,6 +143,8 @@ public class DailyChecklist {
                     if (name == null || name.trim().isEmpty()) {
                         name = "Unknown Checklist";
                     }
+                    // Mark this checklist as opened for this session
+                    openedChecklists.add(name);
                     customChecklistsOverviewPanel.selectChecklistByName(name);
                     frame.setVisible(true);
                     frame.toFront();
@@ -144,6 +153,14 @@ public class DailyChecklist {
                 // On Done action
                 () -> {
                     checklistManager.removeReminder(reminder);
+                },
+                // On Remind Later (15 minutes)
+                () -> {
+                    rescheduleReminder(reminder, 15);
+                },
+                // On Remind Tomorrow
+                () -> {
+                    rescheduleReminderTomorrow(reminder);
                 }
             );
 
@@ -151,6 +168,40 @@ public class DailyChecklist {
             // Notify queue that dialog was dismissed
             reminderQueue.onReminderDismissed();
         });
+    }
+
+    /**
+     * Reschedules a reminder to occur in the specified number of minutes from now.
+     */
+    private static void rescheduleReminder(Reminder originalReminder, int minutesLater) {
+        LocalDateTime newTime = LocalDateTime.now().plusMinutes(minutesLater);
+        Reminder newReminder = new Reminder(
+            originalReminder.getChecklistName(),
+            newTime.getYear(),
+            newTime.getMonthValue(),
+            newTime.getDayOfMonth(),
+            newTime.getHour(),
+            newTime.getMinute()
+        );
+        checklistManager.removeReminder(originalReminder);
+        checklistManager.addReminder(newReminder);
+    }
+
+    /**
+     * Reschedules a reminder to occur tomorrow at the same time.
+     */
+    private static void rescheduleReminderTomorrow(Reminder originalReminder) {
+        LocalDateTime tomorrow = LocalDateTime.now().plusDays(1);
+        Reminder newReminder = new Reminder(
+            originalReminder.getChecklistName(),
+            tomorrow.getYear(),
+            tomorrow.getMonthValue(),
+            tomorrow.getDayOfMonth(),
+            originalReminder.getHour(),
+            originalReminder.getMinute()
+        );
+        checklistManager.removeReminder(originalReminder);
+        checklistManager.addReminder(newReminder);
     }
 
     private void initializeUI() {

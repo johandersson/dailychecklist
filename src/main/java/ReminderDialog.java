@@ -32,11 +32,15 @@ import javax.swing.SwingConstants;
 public class ReminderDialog extends JDialog {
     private final Runnable onOpen;
     private final Runnable onDone;
+    private final Runnable onRemindLater;
+    private final Runnable onRemindTomorrow;
 
-    public ReminderDialog(JFrame parent, Reminder reminder, Runnable onOpen, Runnable onDone) {
-        super(parent, "⏰ Reminder", true);
+    public ReminderDialog(JFrame parent, Reminder reminder, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow) {
+        super(parent, "Reminder", true);
         this.onOpen = onOpen;
         this.onDone = onDone;
+        this.onRemindLater = onRemindLater;
+        this.onRemindTomorrow = onRemindTomorrow;
 
         setAlwaysOnTop(true);
         setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
@@ -54,7 +58,7 @@ public class ReminderDialog extends JDialog {
         // Create HTML-formatted message with better styling
         String htmlMessage = "<html><body style='font-family: Arial, sans-serif; font-size: 12px; padding: 10px;'>" +
             "<div style='text-align: center; margin-bottom: 15px;'>" +
-            "<h2 style='color: #2E86AB; margin: 0 0 5px 0; font-size: 16px;'>⏰ Reminder</h2>" +
+            "<h2 style='color: #2E86AB; margin: 0 0 5px 0; font-size: 16px;'>Reminder</h2>" +
             "<div style='font-size: 14px; font-weight: bold; color: #333; margin-bottom: 8px;'>" + checklistName + "</div>" +
             "<div style='color: #666; font-size: 11px;'>Scheduled for: " + timeString + " on " + dateString + "</div>" +
             "</div>" +
@@ -67,10 +71,14 @@ public class ReminderDialog extends JDialog {
         messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         messageLabel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
-        JButton openButton = new JButton("📂 Open Checklist");
+        JButton openButton = new JButton("Open Checklist");
         openButton.setToolTipText("Open the checklist in the application");
-        JButton doneButton = new JButton("✅ Done");
+        JButton doneButton = new JButton("Done");
         doneButton.setToolTipText("Mark this reminder as completed");
+        JButton remindLaterButton = new JButton("Remind me in 15 minutes");
+        remindLaterButton.setToolTipText("Remind me again in 15 minutes");
+        JButton remindTomorrowButton = new JButton("Remind me tomorrow");
+        remindTomorrowButton.setToolTipText("Remind me tomorrow at the same time");
 
         openButton.addActionListener(e -> {
             onOpen.run();
@@ -82,8 +90,20 @@ public class ReminderDialog extends JDialog {
             dispose();
         });
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        remindLaterButton.addActionListener(e -> {
+            onRemindLater.run();
+            dispose();
+        });
+
+        remindTomorrowButton.addActionListener(e -> {
+            onRemindTomorrow.run();
+            dispose();
+        });
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         buttonPanel.add(openButton);
+        buttonPanel.add(remindLaterButton);
+        buttonPanel.add(remindTomorrowButton);
         buttonPanel.add(doneButton);
 
         setLayout(new BorderLayout());

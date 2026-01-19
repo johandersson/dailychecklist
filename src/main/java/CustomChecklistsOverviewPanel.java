@@ -16,6 +16,10 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -24,6 +28,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.IntStream;
 
+import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -298,32 +303,98 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         JDialog dialog = new JDialog();
         dialog.setTitle("Add Reminder for " + selectedChecklistName);
         dialog.setModal(true);
-        dialog.setLayout(new GridLayout(6, 2, 5, 5));
+        dialog.setLayout(new BorderLayout());
+        dialog.setResizable(false);
+
+        // Header
+        JLabel headerLabel = new JLabel("Set a reminder for: " + selectedChecklistName, JLabel.CENTER);
+        headerLabel.setFont(headerLabel.getFont().deriveFont(14.0f));
+        headerLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Main content panel
+        JPanel contentPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new java.awt.Insets(5, 5, 5, 5);
+        gbc.anchor = GridBagConstraints.WEST;
 
         LocalDateTime now = LocalDateTime.now();
-        JComboBox<Integer> yearBox = new JComboBox<>(IntStream.rangeClosed(now.getYear(), now.getYear() + 10).boxed().toArray(Integer[]::new));
+
+        // Date section
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        JLabel dateLabel = new JLabel("Date:");
+        dateLabel.setFont(dateLabel.getFont().deriveFont(Font.BOLD));
+        contentPanel.add(dateLabel, gbc);
+
+        gbc.gridwidth = 1;
+        gbc.gridy = 1;
+        contentPanel.add(new JLabel("Year:"), gbc);
+        gbc.gridx = 1;
+        JComboBox<Integer> yearBox = new JComboBox<>(IntStream.rangeClosed(now.getYear(), now.getYear() + 5).boxed().toArray(Integer[]::new));
         yearBox.setSelectedItem(now.getYear());
+        contentPanel.add(yearBox, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 2;
+        contentPanel.add(new JLabel("Month:"), gbc);
+        gbc.gridx = 1;
         JComboBox<Integer> monthBox = new JComboBox<>(IntStream.rangeClosed(1, 12).boxed().toArray(Integer[]::new));
         monthBox.setSelectedItem(now.getMonthValue());
+        contentPanel.add(monthBox, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 3;
+        contentPanel.add(new JLabel("Day:"), gbc);
+        gbc.gridx = 1;
         JComboBox<Integer> dayBox = new JComboBox<>(IntStream.rangeClosed(1, 31).boxed().toArray(Integer[]::new));
         dayBox.setSelectedItem(now.getDayOfMonth());
+        contentPanel.add(dayBox, gbc);
+
+        // Time section
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2;
+        JLabel timeLabel = new JLabel("Time:");
+        timeLabel.setFont(timeLabel.getFont().deriveFont(Font.BOLD));
+        contentPanel.add(timeLabel, gbc);
+
+        gbc.gridwidth = 1;
+        gbc.gridy = 5;
+        contentPanel.add(new JLabel("Hour (0-23):"), gbc);
+        gbc.gridx = 1;
         JComboBox<Integer> hourBox = new JComboBox<>(IntStream.rangeClosed(0, 23).boxed().toArray(Integer[]::new));
         hourBox.setSelectedItem(now.getHour());
+        contentPanel.add(hourBox, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 6;
+        contentPanel.add(new JLabel("Minute:"), gbc);
+        gbc.gridx = 1;
         JComboBox<Integer> minuteBox = new JComboBox<>(IntStream.rangeClosed(0, 59).boxed().toArray(Integer[]::new));
-        minuteBox.setSelectedItem(now.getMinute());
+        minuteBox.setSelectedItem((now.getMinute() / 5) * 5); // Round to nearest 5 minutes
+        contentPanel.add(minuteBox, gbc);
 
-        dialog.add(new JLabel("Year:"));
-        dialog.add(yearBox);
-        dialog.add(new JLabel("Month:"));
-        dialog.add(monthBox);
-        dialog.add(new JLabel("Day:"));
-        dialog.add(dayBox);
-        dialog.add(new JLabel("Hour:"));
-        dialog.add(hourBox);
-        dialog.add(new JLabel("Minute:"));
-        dialog.add(minuteBox);
+        // Quick preset buttons
+        gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2;
+        JPanel presetPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        presetPanel.setBorder(BorderFactory.createTitledBorder("Quick Set"));
 
-        JButton okButton = new JButton("OK");
+        JButton in15MinButton = new JButton("In 15 min");
+        JButton in1HourButton = new JButton("In 1 hour");
+        JButton tomorrowButton = new JButton("Tomorrow");
+        JButton nextWeekButton = new JButton("Next week");
+
+        in15MinButton.addActionListener(e -> setTimeFromNow(hourBox, minuteBox, yearBox, monthBox, dayBox, 15));
+        in1HourButton.addActionListener(e -> setTimeFromNow(hourBox, minuteBox, yearBox, monthBox, dayBox, 60));
+        tomorrowButton.addActionListener(e -> setTimeTomorrow(hourBox, minuteBox, yearBox, monthBox, dayBox, now.getHour(), now.getMinute()));
+        nextWeekButton.addActionListener(e -> setTimeNextWeek(hourBox, minuteBox, yearBox, monthBox, dayBox, now.getHour(), now.getMinute()));
+
+        presetPanel.add(in15MinButton);
+        presetPanel.add(in1HourButton);
+        presetPanel.add(tomorrowButton);
+        presetPanel.add(nextWeekButton);
+
+        contentPanel.add(presetPanel, gbc);
+
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        JButton okButton = new JButton("Add Reminder");
+        JButton cancelButton = new JButton("Cancel");
+
         okButton.addActionListener(e -> {
             try {
                 int year = (Integer) yearBox.getSelectedItem();
@@ -338,21 +409,57 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 Reminder reminder = new Reminder(selectedChecklistName, year, month, day, hour, minute);
                 taskManager.addReminder(reminder);
                 dialog.dispose();
-                JOptionPane.showMessageDialog(this, "Reminder added successfully.");
+                JOptionPane.showMessageDialog(this, "Reminder added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dialog, "Invalid date/time. Please check your input.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
 
-        JButton cancelButton = new JButton("Cancel");
         cancelButton.addActionListener(e -> dialog.dispose());
 
-        dialog.add(okButton);
-        dialog.add(cancelButton);
+        buttonPanel.add(okButton);
+        buttonPanel.add(cancelButton);
+
+        dialog.add(headerLabel, BorderLayout.NORTH);
+        dialog.add(contentPanel, BorderLayout.CENTER);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
 
         dialog.pack();
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
+    }
+
+    private void setTimeFromNow(JComboBox<Integer> hourBox, JComboBox<Integer> minuteBox,
+                               JComboBox<Integer> yearBox, JComboBox<Integer> monthBox, JComboBox<Integer> dayBox,
+                               int minutesFromNow) {
+        LocalDateTime futureTime = LocalDateTime.now().plusMinutes(minutesFromNow);
+        yearBox.setSelectedItem(futureTime.getYear());
+        monthBox.setSelectedItem(futureTime.getMonthValue());
+        dayBox.setSelectedItem(futureTime.getDayOfMonth());
+        hourBox.setSelectedItem(futureTime.getHour());
+        minuteBox.setSelectedItem(futureTime.getMinute());
+    }
+
+    private void setTimeTomorrow(JComboBox<Integer> hourBox, JComboBox<Integer> minuteBox,
+                                JComboBox<Integer> yearBox, JComboBox<Integer> monthBox, JComboBox<Integer> dayBox,
+                                int hour, int minute) {
+        LocalDateTime tomorrow = LocalDateTime.now().plusDays(1);
+        yearBox.setSelectedItem(tomorrow.getYear());
+        monthBox.setSelectedItem(tomorrow.getMonthValue());
+        dayBox.setSelectedItem(tomorrow.getDayOfMonth());
+        hourBox.setSelectedItem(hour);
+        minuteBox.setSelectedItem(minute);
+    }
+
+    private void setTimeNextWeek(JComboBox<Integer> hourBox, JComboBox<Integer> minuteBox,
+                                JComboBox<Integer> yearBox, JComboBox<Integer> monthBox, JComboBox<Integer> dayBox,
+                                int hour, int minute) {
+        LocalDateTime nextWeek = LocalDateTime.now().plusWeeks(1);
+        yearBox.setSelectedItem(nextWeek.getYear());
+        monthBox.setSelectedItem(nextWeek.getMonthValue());
+        dayBox.setSelectedItem(nextWeek.getDayOfMonth());
+        hourBox.setSelectedItem(hour);
+        minuteBox.setSelectedItem(minute);
     }
 
     private void editReminders() {
