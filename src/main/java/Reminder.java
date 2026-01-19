@@ -16,12 +16,12 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 public class Reminder {
-    private String checklistName;
-    private int year;
-    private int month;
-    private int day;
-    private int hour;
-    private int minute;
+    private final String checklistName;
+    private final int year;
+    private final int month;
+    private final int day;
+    private final int hour;
+    private final int minute;
 
     public Reminder(String checklistName, int year, int month, int day, int hour, int minute) {
         this.checklistName = checklistName;
@@ -39,14 +39,6 @@ public class Reminder {
     public int getDay() { return day; }
     public int getHour() { return hour; }
     public int getMinute() { return minute; }
-
-    // Setters
-    public void setChecklistName(String checklistName) { this.checklistName = checklistName; }
-    public void setYear(int year) { this.year = year; }
-    public void setMonth(int month) { this.month = month; }
-    public void setDay(int day) { this.day = day; }
-    public void setHour(int hour) { this.hour = hour; }
-    public void setMinute(int minute) { this.minute = minute; }
 
     @Override
     public boolean equals(Object obj) {
