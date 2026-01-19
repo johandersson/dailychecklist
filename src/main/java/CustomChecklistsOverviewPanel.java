@@ -129,6 +129,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         newChecklistField.setText("");
         selectChecklist(name);
         updateTasks.run();
+        updateTasks();
         checklistList.setSelectedValue(name, true);
     }
 
