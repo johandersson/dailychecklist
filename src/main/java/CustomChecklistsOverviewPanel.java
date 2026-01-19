@@ -205,6 +205,15 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                     taskManager.updateTask(task);
                 }
             }
+            // Also update reminders
+            List<Reminder> reminders = taskManager.getReminders();
+            for (Reminder r : reminders) {
+                if (r.getChecklistName().equals(oldName)) {
+                    taskManager.removeReminder(r);
+                    Reminder newReminder = new Reminder(newName, r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+                    taskManager.addReminder(newReminder);
+                }
+            }
             updateTasks.run();
             selectChecklist(newName);
         }
