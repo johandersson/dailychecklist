@@ -14,4 +14,4 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */public enum TaskType { MORNING, EVENING }
+ */public enum TaskType { MORNING, EVENING, CUSTOM }
