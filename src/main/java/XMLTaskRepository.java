@@ -14,7 +14,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */import java.awt.GraphicsEnvironment;
+ */
+import java.awt.GraphicsEnvironment;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -24,6 +25,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 
 import javax.swing.JOptionPane;
@@ -495,7 +497,7 @@ public class XMLTaskRepository implements TaskRepository {
     @Override
     public void removeReminder(Reminder reminder) {
         List<Reminder> reminders = getReminders();
-        reminders.removeIf(r -> r.getChecklistName().equals(reminder.getChecklistName()) &&
+        reminders.removeIf(r -> Objects.equals(r.getChecklistName(), reminder.getChecklistName()) &&
                                r.getYear() == reminder.getYear() &&
                                r.getMonth() == reminder.getMonth() &&
                                r.getDay() == reminder.getDay() &&
@@ -514,7 +516,6 @@ public class XMLTaskRepository implements TaskRepository {
         List<Reminder> allReminders = getReminders();
         List<Reminder> dueReminders = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime cutoff = now.plusMinutes(minutesAhead);
 
         for (Reminder r : allReminders) {
             // Skip reminders for checklists that have been opened in this session
