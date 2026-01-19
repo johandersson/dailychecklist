@@ -29,4 +29,8 @@ public interface TaskRepository {
     void removeTask(Task task);
     boolean hasUndoneTasks();
     void setTasks(List<Task> tasks);
+
+    List<Reminder> getReminders();
+    void addReminder(Reminder reminder);
+    void removeReminder(Reminder reminder);
 }

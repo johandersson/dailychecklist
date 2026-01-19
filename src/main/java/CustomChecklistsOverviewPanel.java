@@ -16,13 +16,19 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import java.awt.BorderLayout;
+import java.awt.GridLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -181,6 +187,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         JMenuItem deleteItem = new JMenuItem("Delete");
         deleteItem.addActionListener(e -> deleteChecklist());
         menu.add(deleteItem);
+        JMenuItem addReminderItem = new JMenuItem("Add Reminder");
+        addReminderItem.addActionListener(e -> addReminder());
+        menu.add(addReminderItem);
         menu.show(checklistList, x, y);
     }
 
@@ -233,5 +242,68 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 taskManager.updateTask(task);
             }
         }
+    }
+
+    private void addReminder() {
+        if (selectedChecklistName == null) return;
+
+        JDialog dialog = new JDialog();
+        dialog.setTitle("Add Reminder for " + selectedChecklistName);
+        dialog.setModal(true);
+        dialog.setLayout(new GridLayout(6, 2, 5, 5));
+
+        LocalDateTime now = LocalDateTime.now();
+        JComboBox<Integer> yearBox = new JComboBox<>(IntStream.rangeClosed(now.getYear(), now.getYear() + 10).boxed().toArray(Integer[]::new));
+        yearBox.setSelectedItem(now.getYear());
+        JComboBox<Integer> monthBox = new JComboBox<>(IntStream.rangeClosed(1, 12).boxed().toArray(Integer[]::new));
+        monthBox.setSelectedItem(now.getMonthValue());
+        JComboBox<Integer> dayBox = new JComboBox<>(IntStream.rangeClosed(1, 31).boxed().toArray(Integer[]::new));
+        dayBox.setSelectedItem(now.getDayOfMonth());
+        JComboBox<Integer> hourBox = new JComboBox<>(IntStream.rangeClosed(0, 23).boxed().toArray(Integer[]::new));
+        hourBox.setSelectedItem(now.getHour());
+        JComboBox<Integer> minuteBox = new JComboBox<>(IntStream.rangeClosed(0, 59).boxed().toArray(Integer[]::new));
+        minuteBox.setSelectedItem(now.getMinute());
+
+        dialog.add(new JLabel("Year:"));
+        dialog.add(yearBox);
+        dialog.add(new JLabel("Month:"));
+        dialog.add(monthBox);
+        dialog.add(new JLabel("Day:"));
+        dialog.add(dayBox);
+        dialog.add(new JLabel("Hour:"));
+        dialog.add(hourBox);
+        dialog.add(new JLabel("Minute:"));
+        dialog.add(minuteBox);
+
+        JButton okButton = new JButton("OK");
+        okButton.addActionListener(e -> {
+            try {
+                int year = (Integer) yearBox.getSelectedItem();
+                int month = (Integer) monthBox.getSelectedItem();
+                int day = (Integer) dayBox.getSelectedItem();
+                int hour = (Integer) hourBox.getSelectedItem();
+                int minute = (Integer) minuteBox.getSelectedItem();
+
+                // Validate date
+                java.time.LocalDateTime.of(year, month, day, hour, minute);
+
+                Reminder reminder = new Reminder(selectedChecklistName, year, month, day, hour, minute);
+                taskManager.addReminder(reminder);
+                dialog.dispose();
+                JOptionPane.showMessageDialog(this, "Reminder added successfully.");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, "Invalid date/time. Please check your input.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        JButton cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        dialog.add(okButton);
+        dialog.add(cancelButton);
+
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 }

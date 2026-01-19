@@ -20,9 +20,12 @@ import java.awt.GraphicsEnvironment;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
@@ -82,6 +85,39 @@ public class DailyChecklist {
                 }
             });
         }
+
+        // Start reminder check thread
+        new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(60000); // Check every minute
+                    List<Reminder> reminders = checklistManager.getReminders();
+                    LocalDateTime now = LocalDateTime.now();
+                    for (Reminder r : reminders) {
+                        LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+                        if (!reminderTime.isAfter(now)) { // Time has passed or is now
+                            SwingUtilities.invokeLater(() -> {
+                                int choice = JOptionPane.showOptionDialog(frame, "Reminder for " + r.getChecklistName(), "Reminder", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, new String[]{"Open", "Done"}, "Open");
+                                if (choice == JOptionPane.YES_OPTION) { // Done
+                                    checklistManager.removeReminder(r);
+                                } else { // Open
+                                    ChecklistWindow window = new ChecklistWindow(checklistManager, () -> {
+                                        checklistPanel.updateTasks();
+                                        customChecklistsOverviewPanel.updateTasks();
+                                    }, r.getChecklistName());
+                                    window.setVisible(true);
+                                }
+                            });
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     private void initializeUI() {
