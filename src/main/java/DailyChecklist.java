@@ -15,8 +15,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.awt.event.WindowAdapter;
@@ -25,18 +23,10 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JDialog;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
@@ -50,8 +40,7 @@ public class DailyChecklist {
     private static CustomChecklistsOverviewPanel customChecklistsOverviewPanel;
     private static JTabbedPane tabbedPane;
     private static FocusTimer focusTimerInstance = FocusTimer.getInstance();
-    private static boolean reminderDialogShowing = false;
-    private static Queue<Reminder> pendingReminders = new ConcurrentLinkedQueue<>();
+    private static ReminderQueue reminderQueue;
 
     public DailyChecklist() {
         settingsManager = new SettingsManager();
@@ -97,6 +86,9 @@ public class DailyChecklist {
             });
         }
 
+        // Initialize reminder queue
+        reminderQueue = new ReminderQueue(reminder -> showReminderDialog(reminder));
+
         // Start reminder check thread
         new Thread(() -> {
             while (true) {
@@ -110,9 +102,7 @@ public class DailyChecklist {
                             // Only show reminders from the last 5 minutes to avoid showing very old ones
                             // Automatically remove reminders older than 1 hour
                             if (now.minusMinutes(5).isBefore(reminderTime)) {
-                                // Add reminder to queue instead of showing immediately
-                                pendingReminders.add(r);
-                                showNextReminder();
+                                reminderQueue.addReminder(r);
                             } else if (now.minusHours(1).isAfter(reminderTime)) {
                                 // Automatically remove reminders older than 1 hour
                                 checklistManager.removeReminder(r);
@@ -132,104 +122,34 @@ public class DailyChecklist {
     /**
      * Shows the next reminder from the queue if no dialog is currently showing
      */
-    private static void showNextReminder() {
-        if (reminderDialogShowing || pendingReminders.isEmpty()) {
-            return;
-        }
-
-        Reminder r = pendingReminders.poll(); // Remove from queue
-        if (r == null) return;
-
+    /**
+     * Shows a reminder dialog using the ReminderDialog class.
+     */
+    private static void showReminderDialog(Reminder reminder) {
         SwingUtilities.invokeLater(() -> {
-            // Prevent multiple reminder dialogs
-            reminderDialogShowing = true;
-
-            // Create always-on-top reminder dialog
-            JDialog reminderDialog = new JDialog(frame, "⏰ Reminder", true);
-            reminderDialog.setAlwaysOnTop(true);
-            reminderDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-            reminderDialog.setResizable(false);
-
-            String checklistName = r.getChecklistName();
-            if (checklistName == null || checklistName.trim().isEmpty()) {
-                checklistName = "Unknown Checklist";
-            }
-
-            // Format the reminder time nicely
-            String timeString = String.format("%02d:%02d", r.getHour(), r.getMinute());
-            String dateString = String.format("%d/%d/%d", r.getMonth(), r.getDay(), r.getYear());
-
-            // Create HTML-formatted message with better styling
-            String htmlMessage = "<html><body style='font-family: Arial, sans-serif; font-size: 12px; padding: 10px;'>" +
-                "<div style='text-align: center; margin-bottom: 15px;'>" +
-                "<h2 style='color: #2E86AB; margin: 0 0 5px 0; font-size: 16px;'>⏰ Reminder</h2>" +
-                "<div style='font-size: 14px; font-weight: bold; color: #333; margin-bottom: 8px;'>" + checklistName + "</div>" +
-                "<div style='color: #666; font-size: 11px;'>Scheduled for: " + timeString + " on " + dateString + "</div>" +
-                "</div>" +
-                "<div style='text-align: center; color: #555; font-style: italic;'>" +
-                "It's time to check your tasks!" +
-                "</div>" +
-                "</body></html>";
-
-            JLabel messageLabel = new JLabel(htmlMessage);
-            messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            messageLabel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-
-            JButton openButton = new JButton("📂 Open Checklist");
-            openButton.setToolTipText("Open the checklist in the application");
-            JButton doneButton = new JButton("✅ Done");
-            doneButton.setToolTipText("Mark this reminder as completed");
-
-            openButton.addActionListener(e -> {
-                // Switch to custom checklists tab
-                tabbedPane.setSelectedIndex(1);
-                String name = r.getChecklistName();
-                if (name == null || name.trim().isEmpty()) {
-                    name = "Unknown Checklist";
+            ReminderDialog dialog = new ReminderDialog(frame, reminder,
+                // On Open action
+                () -> {
+                    // Switch to custom checklists tab
+                    tabbedPane.setSelectedIndex(1);
+                    String name = reminder.getChecklistName();
+                    if (name == null || name.trim().isEmpty()) {
+                        name = "Unknown Checklist";
+                    }
+                    customChecklistsOverviewPanel.selectChecklistByName(name);
+                    frame.setVisible(true);
+                    frame.toFront();
+                    frame.requestFocus();
+                },
+                // On Done action
+                () -> {
+                    checklistManager.removeReminder(reminder);
                 }
-                customChecklistsOverviewPanel.selectChecklistByName(name);
-                frame.setVisible(true);
-                frame.toFront();
-                frame.requestFocus();
-                reminderDialogShowing = false;
-                reminderDialog.dispose();
-                // Show next reminder in queue after a short delay
-                SwingUtilities.invokeLater(() -> {
-                    try {
-                        Thread.sleep(500); // Small delay to prevent rapid-fire dialogs
-                        showNextReminder();
-                    } catch (InterruptedException ex) {
-                        Thread.currentThread().interrupt();
-                    }
-                });
-            });
+            );
 
-            doneButton.addActionListener(e -> {
-                checklistManager.removeReminder(r);
-                reminderDialogShowing = false;
-                reminderDialog.dispose();
-                // Show next reminder in queue after a short delay
-                SwingUtilities.invokeLater(() -> {
-                    try {
-                        Thread.sleep(500); // Small delay to prevent rapid-fire dialogs
-                        showNextReminder();
-                    } catch (InterruptedException ex) {
-                        Thread.currentThread().interrupt();
-                    }
-                });
-            });
-
-            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
-            buttonPanel.add(openButton);
-            buttonPanel.add(doneButton);
-
-            reminderDialog.setLayout(new BorderLayout());
-            reminderDialog.add(messageLabel, BorderLayout.CENTER);
-            reminderDialog.add(buttonPanel, BorderLayout.SOUTH);
-
-            reminderDialog.pack();
-            reminderDialog.setLocationRelativeTo(frame);
-            reminderDialog.setVisible(true);
+            dialog.setVisible(true);
+            // Notify queue that dialog was dismissed
+            reminderQueue.onReminderDismissed();
         });
     }
 
