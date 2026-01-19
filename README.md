@@ -1,5 +1,7 @@
 # Daily Checklist with Focus Timer
 
+Welcome to Daily Checklist! This guide will help you get started with managing your daily tasks, custom checklists, reminders, and using the focus timer.
+
 Stay organized and boost your productivity with the **Daily Checklist** application! This Java-based desktop program helps you manage your daily tasks efficiently while incorporating a built-in **Focus Timer** to keep you on track during focused work sessions.
 
 ## Features
