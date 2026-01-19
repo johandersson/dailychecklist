@@ -14,7 +14,7 @@ copy license.md target\
 copy README.md target\
 
 echo Creating JAR...
-jar -cfe target\dailychecklist.jar Main -C target\classes .
+jar -cfe target\dailychecklist.jar Main -C target\classes . -C target license.md -C target README.md
 if %errorlevel% neq 0 exit /b %errorlevel%
 
 echo Build complete. JAR created at target\dailychecklist.jar

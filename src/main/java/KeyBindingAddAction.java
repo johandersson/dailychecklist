@@ -17,13 +17,14 @@ public class KeyBindingAddAction extends AbstractAction {
     @Override
     public void actionPerformed(ActionEvent e) {
         if (!java.awt.GraphicsEnvironment.isHeadless()) {
-            String taskName = JOptionPane.showInputDialog(parent, "Enter new task name:", "Add New Task", JOptionPane.PLAIN_MESSAGE);
-            if (taskName != null && !taskName.trim().isEmpty()) {
+            String rawTaskName = JOptionPane.showInputDialog(parent, "Enter new task name:", "Add New Task", JOptionPane.PLAIN_MESSAGE);
+            String taskName = TaskManager.validateInputWithError(rawTaskName, "Task name");
+            if (taskName != null) {
                 String[] options = {"Morning", "Evening"};
                 int timeOfDay = JOptionPane.showOptionDialog(parent, "Select time of day for the task:", "Time of Day",
                         JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
                 TaskType type = (timeOfDay == 0) ? TaskType.MORNING : TaskType.EVENING;
-                Task newTask = new Task(taskName.trim(), type, null);
+                Task newTask = new Task(taskName, type, null);
                 taskManager.addTask(newTask);
                 updateTasks.run();
             }

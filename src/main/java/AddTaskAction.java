@@ -24,8 +24,9 @@ public class AddTaskAction extends AbstractAction {
             taskName = "Test Task";
             timeOfDay = 0;
         } else {
-            taskName = JOptionPane.showInputDialog(parent, "Enter new task name:", "Add New Task", JOptionPane.PLAIN_MESSAGE);
-            if (taskName == null || taskName.trim().isEmpty()) {
+            String rawTaskName = JOptionPane.showInputDialog(parent, "Enter new task name:", "Add New Task", JOptionPane.PLAIN_MESSAGE);
+            taskName = TaskManager.validateInputWithError(rawTaskName, "Task name");
+            if (taskName == null) {
                 return;
             }
             String[] options = {"Morning", "Evening"};
@@ -33,7 +34,7 @@ public class AddTaskAction extends AbstractAction {
                     JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
         }
         TaskType type = (timeOfDay == 0) ? TaskType.MORNING : TaskType.EVENING;
-        Task newTask = new Task(taskName.trim(), type, null);
+        Task newTask = new Task(taskName, type, null);
         taskManager.addTask(newTask);
         updateTasks.run();
     }

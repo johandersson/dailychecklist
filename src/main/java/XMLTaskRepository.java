@@ -16,11 +16,14 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */import java.awt.GraphicsEnvironment;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import javax.swing.JOptionPane;
 import javax.xml.parsers.DocumentBuilder;
@@ -40,6 +43,13 @@ import org.xml.sax.SAXException;
 
 public class XMLTaskRepository implements TaskRepository {
     private static String FILE_NAME = System.getProperty("user.home") + File.separator + "dailychecklist-tasks.xml";
+    private static String REMINDER_FILE_NAME = System.getProperty("user.home") + File.separator + "dailychecklist-reminders.properties";
+
+    // Caching
+    private List<Task> cachedTasks = null;
+    private List<Reminder> cachedReminders = null;
+    private boolean tasksDirty = false;
+    private boolean remindersDirty = false;
 
     @Override
     public void initialize() {
@@ -117,6 +127,10 @@ public class XMLTaskRepository implements TaskRepository {
 
     @Override
     public List<Task> getAllTasks() {
+        if (cachedTasks != null && !tasksDirty) {
+            return new ArrayList<>(cachedTasks);
+        }
+
         List<Task> tasks = new ArrayList<>();
         String today = new SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date(System.currentTimeMillis()));
         try {
@@ -147,6 +161,9 @@ public class XMLTaskRepository implements TaskRepository {
                 JOptionPane.showMessageDialog(null, "Failed to load all tasks: " + e.getMessage(), "Load Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+
+        cachedTasks = new ArrayList<>(tasks);
+        tasksDirty = false;
         return tasks;
     }
 
@@ -179,6 +196,7 @@ public class XMLTaskRepository implements TaskRepository {
             }
             root.appendChild(taskElement);
             writeDocument(document);
+            tasksDirty = true; // Mark cache as dirty
         } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
             if (!GraphicsEnvironment.isHeadless()) {
                 JOptionPane.showMessageDialog(null, "Failed to add task: " + e.getMessage(), "Add Task Error", JOptionPane.ERROR_MESSAGE);
@@ -212,6 +230,7 @@ public class XMLTaskRepository implements TaskRepository {
                             element.appendChild(checklistNameElement);
                         }
                         writeDocument(document);
+                        tasksDirty = true; // Mark cache as dirty
                         return;
                     }
                 }
@@ -235,6 +254,7 @@ public class XMLTaskRepository implements TaskRepository {
                     if (element.getAttribute("id").equals(task.getId())) {
                         node.getParentNode().removeChild(node);
                         writeDocument(document);
+                        tasksDirty = true; // Mark cache as dirty
                         return;
                     }
                 }
@@ -294,6 +314,8 @@ public class XMLTaskRepository implements TaskRepository {
                 root.appendChild(taskElement);
             }
             writeDocument(document);
+            cachedTasks = new ArrayList<>(tasks); // Update cache
+            tasksDirty = false;
         } catch (ParserConfigurationException | TransformerException e) {
             if (!GraphicsEnvironment.isHeadless()) {
                 JOptionPane.showMessageDialog(null, "Failed to set tasks: " + e.getMessage(), "Set Tasks Error", JOptionPane.ERROR_MESSAGE);
@@ -312,12 +334,21 @@ public class XMLTaskRepository implements TaskRepository {
 
     private Document readDocument() throws ParserConfigurationException, SAXException, IOException {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        // Secure XML processing - prevent XXE attacks
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        factory.setXIncludeAware(false);
+        factory.setExpandEntityReferences(false);
         DocumentBuilder builder = factory.newDocumentBuilder();
         return builder.parse(new File(FILE_NAME));
     }
 
     private void writeDocument(Document document) throws TransformerException {
-        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        TransformerFactory factory = TransformerFactory.newInstance();
+        // Secure XSLT processing - prevent XXE attacks
+        factory.setFeature("http://javax.xml.XMLConstants/feature/secure-processing", true);
+        Transformer transformer = factory.newTransformer();
         DOMSource source = new DOMSource(document);
         StreamResult result = new StreamResult(new File(FILE_NAME));
         transformer.transform(source, result);
@@ -325,79 +356,98 @@ public class XMLTaskRepository implements TaskRepository {
 
     @Override
     public List<Reminder> getReminders() {
+        if (cachedReminders != null && !remindersDirty) {
+            return new ArrayList<>(cachedReminders);
+        }
+
         List<Reminder> reminders = new ArrayList<>();
-        try {
-            Document document = readDocument();
-            NodeList nodeList = document.getElementsByTagName("reminder");
-            for (int i = 0; i < nodeList.getLength(); i++) {
-                Node node = nodeList.item(i);
-                if (node.getNodeType() == Node.ELEMENT_NODE) {
-                    Element element = (Element) node;
+        Properties props = new Properties();
+        try (FileInputStream fis = new FileInputStream(REMINDER_FILE_NAME)) {
+            props.load(fis);
+            for (String key : props.stringPropertyNames()) {
+                String value = props.getProperty(key);
+                String[] parts = value.split(",");
+                if (parts.length == 6) {
                     Reminder reminder = new Reminder(
-                            element.getAttribute("checklistName"),
-                            Integer.parseInt(element.getAttribute("year")),
-                            Integer.parseInt(element.getAttribute("month")),
-                            Integer.parseInt(element.getAttribute("day")),
-                            Integer.parseInt(element.getAttribute("hour")),
-                            Integer.parseInt(element.getAttribute("minute"))
+                            parts[0], // checklistName
+                            Integer.parseInt(parts[1]), // year
+                            Integer.parseInt(parts[2]), // month
+                            Integer.parseInt(parts[3]), // day
+                            Integer.parseInt(parts[4]), // hour
+                            Integer.parseInt(parts[5])  // minute
                     );
                     reminders.add(reminder);
                 }
             }
-        } catch (Exception e) {
-            // Ignore errors for backwards compatibility
+        } catch (IOException e) {
+            // Try to load from XML for backwards compatibility
+            try {
+                Document document = readDocument();
+                NodeList nodeList = document.getElementsByTagName("reminder");
+                for (int i = 0; i < nodeList.getLength(); i++) {
+                    Node node = nodeList.item(i);
+                    if (node.getNodeType() == Node.ELEMENT_NODE) {
+                        Element element = (Element) node;
+                        Reminder reminder = new Reminder(
+                                element.getAttribute("checklistName"),
+                                Integer.parseInt(element.getAttribute("year")),
+                                Integer.parseInt(element.getAttribute("month")),
+                                Integer.parseInt(element.getAttribute("day")),
+                                Integer.parseInt(element.getAttribute("hour")),
+                                Integer.parseInt(element.getAttribute("minute"))
+                        );
+                        reminders.add(reminder);
+                    }
+                }
+                // Migrate to Properties file
+                saveRemindersToProperties(reminders);
+            } catch (Exception ex) {
+                // Ignore errors for backwards compatibility
+            }
         }
+
+        cachedReminders = new ArrayList<>(reminders);
+        remindersDirty = false;
         return reminders;
+    }
+
+    private void saveRemindersToProperties(List<Reminder> reminders) {
+        Properties props = new Properties();
+        for (int i = 0; i < reminders.size(); i++) {
+            Reminder r = reminders.get(i);
+            String key = "reminder." + i;
+            String value = r.getChecklistName() + "," + r.getYear() + "," + r.getMonth() + "," +
+                          r.getDay() + "," + r.getHour() + "," + r.getMinute();
+            props.setProperty(key, value);
+        }
+        try (FileOutputStream fos = new FileOutputStream(REMINDER_FILE_NAME)) {
+            props.store(fos, "Daily Checklist Reminders");
+        } catch (IOException e) {
+            // Ignore errors
+        }
     }
 
     @Override
     public void addReminder(Reminder reminder) {
-        try {
-            Document document = readDocument();
-            Element root = document.getDocumentElement();
-            Element remindersElement = getOrCreateRemindersElement(document, root);
-            Element reminderElement = document.createElement("reminder");
-            reminderElement.setAttribute("checklistName", reminder.getChecklistName());
-            reminderElement.setAttribute("year", String.valueOf(reminder.getYear()));
-            reminderElement.setAttribute("month", String.valueOf(reminder.getMonth()));
-            reminderElement.setAttribute("day", String.valueOf(reminder.getDay()));
-            reminderElement.setAttribute("hour", String.valueOf(reminder.getHour()));
-            reminderElement.setAttribute("minute", String.valueOf(reminder.getMinute()));
-            remindersElement.appendChild(reminderElement);
-            writeDocument(document);
-        } catch (Exception e) {
-            if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(null, "Failed to add reminder: " + e.getMessage(), "Add Reminder Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
+        List<Reminder> reminders = getReminders();
+        reminders.add(reminder);
+        saveRemindersToProperties(reminders);
+        cachedReminders = reminders;
+        remindersDirty = false;
     }
 
     @Override
     public void removeReminder(Reminder reminder) {
-        try {
-            Document document = readDocument();
-            NodeList nodeList = document.getElementsByTagName("reminder");
-            for (int i = 0; i < nodeList.getLength(); i++) {
-                Node node = nodeList.item(i);
-                if (node.getNodeType() == Node.ELEMENT_NODE) {
-                    Element element = (Element) node;
-                    if (element.getAttribute("checklistName").equals(reminder.getChecklistName()) &&
-                        Integer.parseInt(element.getAttribute("year")) == reminder.getYear() &&
-                        Integer.parseInt(element.getAttribute("month")) == reminder.getMonth() &&
-                        Integer.parseInt(element.getAttribute("day")) == reminder.getDay() &&
-                        Integer.parseInt(element.getAttribute("hour")) == reminder.getHour() &&
-                        Integer.parseInt(element.getAttribute("minute")) == reminder.getMinute()) {
-                        element.getParentNode().removeChild(element);
-                        break;
-                    }
-                }
-            }
-            writeDocument(document);
-        } catch (Exception e) {
-            if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(null, "Failed to remove reminder: " + e.getMessage(), "Remove Reminder Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
+        List<Reminder> reminders = getReminders();
+        reminders.removeIf(r -> r.getChecklistName().equals(reminder.getChecklistName()) &&
+                               r.getYear() == reminder.getYear() &&
+                               r.getMonth() == reminder.getMonth() &&
+                               r.getDay() == reminder.getDay() &&
+                               r.getHour() == reminder.getHour() &&
+                               r.getMinute() == reminder.getMinute());
+        saveRemindersToProperties(reminders);
+        cachedReminders = reminders;
+        remindersDirty = false;
     }
 
     private Element getOrCreateRemindersElement(Document document, Element root) {
