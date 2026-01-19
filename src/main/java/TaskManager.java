@@ -16,6 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class TaskManager {
     private final TaskRepository repository;
@@ -50,7 +51,7 @@ public class TaskManager {
         List<Task> filtered = new ArrayList<>();
         for (Task task : allTasks) {
             if (task.getType() == type) {
-                if (type != TaskType.CUSTOM || checklistName == null || checklistName.equals(task.getChecklistName())) {
+            if (type != TaskType.CUSTOM || checklistName == null || Objects.equals(checklistName, task.getChecklistName())) {
                     filtered.add(task);
                 }
             }

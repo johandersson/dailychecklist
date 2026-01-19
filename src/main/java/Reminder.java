@@ -1,19 +1,7 @@
-/*
- * Daily Checklist
- * Copyright (C) 2025 Johan Andersson
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
+import java.util.Objects;
+
+/**
+ * A reminder for a checklist at a specific date and time.
  */
 public class Reminder {
     private final String checklistName;
@@ -47,11 +35,11 @@ public class Reminder {
         Reminder reminder = (Reminder) obj;
         return year == reminder.year && month == reminder.month && day == reminder.day &&
                hour == reminder.hour && minute == reminder.minute &&
-               checklistName.equals(reminder.checklistName);
+               Objects.equals(checklistName, reminder.checklistName);
     }
 
     @Override
     public int hashCode() {
-        return checklistName.hashCode() + year + month + day + hour + minute;
+        return Objects.hashCode(checklistName) + year + month + day + hour + minute;
     }
 }
