@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import javax.swing.JFrame;
+import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -85,7 +86,7 @@ public class DailyChecklist {
 
     private void initializeUI() {
         frame.setTitle("Daily Checklist");
-        frame.setSize(800, 800);
+        frame.setSize(1400, 900);
 
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -105,9 +106,10 @@ public class DailyChecklist {
 
     private void addTabbedPane() {
         JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.add("Checklist", checklistPanel);
+        JSplitPane dailySplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, checklistPanel, addTaskPanel);
+        dailySplit.setResizeWeight(0.7);
+        tabbedPane.add("Checklist", dailySplit);
         tabbedPane.add("Custom checklists", customChecklistsOverviewPanel);
-        tabbedPane.add("Add task(s)", addTaskPanel);
         frame.add(tabbedPane);
     }
 
