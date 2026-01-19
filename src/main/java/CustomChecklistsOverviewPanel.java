@@ -307,7 +307,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         dialog.setResizable(false);
 
         // Header
-        JLabel headerLabel = new JLabel("Set a reminder for: " + selectedChecklistName, JLabel.CENTER);
+        String currentTimeString = String.format("%02d:%02d on %d/%d/%d", 
+            now.getHour(), now.getMinute(), now.getMonthValue(), now.getDayOfMonth(), now.getYear());
+        JLabel headerLabel = new JLabel("<html>Set a reminder for: <b>" + selectedChecklistName + "</b><br><small>Current time is pre-selected: " + currentTimeString + "</small></html>", JLabel.CENTER);
         headerLabel.setFont(headerLabel.getFont().deriveFont(14.0f));
         headerLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -409,7 +411,13 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 Reminder reminder = new Reminder(selectedChecklistName, year, month, day, hour, minute);
                 taskManager.addReminder(reminder);
                 dialog.dispose();
-                JOptionPane.showMessageDialog(this, "Reminder added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                
+                // Show informative success message
+                String timeString = String.format("%02d:%02d", hour, minute);
+                String dateString = String.format("%d/%d/%d", month, day, year);
+                String message = String.format("Reminder set successfully!\n\nChecklist: %s\nDate: %s\nTime: %s\n\nYou'll be reminded at the specified time.",
+                    selectedChecklistName, dateString, timeString);
+                JOptionPane.showMessageDialog(this, message, "Reminder Set", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dialog, "Invalid date/time. Please check your input.", "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -586,7 +594,13 @@ public class CustomChecklistsOverviewPanel extends JPanel {
 
                 dialog.dispose();
                 onSave.run();
-                JOptionPane.showMessageDialog(this, "Reminder updated successfully.");
+                
+                // Show informative success message
+                String timeString = String.format("%02d:%02d", hour, minute);
+                String dateString = String.format("%d/%d/%d", month, day, year);
+                String message = String.format("Reminder updated successfully!\n\nChecklist: %s\nNew Date: %s\nNew Time: %s\n\nYou'll be reminded at the updated time.",
+                    reminder.getChecklistName(), dateString, timeString);
+                JOptionPane.showMessageDialog(this, message, "Reminder Updated", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dialog, "Invalid date/time. Please check your input.", "Error", JOptionPane.ERROR_MESSAGE);
             }
