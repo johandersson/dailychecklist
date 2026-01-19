@@ -228,7 +228,12 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             moveTasksToType(name, TaskType.EVENING);
         }
         updateTasks.run();
-        selectChecklist(null);
+        // After deletion, select the first checklist if available
+        if (listModel.size() > 0) {
+            selectChecklist(listModel.get(0));
+        } else {
+            selectChecklist(null);
+        }
     }
 
     private void moveTasksToType(String checklistName, TaskType type) {
