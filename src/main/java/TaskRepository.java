@@ -33,4 +33,15 @@ public interface TaskRepository {
     List<Reminder> getReminders();
     void addReminder(Reminder reminder);
     void removeReminder(Reminder reminder);
+
+    /**
+     * Gets reminders that are due within the next specified minutes.
+     */
+    List<Reminder> getDueReminders(int minutesAhead, java.util.Set<String> openedChecklists);
+
+    /**
+     * Gets the next upcoming reminder time efficiently.
+     * Returns null if no future reminders exist.
+     */
+    java.time.LocalDateTime getNextReminderTime(java.util.Set<String> openedChecklists);
 }

@@ -137,24 +137,50 @@ public class XMLTaskRepository implements TaskRepository {
         try {
             Document document = readDocument();
             NodeList nodeList = document.getElementsByTagName("task");
-            for (int i = 0; i < nodeList.getLength(); i++) {
-                Node node = nodeList.item(i);
-                if (node.getNodeType() == Node.ELEMENT_NODE) {
-                    Element element = (Element) node;
-                    String weekday = element.getElementsByTagName("weekday").item(0) != null ? element.getElementsByTagName("weekday").item(0).getTextContent() : null;
-                    if (weekday != null && weekday.isEmpty()) weekday = null;
-                    if (weekday != null) weekday = weekday.toLowerCase();
-                    Task task = new Task(
-                            element.getAttribute("id"),
-                            element.getElementsByTagName("name").item(0).getTextContent(),
-                            TaskType.valueOf(element.getElementsByTagName("type").item(0).getTextContent()),
-                            weekday,
-                            element.getElementsByTagName("done").item(0) != null ? Boolean.parseBoolean(element.getElementsByTagName("done").item(0).getTextContent()) : false,
-                            element.getElementsByTagName("doneDate").item(0) != null ? element.getElementsByTagName("doneDate").item(0).getTextContent() : null,
-                            element.getElementsByTagName("checklistName").item(0) != null ? element.getElementsByTagName("checklistName").item(0).getTextContent() : null
-                    );
-                    checkIfDoneDateIsInThePast(task, today);
-                    tasks.add(task);
+
+            // Memory safety check: prevent loading extremely large datasets
+            if (MemorySafetyManager.checkTaskLimit(nodeList.getLength())) {
+                // Load only the first MAX_TASKS tasks
+                for (int i = 0; i < MemorySafetyManager.MAX_TASKS && i < nodeList.getLength(); i++) {
+                    Node node = nodeList.item(i);
+                    if (node.getNodeType() == Node.ELEMENT_NODE) {
+                        Element element = (Element) node;
+                        String weekday = element.getElementsByTagName("weekday").item(0) != null ? element.getElementsByTagName("weekday").item(0).getTextContent() : null;
+                        if (weekday != null && weekday.isEmpty()) weekday = null;
+                        if (weekday != null) weekday = weekday.toLowerCase();
+                        Task task = new Task(
+                                element.getAttribute("id"),
+                                element.getElementsByTagName("name").item(0).getTextContent(),
+                                TaskType.valueOf(element.getElementsByTagName("type").item(0).getTextContent()),
+                                weekday,
+                                element.getElementsByTagName("done").item(0) != null ? Boolean.parseBoolean(element.getElementsByTagName("done").item(0).getTextContent()) : false,
+                                element.getElementsByTagName("doneDate").item(0) != null ? element.getElementsByTagName("doneDate").item(0).getTextContent() : null,
+                                element.getElementsByTagName("checklistName").item(0) != null ? element.getElementsByTagName("checklistName").item(0).getTextContent() : null
+                        );
+                        checkIfDoneDateIsInThePast(task, today);
+                        tasks.add(task);
+                    }
+                }
+            } else {
+                for (int i = 0; i < nodeList.getLength(); i++) {
+                    Node node = nodeList.item(i);
+                    if (node.getNodeType() == Node.ELEMENT_NODE) {
+                        Element element = (Element) node;
+                        String weekday = element.getElementsByTagName("weekday").item(0) != null ? element.getElementsByTagName("weekday").item(0).getTextContent() : null;
+                        if (weekday != null && weekday.isEmpty()) weekday = null;
+                        if (weekday != null) weekday = weekday.toLowerCase();
+                        Task task = new Task(
+                                element.getAttribute("id"),
+                                element.getElementsByTagName("name").item(0).getTextContent(),
+                                TaskType.valueOf(element.getElementsByTagName("type").item(0).getTextContent()),
+                                weekday,
+                                element.getElementsByTagName("done").item(0) != null ? Boolean.parseBoolean(element.getElementsByTagName("done").item(0).getTextContent()) : false,
+                                element.getElementsByTagName("doneDate").item(0) != null ? element.getElementsByTagName("doneDate").item(0).getTextContent() : null,
+                                element.getElementsByTagName("checklistName").item(0) != null ? element.getElementsByTagName("checklistName").item(0).getTextContent() : null
+                        );
+                        checkIfDoneDateIsInThePast(task, today);
+                        tasks.add(task);
+                    }
                 }
             }
         } catch (ParserConfigurationException | SAXException | IOException e) {
@@ -365,7 +391,17 @@ public class XMLTaskRepository implements TaskRepository {
         Properties props = new Properties();
         try (FileInputStream fis = new FileInputStream(REMINDER_FILE_NAME)) {
             props.load(fis);
+
+            // Memory safety check: prevent loading extremely large reminder datasets
+            int reminderCount = 0;
+            boolean exceededLimit = false;
+
             for (String key : props.stringPropertyNames()) {
+                if (reminderCount >= MemorySafetyManager.MAX_REMINDERS) {
+                    exceededLimit = true;
+                    break;
+                }
+
                 String value = props.getProperty(key);
                 String[] parts = value.split(",");
                 if (parts.length == 6) {
@@ -378,14 +414,28 @@ public class XMLTaskRepository implements TaskRepository {
                             Integer.parseInt(parts[5])  // minute
                     );
                     reminders.add(reminder);
+                    reminderCount++;
                 }
+            }
+
+            if (exceededLimit) {
+                MemorySafetyManager.checkReminderLimit(MemorySafetyManager.MAX_REMINDERS + 1); // Trigger warning
             }
         } catch (IOException e) {
             // Try to load from XML for backwards compatibility
             try {
                 Document document = readDocument();
                 NodeList nodeList = document.getElementsByTagName("reminder");
-                for (int i = 0; i < nodeList.getLength(); i++) {
+
+                // Memory safety check for XML reminders too
+                boolean exceededLimit = false;
+
+                for (int i = 0; i < nodeList.getLength() && i < MemorySafetyManager.MAX_REMINDERS; i++) {
+                    if (i >= MemorySafetyManager.MAX_REMINDERS) {
+                        exceededLimit = true;
+                        break;
+                    }
+
                     Node node = nodeList.item(i);
                     if (node.getNodeType() == Node.ELEMENT_NODE) {
                         Element element = (Element) node;
@@ -400,6 +450,11 @@ public class XMLTaskRepository implements TaskRepository {
                         reminders.add(reminder);
                     }
                 }
+
+                if (exceededLimit) {
+                    MemorySafetyManager.checkReminderLimit(MemorySafetyManager.MAX_REMINDERS + 1); // Trigger warning
+                }
+
                 // Migrate to Properties file
                 saveRemindersToProperties(reminders);
             } catch (Exception ex) {
@@ -469,8 +524,13 @@ public class XMLTaskRepository implements TaskRepository {
             }
 
             LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-            if (!reminderTime.isAfter(now) && reminderTime.isAfter(now.minusMinutes(5))) {
-                // Due within last 5 minutes (to avoid showing very old ones)
+            // Show reminders that are:
+            // 1. Due within the next minutesAhead minutes, OR
+            // 2. Overdue but within the last hour (to avoid showing very old reminders)
+            boolean isUpcoming = reminderTime.isAfter(now) && !reminderTime.isAfter(now.plusMinutes(minutesAhead));
+            boolean isRecentlyOverdue = !reminderTime.isAfter(now) && reminderTime.isAfter(now.minusHours(1));
+
+            if (isUpcoming || isRecentlyOverdue) {
                 dueReminders.add(r);
             }
         }
