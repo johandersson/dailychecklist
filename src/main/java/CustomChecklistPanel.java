@@ -35,17 +35,19 @@ public class CustomChecklistPanel extends JPanel {
     private DefaultListModel<Task> customListModel;
     private TaskUpdater taskUpdater;
     private TaskManager taskManager;
+    private String checklistName;
 
-    public CustomChecklistPanel(TaskManager taskManager, TaskUpdater taskUpdater) {
+    public CustomChecklistPanel(TaskManager taskManager, TaskUpdater taskUpdater, String checklistName) {
         this.taskManager = taskManager;
         this.taskUpdater = taskUpdater;
+        this.checklistName = checklistName;
         initialize();
     }
 
     private void initialize() {
         customListModel = new DefaultListModel<>();
         customTaskList = createTaskList(customListModel);
-        JPanel customPanel = createPanel("Custom Checklists", customTaskList);
+        JPanel customPanel = createPanel(checklistName, customTaskList);
         setLayout(new BorderLayout());
         add(customPanel, BorderLayout.CENTER);
     }
@@ -125,11 +127,9 @@ public class CustomChecklistPanel extends JPanel {
 
     public void updateTasks() {
         customListModel.clear();
-        List<Task> tasks = taskManager.getAllTasks();
+        List<Task> tasks = taskManager.getTasks(TaskType.CUSTOM, checklistName);
         for (Task task : tasks) {
-            if (task.getType() == TaskType.CUSTOM) {
-                customListModel.addElement(task);
-            }
+            customListModel.addElement(task);
         }
     }
 }

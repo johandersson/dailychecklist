@@ -14,7 +14,10 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */import java.util.List;
+ */import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class TaskManager {
     private final TaskRepository repository;
@@ -44,8 +47,37 @@ public class TaskManager {
         repository.removeTask(task);
     }
 
+    public List<Task> getTasks(TaskType type, String checklistName) {
+        List<Task> allTasks = repository.getAllTasks();
+        List<Task> filtered = new ArrayList<>();
+        for (Task task : allTasks) {
+            if (task.getType() == type) {
+                if (type != TaskType.CUSTOM || checklistName == null || checklistName.equals(task.getChecklistName())) {
+                    filtered.add(task);
+                }
+            }
+        }
+        return filtered;
+    }
+
+    public java.util.Set<String> getCustomChecklistNames() {
+        List<Task> allTasks = repository.getAllTasks();
+        java.util.Set<String> names = new java.util.HashSet<>();
+        for (Task task : allTasks) {
+            if (task.getType() == TaskType.CUSTOM && task.getChecklistName() != null) {
+                names.add(task.getChecklistName());
+            }
+        }
+        return names;
+    }
+
     public boolean hasUndoneTasks() {
-        return repository.hasUndoneTasks();
+        for (Task task : getAllTasks()) {
+            if (!task.isDone()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void setTasks(List<Task> tasks) {

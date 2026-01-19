@@ -71,13 +71,19 @@ public class XMLTaskRepository implements TaskRepository {
                 Node node = nodeList.item(i);
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                     Element element = (Element) node;
+                    String checklistName = null;
+                    NodeList checklistNameNodes = element.getElementsByTagName("checklistName");
+                    if (checklistNameNodes.getLength() > 0) {
+                        checklistName = checklistNameNodes.item(0).getTextContent();
+                    }
                     Task task = new Task(
                             element.getAttribute("id"),
                             element.getElementsByTagName("name").item(0).getTextContent(),
                             TaskType.valueOf(element.getElementsByTagName("type").item(0).getTextContent()),
                             null,
                             Boolean.parseBoolean(element.getElementsByTagName("done").item(0).getTextContent()),
-                            element.getElementsByTagName("doneDate").item(0).getTextContent()
+                            element.getElementsByTagName("doneDate").item(0).getTextContent(),
+                            checklistName
                     );
                     checkIfDoneDateIsInThePast(task, today);
                     tasks.add(task);
@@ -129,7 +135,8 @@ public class XMLTaskRepository implements TaskRepository {
                             TaskType.valueOf(element.getElementsByTagName("type").item(0).getTextContent()),
                             weekday,
                             element.getElementsByTagName("done").item(0) != null ? Boolean.parseBoolean(element.getElementsByTagName("done").item(0).getTextContent()) : false,
-                            element.getElementsByTagName("doneDate").item(0) != null ? element.getElementsByTagName("doneDate").item(0).getTextContent() : null
+                            element.getElementsByTagName("doneDate").item(0) != null ? element.getElementsByTagName("doneDate").item(0).getTextContent() : null,
+                            element.getElementsByTagName("checklistName").item(0) != null ? element.getElementsByTagName("checklistName").item(0).getTextContent() : null
                     );
                     checkIfDoneDateIsInThePast(task, today);
                     tasks.add(task);
@@ -165,6 +172,11 @@ public class XMLTaskRepository implements TaskRepository {
             Element doneDateElement = document.createElement("doneDate");
             doneDateElement.setTextContent(task.getDoneDate());
             taskElement.appendChild(doneDateElement);
+            if (task.getChecklistName() != null) {
+                Element checklistNameElement = document.createElement("checklistName");
+                checklistNameElement.setTextContent(task.getChecklistName());
+                taskElement.appendChild(checklistNameElement);
+            }
             root.appendChild(taskElement);
             writeDocument(document);
         } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
@@ -189,6 +201,16 @@ public class XMLTaskRepository implements TaskRepository {
                         element.getElementsByTagName("weekday").item(0).setTextContent(task.getWeekday());
                         element.getElementsByTagName("done").item(0).setTextContent(String.valueOf(task.isDone()));
                         element.getElementsByTagName("doneDate").item(0).setTextContent(task.getDoneDate());
+                        // Handle checklistName
+                        NodeList checklistNodes = element.getElementsByTagName("checklistName");
+                        if (checklistNodes.getLength() > 0) {
+                            element.removeChild(checklistNodes.item(0));
+                        }
+                        if (task.getChecklistName() != null) {
+                            Element checklistNameElement = document.createElement("checklistName");
+                            checklistNameElement.setTextContent(task.getChecklistName());
+                            element.appendChild(checklistNameElement);
+                        }
                         writeDocument(document);
                         return;
                     }

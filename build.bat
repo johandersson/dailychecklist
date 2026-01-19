@@ -9,6 +9,10 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 echo Copying resources...
 xcopy src\main\resources\* target\classes\ /s /i /y
 
+echo Copying documentation...
+copy license.md target\
+copy README.md target\
+
 echo Creating JAR...
 jar -cfe target\dailychecklist.jar Main -C target\classes .
 if %errorlevel% neq 0 exit /b %errorlevel%
