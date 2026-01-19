@@ -15,9 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class TaskManager {
     private final TaskRepository repository;
@@ -82,5 +80,17 @@ public class TaskManager {
 
     public void setTasks(List<Task> tasks) {
         repository.setTasks(tasks);
+    }
+
+    public List<Reminder> getReminders() {
+        return repository.getReminders();
+    }
+
+    public void addReminder(Reminder reminder) {
+        repository.addReminder(reminder);
+    }
+
+    public void removeReminder(Reminder reminder) {
+        repository.removeReminder(reminder);
     }
 }

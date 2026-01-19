@@ -322,4 +322,92 @@ public class XMLTaskRepository implements TaskRepository {
         StreamResult result = new StreamResult(new File(FILE_NAME));
         transformer.transform(source, result);
     }
+
+    @Override
+    public List<Reminder> getReminders() {
+        List<Reminder> reminders = new ArrayList<>();
+        try {
+            Document document = readDocument();
+            NodeList nodeList = document.getElementsByTagName("reminder");
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node node = nodeList.item(i);
+                if (node.getNodeType() == Node.ELEMENT_NODE) {
+                    Element element = (Element) node;
+                    Reminder reminder = new Reminder(
+                            element.getAttribute("checklistName"),
+                            Integer.parseInt(element.getAttribute("year")),
+                            Integer.parseInt(element.getAttribute("month")),
+                            Integer.parseInt(element.getAttribute("day")),
+                            Integer.parseInt(element.getAttribute("hour")),
+                            Integer.parseInt(element.getAttribute("minute"))
+                    );
+                    reminders.add(reminder);
+                }
+            }
+        } catch (Exception e) {
+            // Ignore errors for backwards compatibility
+        }
+        return reminders;
+    }
+
+    @Override
+    public void addReminder(Reminder reminder) {
+        try {
+            Document document = readDocument();
+            Element root = document.getDocumentElement();
+            Element remindersElement = getOrCreateRemindersElement(document, root);
+            Element reminderElement = document.createElement("reminder");
+            reminderElement.setAttribute("checklistName", reminder.getChecklistName());
+            reminderElement.setAttribute("year", String.valueOf(reminder.getYear()));
+            reminderElement.setAttribute("month", String.valueOf(reminder.getMonth()));
+            reminderElement.setAttribute("day", String.valueOf(reminder.getDay()));
+            reminderElement.setAttribute("hour", String.valueOf(reminder.getHour()));
+            reminderElement.setAttribute("minute", String.valueOf(reminder.getMinute()));
+            remindersElement.appendChild(reminderElement);
+            writeDocument(document);
+        } catch (Exception e) {
+            if (!GraphicsEnvironment.isHeadless()) {
+                JOptionPane.showMessageDialog(null, "Failed to add reminder: " + e.getMessage(), "Add Reminder Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    @Override
+    public void removeReminder(Reminder reminder) {
+        try {
+            Document document = readDocument();
+            NodeList nodeList = document.getElementsByTagName("reminder");
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node node = nodeList.item(i);
+                if (node.getNodeType() == Node.ELEMENT_NODE) {
+                    Element element = (Element) node;
+                    if (element.getAttribute("checklistName").equals(reminder.getChecklistName()) &&
+                        Integer.parseInt(element.getAttribute("year")) == reminder.getYear() &&
+                        Integer.parseInt(element.getAttribute("month")) == reminder.getMonth() &&
+                        Integer.parseInt(element.getAttribute("day")) == reminder.getDay() &&
+                        Integer.parseInt(element.getAttribute("hour")) == reminder.getHour() &&
+                        Integer.parseInt(element.getAttribute("minute")) == reminder.getMinute()) {
+                        element.getParentNode().removeChild(element);
+                        break;
+                    }
+                }
+            }
+            writeDocument(document);
+        } catch (Exception e) {
+            if (!GraphicsEnvironment.isHeadless()) {
+                JOptionPane.showMessageDialog(null, "Failed to remove reminder: " + e.getMessage(), "Remove Reminder Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private Element getOrCreateRemindersElement(Document document, Element root) {
+        NodeList remindersList = root.getElementsByTagName("reminders");
+        if (remindersList.getLength() > 0) {
+            return (Element) remindersList.item(0);
+        } else {
+            Element remindersElement = document.createElement("reminders");
+            root.appendChild(remindersElement);
+            return remindersElement;
+        }
+    }
 }
