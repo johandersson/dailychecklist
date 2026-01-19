@@ -66,9 +66,10 @@ public class CustomChecklistPanel extends JPanel {
                     } else if (e.getClickCount() == 2) {
                         // Double-click to edit name
                         Task task = list.getModel().getElementAt(index);
-                        String newName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for checklist:", task.getName());
-                        if (newName != null && !newName.trim().isEmpty()) {
-                            task.setName(newName.trim());
+                        String rawNewName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for checklist:", task.getName());
+                        String newName = TaskManager.validateInputWithError(rawNewName, "Task name");
+                        if (newName != null) {
+                            task.setName(newName);
                             taskManager.updateTask(task);
                             list.repaint(list.getCellBounds(index, index));
                         }
@@ -94,9 +95,10 @@ public class CustomChecklistPanel extends JPanel {
         JMenuItem editItem = new JMenuItem("Rename task");
         editItem.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
-            String newName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for task:", task.getName());
-            if (newName != null && !newName.trim().isEmpty()) {
-                task.setName(newName.trim());
+            String rawNewName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for task:", task.getName());
+            String newName = TaskManager.validateInputWithError(rawNewName, "Task name");
+            if (newName != null) {
+                task.setName(newName);
                 taskManager.updateTask(task);
                 list.repaint(list.getCellBounds(index, index));
             }

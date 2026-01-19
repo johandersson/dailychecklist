@@ -113,9 +113,10 @@ public class ChecklistPanel extends JPanel {
         //on editItem, add listener to edit task name inline in the list
         editItem.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
-            String newName = javax.swing.JOptionPane.showInputDialog(this, "Enter new name for task:", task.getName());
-            if (newName != null && !newName.trim().isEmpty()) {
-                task.setName(newName.trim());
+            String rawNewName = javax.swing.JOptionPane.showInputDialog(this, "Enter new name for task:", task.getName());
+            String newName = TaskManager.validateInputWithError(rawNewName, "Task name");
+            if (newName != null) {
+                task.setName(newName);
                 taskManager.updateTask(task);
                 list.repaint(list.getCellBounds(index, index));
             }

@@ -101,11 +101,10 @@ public class DailyChecklist {
                                 if (choice == JOptionPane.YES_OPTION) { // Done
                                     checklistManager.removeReminder(r);
                                 } else { // Open
-                                    ChecklistWindow window = new ChecklistWindow(checklistManager, () -> {
-                                        checklistPanel.updateTasks();
-                                        customChecklistsOverviewPanel.updateTasks();
-                                    }, r.getChecklistName());
-                                    window.setVisible(true);
+                                    customChecklistsOverviewPanel.selectChecklistByName(r.getChecklistName());
+                                    frame.setVisible(true);
+                                    frame.toFront();
+                                    frame.requestFocus();
                                 }
                             });
                         }

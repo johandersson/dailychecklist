@@ -116,9 +116,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     }
 
     private void createNewChecklist() {
-        String name = newChecklistField.getText().trim();
-        if (name.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter a checklist name.");
+        String rawName = newChecklistField.getText();
+        String name = TaskManager.validateInputWithError(rawName, "Checklist name");
+        if (name == null) {
             return;
         }
         Set<String> existing = taskManager.getCustomChecklistNames();
@@ -127,8 +127,19 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             return;
         }
         newChecklistField.setText("");
-        updateTasks.run();
         selectChecklist(name);
+        updateTasks.run();
+        checklistList.setSelectedValue(name, true);
+    }
+
+    /**
+     * Public method to select a checklist by name (used by reminders)
+     */
+    public void selectChecklistByName(String checklistName) {
+        selectChecklist(checklistName);
+        if (checklistName != null) {
+            checklistList.setSelectedValue(checklistName, true);
+        }
     }
 
     private void selectChecklist(String checklistName) {
@@ -152,9 +163,10 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Please select a checklist first.");
             return;
         }
-        String taskName = JOptionPane.showInputDialog(this, "Enter task name:");
-        if (taskName != null && !taskName.trim().isEmpty()) {
-            Task newTask = new Task(taskName.trim(), TaskType.CUSTOM, null, selectedChecklistName);
+        String rawTaskName = JOptionPane.showInputDialog(this, "Enter task name:");
+        String taskName = TaskManager.validateInputWithError(rawTaskName, "Task name");
+        if (taskName != null) {
+            Task newTask = new Task(taskName, TaskType.CUSTOM, null, selectedChecklistName);
             taskManager.addTask(newTask);
             if (currentChecklistPanel != null) {
                 currentChecklistPanel.updateTasks();
@@ -190,14 +202,18 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         JMenuItem addReminderItem = new JMenuItem("Add Reminder");
         addReminderItem.addActionListener(e -> addReminder());
         menu.add(addReminderItem);
+        JMenuItem editRemindersItem = new JMenuItem("View/Edit Reminders");
+        editRemindersItem.addActionListener(e -> editReminders());
+        menu.add(editRemindersItem);
         menu.show(checklistList, x, y);
     }
 
     private void renameChecklist() {
         String oldName = selectedChecklistName;
         if (oldName == null) return;
-        String newName = JOptionPane.showInputDialog(this, "Enter new name:", oldName);
-        if (newName != null && !newName.trim().isEmpty() && !newName.equals(oldName)) {
+        String rawNewName = JOptionPane.showInputDialog(this, "Enter new name:", oldName);
+        String newName = TaskManager.validateInputWithError(rawNewName, "Checklist name");
+        if (newName != null && !newName.equals(oldName)) {
             List<Task> allTasks = taskManager.getAllTasks();
             for (Task task : allTasks) {
                 if (task.getChecklistName() != null && task.getChecklistName().equals(oldName)) {
@@ -239,9 +255,12 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         updateTasks.run();
         // After deletion, select the first checklist if available
         if (listModel.size() > 0) {
-            selectChecklist(listModel.get(0));
+            String firstChecklist = listModel.get(0);
+            selectChecklist(firstChecklist);
+            checklistList.setSelectedValue(firstChecklist, true);
         } else {
             selectChecklist(null);
+            checklistList.clearSelection();
         }
     }
 
@@ -314,6 +333,147 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         cancelButton.addActionListener(e -> dialog.dispose());
 
         dialog.add(okButton);
+        dialog.add(cancelButton);
+
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    private void editReminders() {
+        if (selectedChecklistName == null) return;
+
+        List<Reminder> allReminders = taskManager.getReminders();
+        List<Reminder> checklistReminders = allReminders.stream()
+                .filter(r -> r.getChecklistName().equals(selectedChecklistName))
+                .toList();
+
+        if (checklistReminders.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No reminders found for this checklist.", "No Reminders", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        JDialog dialog = new JDialog();
+        dialog.setTitle("Edit Reminders for " + selectedChecklistName);
+        dialog.setModal(true);
+        dialog.setLayout(new BorderLayout());
+
+        DefaultListModel<String> reminderModel = new DefaultListModel<>();
+        for (Reminder r : checklistReminders) {
+            reminderModel.addElement(String.format("%d-%02d-%02d %02d:%02d",
+                    r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute()));
+        }
+
+        JList<String> reminderList = new JList<>(reminderModel);
+        JScrollPane scrollPane = new JScrollPane(reminderList);
+
+        JPanel buttonPanel = new JPanel();
+        JButton editButton = new JButton("Edit");
+        JButton deleteButton = new JButton("Delete");
+        JButton closeButton = new JButton("Close");
+
+        editButton.addActionListener(e -> {
+            int index = reminderList.getSelectedIndex();
+            if (index >= 0) {
+                Reminder reminder = checklistReminders.get(index);
+                editReminderDialog(reminder, () -> {
+                    // Refresh the list after editing
+                    List<Reminder> updatedReminders = taskManager.getReminders().stream()
+                            .filter(r -> r.getChecklistName().equals(selectedChecklistName))
+                            .toList();
+                    reminderModel.clear();
+                    for (Reminder r : updatedReminders) {
+                        reminderModel.addElement(String.format("%d-%02d-%02d %02d:%02d",
+                                r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute()));
+                    }
+                });
+            }
+        });
+
+        deleteButton.addActionListener(e -> {
+            int index = reminderList.getSelectedIndex();
+            if (index >= 0) {
+                Reminder reminder = checklistReminders.get(index);
+                int choice = JOptionPane.showConfirmDialog(dialog, "Delete this reminder?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+                if (choice == JOptionPane.YES_OPTION) {
+                    taskManager.removeReminder(reminder);
+                    reminderModel.remove(index);
+                    checklistReminders.remove(index);
+                }
+            }
+        });
+
+        closeButton.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(editButton);
+        buttonPanel.add(deleteButton);
+        buttonPanel.add(closeButton);
+
+        dialog.add(scrollPane, BorderLayout.CENTER);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setSize(300, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    private void editReminderDialog(Reminder reminder, Runnable onSave) {
+        JDialog dialog = new JDialog();
+        dialog.setTitle("Edit Reminder");
+        dialog.setModal(true);
+        dialog.setLayout(new GridLayout(6, 2, 5, 5));
+
+        JComboBox<Integer> yearBox = new JComboBox<>(IntStream.rangeClosed(2020, 2030).boxed().toArray(Integer[]::new));
+        yearBox.setSelectedItem(reminder.getYear());
+        JComboBox<Integer> monthBox = new JComboBox<>(IntStream.rangeClosed(1, 12).boxed().toArray(Integer[]::new));
+        monthBox.setSelectedItem(reminder.getMonth());
+        JComboBox<Integer> dayBox = new JComboBox<>(IntStream.rangeClosed(1, 31).boxed().toArray(Integer[]::new));
+        dayBox.setSelectedItem(reminder.getDay());
+        JComboBox<Integer> hourBox = new JComboBox<>(IntStream.rangeClosed(0, 23).boxed().toArray(Integer[]::new));
+        hourBox.setSelectedItem(reminder.getHour());
+        JComboBox<Integer> minuteBox = new JComboBox<>(IntStream.rangeClosed(0, 59).boxed().toArray(Integer[]::new));
+        minuteBox.setSelectedItem(reminder.getMinute());
+
+        dialog.add(new JLabel("Year:"));
+        dialog.add(yearBox);
+        dialog.add(new JLabel("Month:"));
+        dialog.add(monthBox);
+        dialog.add(new JLabel("Day:"));
+        dialog.add(dayBox);
+        dialog.add(new JLabel("Hour:"));
+        dialog.add(hourBox);
+        dialog.add(new JLabel("Minute:"));
+        dialog.add(minuteBox);
+
+        JButton saveButton = new JButton("Save");
+        saveButton.addActionListener(e -> {
+            try {
+                int year = (Integer) yearBox.getSelectedItem();
+                int month = (Integer) monthBox.getSelectedItem();
+                int day = (Integer) dayBox.getSelectedItem();
+                int hour = (Integer) hourBox.getSelectedItem();
+                int minute = (Integer) minuteBox.getSelectedItem();
+
+                // Validate date
+                java.time.LocalDateTime.of(year, month, day, hour, minute);
+
+                // Remove old reminder and add new one
+                taskManager.removeReminder(reminder);
+                Reminder newReminder = new Reminder(reminder.getChecklistName(), year, month, day, hour, minute);
+                taskManager.addReminder(newReminder);
+
+                dialog.dispose();
+                onSave.run();
+                JOptionPane.showMessageDialog(this, "Reminder updated successfully.");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, "Invalid date/time. Please check your input.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        JButton cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        dialog.add(saveButton);
         dialog.add(cancelButton);
 
         dialog.pack();

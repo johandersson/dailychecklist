@@ -93,4 +93,54 @@ public class TaskManager {
     public void removeReminder(Reminder reminder) {
         repository.removeReminder(reminder);
     }
+
+    /**
+     * Validates and sanitizes user input for task/checklist names
+     * @param input The raw user input
+     * @return Sanitized input or null if invalid
+     */
+    public static String validateAndSanitizeInput(String input) {
+        if (input == null) {
+            return null;
+        }
+
+        String trimmed = input.trim();
+
+        // Check length limits
+        if (trimmed.isEmpty() || trimmed.length() > 100) {
+            return null;
+        }
+
+        // Remove potentially dangerous characters for XML and file systems
+        // Allow alphanumeric, spaces, hyphens, underscores, and basic punctuation
+        if (!trimmed.matches("[\\w\\s\\-_.()]+")) {
+            return null;
+        }
+
+        // Additional security: prevent path traversal attempts
+        if (trimmed.contains("..") || trimmed.contains("/") || trimmed.contains("\\") ||
+            trimmed.contains("<") || trimmed.contains(">") || trimmed.contains("&")) {
+            return null;
+        }
+
+        return trimmed;
+    }
+
+    /**
+     * Validates input and shows appropriate error message
+     * @param input The raw user input
+     * @param fieldName Name of the field for error messages
+     * @return Validated and sanitized input, or null if invalid
+     */
+    public static String validateInputWithError(String input, String fieldName) {
+        String validated = validateAndSanitizeInput(input);
+        if (validated == null && input != null && !input.trim().isEmpty()) {
+            javax.swing.JOptionPane.showMessageDialog(null,
+                fieldName + " contains invalid characters or is too long.\n" +
+                "Use only letters, numbers, spaces, hyphens, underscores, dots, and parentheses.\n" +
+                "Maximum length: 100 characters.",
+                "Invalid Input", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
+        return validated;
+    }
 }
