@@ -132,6 +132,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         }
         if (checklistName != null) {
             currentChecklistPanel = new CustomChecklistPanel(taskManager, new TaskUpdater(), checklistName);
+            currentChecklistPanel.updateTasks();
             rightPanel.add(currentChecklistPanel, BorderLayout.CENTER);
         } else {
             currentChecklistPanel = null;
