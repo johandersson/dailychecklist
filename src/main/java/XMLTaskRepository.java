@@ -21,6 +21,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -450,14 +451,53 @@ public class XMLTaskRepository implements TaskRepository {
         remindersDirty = false;
     }
 
-    private Element getOrCreateRemindersElement(Document document, Element root) {
-        NodeList remindersList = root.getElementsByTagName("reminders");
-        if (remindersList.getLength() > 0) {
-            return (Element) remindersList.item(0);
-        } else {
-            Element remindersElement = document.createElement("reminders");
-            root.appendChild(remindersElement);
-            return remindersElement;
+    /**
+     * Gets reminders that are due within the next specified minutes.
+     * More efficient than checking all reminders by filtering upfront.
+     */
+    public List<Reminder> getDueReminders(int minutesAhead, java.util.Set<String> openedChecklists) {
+        List<Reminder> allReminders = getReminders();
+        List<Reminder> dueReminders = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime cutoff = now.plusMinutes(minutesAhead);
+
+        for (Reminder r : allReminders) {
+            // Skip reminders for checklists that have been opened in this session
+            String checklistName = r.getChecklistName();
+            if (checklistName != null && openedChecklists != null && openedChecklists.contains(checklistName)) {
+                continue;
+            }
+
+            LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+            if (!reminderTime.isAfter(now) && reminderTime.isAfter(now.minusMinutes(5))) {
+                // Due within last 5 minutes (to avoid showing very old ones)
+                dueReminders.add(r);
+            }
         }
+        return dueReminders;
+    }
+
+    /**
+     * Gets the next upcoming reminder time efficiently.
+     * Returns null if no future reminders exist.
+     */
+    public LocalDateTime getNextReminderTime(java.util.Set<String> openedChecklists) {
+        List<Reminder> reminders = getReminders();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime nextTime = null;
+
+        for (Reminder r : reminders) {
+            // Skip reminders for checklists that have been opened in this session
+            String checklistName = r.getChecklistName();
+            if (checklistName != null && openedChecklists != null && openedChecklists.contains(checklistName)) {
+                continue;
+            }
+
+            LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+            if (reminderTime.isAfter(now) && (nextTime == null || reminderTime.isBefore(nextTime))) {
+                nextTime = reminderTime;
+            }
+        }
+        return nextTime;
     }
 }

@@ -306,6 +306,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         dialog.setLayout(new BorderLayout());
         dialog.setResizable(false);
 
+        LocalDateTime now = LocalDateTime.now();
+
         // Header
         String currentTimeString = String.format("%02d:%02d on %d/%d/%d", 
             now.getHour(), now.getMinute(), now.getMonthValue(), now.getDayOfMonth(), now.getYear());
@@ -318,8 +320,6 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new java.awt.Insets(5, 5, 5, 5);
         gbc.anchor = GridBagConstraints.WEST;
-
-        LocalDateTime now = LocalDateTime.now();
 
         // Date section
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
