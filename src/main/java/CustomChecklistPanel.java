@@ -91,17 +91,17 @@ public class CustomChecklistPanel extends JPanel {
 
     private void showContextMenu(MouseEvent e, JList<Task> list, int index) {
         JPopupMenu contextMenu = new JPopupMenu();
-        JMenuItem editItem = new JMenuItem("Rename checklist");
+        JMenuItem editItem = new JMenuItem("Rename task");
         editItem.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
-            String newName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for checklist:", task.getName());
+            String newName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for task:", task.getName());
             if (newName != null && !newName.trim().isEmpty()) {
                 task.setName(newName.trim());
                 taskManager.updateTask(task);
                 list.repaint(list.getCellBounds(index, index));
             }
         });
-        JMenuItem removeItem = new JMenuItem("Remove checklist");
+        JMenuItem removeItem = new JMenuItem("Remove task");
         removeItem.addActionListener(event -> removeTask(list, index));
         contextMenu.add(editItem);
         contextMenu.add(removeItem);
@@ -110,7 +110,7 @@ public class CustomChecklistPanel extends JPanel {
 
     private void removeTask(JList<Task> list, int index) {
         Task task = list.getModel().getElementAt(index);
-        int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to remove this checklist?", "Confirm Removal", JOptionPane.YES_NO_OPTION);
+        int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to remove this task?", "Confirm Removal", JOptionPane.YES_NO_OPTION);
         if (result == JOptionPane.YES_OPTION) {
             taskManager.removeTask(task);
             updateTasks();
