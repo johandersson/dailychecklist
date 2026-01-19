@@ -15,8 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */import java.util.Date;
-import java.util.UUID;
 import java.util.Objects;
+import java.util.UUID;
 
 public class Task {
     private String doneDate;
@@ -25,24 +25,37 @@ public class Task {
     private TaskType type;
     private String weekday;
     private boolean done;
+    private String checklistName;
     // Constructor when loading from file (ID provided)
-    public Task(String id, String name, TaskType type, String weekday, boolean done, String doneDate) {
+    public Task(String id, String name, TaskType type, String weekday, boolean done, String doneDate, String checklistName) {
         this.id = id;
         this.name = name;
         this.type = type;
         this.weekday = weekday;
         this.done = done;
         this.doneDate = doneDate;
+        this.checklistName = checklistName;
     }
 
     // Constructor when creating a new task (ID generated)
-    public Task(String name, TaskType type, String weekday) {
+    public Task(String name, TaskType type, String weekday, String checklistName) {
         this.id = UUID.randomUUID().toString();
         this.name = name;
         this.type = type;
         this.weekday = weekday;
         this.done = false;
         this.doneDate = null;
+        this.checklistName = checklistName;
+    }
+
+    // Constructor for backwards compatibility (checklistName = null)
+    public Task(String name, TaskType type, String weekday) {
+        this(name, type, weekday, null);
+    }
+
+    // Constructor for loading from file without checklistName (backwards compatibility)
+    public Task(String id, String name, TaskType type, String weekday, boolean done, String doneDate) {
+        this(id, name, type, weekday, done, doneDate, null);
     }
 
 
@@ -95,7 +108,14 @@ public class Task {
     @Override
     public String toString() {
         return "Task [id=" + id + ", name=" + name + ", type=" + type
-                + ", weekday=" + weekday + ", done=" + done + "]";
+                + ", weekday=" + weekday + ", done=" + done + ", checklistName=" + checklistName + "]";
+    }
+
+    public String getChecklistName() {
+        return checklistName;
+    }
+    public void setChecklistName(String checklistName) {
+        this.checklistName = checklistName;
     }
 
     public String getDoneDate() {

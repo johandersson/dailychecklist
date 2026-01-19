@@ -20,6 +20,9 @@ import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -942,5 +945,20 @@ public class MenuBarBuilder {
 
         menuBar.add(fileMenu);
         return menuBar;
+    }
+
+    private String readGpl3Text() {
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                getClass().getResourceAsStream("/gpl3.txt"), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+        } catch (Exception e) {
+            // Fallback to a short message if file not found
+            return "GNU General Public License v3\n\nSee https://www.gnu.org/licenses/gpl-3.0.html for the full text.";
+        }
+        return sb.toString();
     }
 }

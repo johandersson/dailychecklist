@@ -34,7 +34,7 @@ public class DailyChecklist {
     private SettingsManager settingsManager;
     private ChecklistPanel checklistPanel;
     private AddTaskPanel addTaskPanel;
-    private CustomChecklistPanel customChecklistPanel;
+    private CustomChecklistsOverviewPanel customChecklistsOverviewPanel;
     private static FocusTimer focusTimerInstance = FocusTimer.getInstance();
 
     public DailyChecklist() {
@@ -49,31 +49,34 @@ public class DailyChecklist {
         checklistPanel = new ChecklistPanel(checklistManager, taskUpdater);
         addTaskPanel = new AddTaskPanel(checklistManager, () -> {
             checklistPanel.updateTasks();
-            customChecklistPanel.updateTasks();
+            customChecklistsOverviewPanel.updateTasks();
         });
-        customChecklistPanel = new CustomChecklistPanel(checklistManager, taskUpdater);
+        customChecklistsOverviewPanel = new CustomChecklistsOverviewPanel(checklistManager, () -> {
+            checklistPanel.updateTasks();
+            customChecklistsOverviewPanel.updateTasks();
+        });
         if (!GraphicsEnvironment.isHeadless()) {
             addTabbedPane();
             frame.setJMenuBar(MenuBarBuilder.build(frame, checklistManager, () -> {
                 checklistPanel.updateTasks();
-                customChecklistPanel.updateTasks();
+                customChecklistsOverviewPanel.updateTasks();
             }));
             setTitleWithDate();
         }
         checklistPanel.setShowWeekdayTasks(settingsManager.getShowWeekdayTasks());
         checklistPanel.updateTasks();
-        customChecklistPanel.updateTasks();
+        customChecklistsOverviewPanel.updateTasks();
         if (!GraphicsEnvironment.isHeadless()) {
             KeyBindingManager.bindKeys(frame.getRootPane(), frame, checklistManager, () -> {
                 checklistPanel.updateTasks();
-                customChecklistPanel.updateTasks();
+                customChecklistsOverviewPanel.updateTasks();
             });
             frame.addWindowListener(new WindowAdapter() {
                 @Override
                 public void windowActivated(WindowEvent e) {
                     settingsManager.checkDateAndUpdate(checklistManager, () -> {
                         checklistPanel.updateTasks();
-                        customChecklistPanel.updateTasks();
+                        customChecklistsOverviewPanel.updateTasks();
                     }, checklistPanel.isShowWeekdayTasks());
                 }
             });
@@ -103,7 +106,7 @@ public class DailyChecklist {
     private void addTabbedPane() {
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.add("Checklist", checklistPanel);
-        tabbedPane.add("Custom checklists", customChecklistPanel);
+        tabbedPane.add("Custom checklists", customChecklistsOverviewPanel);
         tabbedPane.add("Add task(s)", addTaskPanel);
         frame.add(tabbedPane);
     }
