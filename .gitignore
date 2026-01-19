@@ -1,0 +1,65 @@
+### IntelliJ IDEA ###
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+### Java Build Files ###
+# Compiled class files
+*.class
+
+# Target directory (build output like Maven)
+target/
+
+# JAR files in root directory
+/*.jar
+
+lib/
+*.jar
+.idea/
+
+# Maven files
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/
+
+# Temporary files
+*.tmp
+*.bak
+
+# Log files
+*.log
+
+# Test coverage reports
+coverage-report/
+jacoco.exec
+coverage.csv

@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><tasks><task id="1"><name>Test Task</name><type>MORNING</type><weekday></weekday><done>false</done><doneDate></doneDate></task><task id="2"><name>Weekday Task</name><type>EVENING</type><weekday>monday</weekday><done>true</done><doneDate>2025-11-19</doneDate></task></tasks>
