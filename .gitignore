@@ -41,6 +41,7 @@ target/
 lib/
 *.jar
 .idea/
+tasks.xml
 
 # Temporary files
 *.tmp
