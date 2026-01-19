@@ -1,0 +1,113 @@
+<html><head><style>
+h1 { font-size: 24pt; color: #333; }
+h2 { font-size: 18pt; color: #555; }
+h3 { font-size: 14pt; color: #777; }
+body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
+</style></head><body>
+<h1>Daily Checklist Help</h1>
+
+<p>Daily Checklist is a specialized app for managing daily checklists, not general todo lists. It 'remembers' if you've completed tasks each day but resets fresh daily, without saving history. Unlike many todo apps that struggle with recurring tasks, this is designed specifically for daily checklists.</p>
+
+<p>Welcome to Daily Checklist! This guide will help you get started with managing your daily tasks and using the focus timer.</p>
+
+<h2>Getting Started</h2>
+
+<ol>
+<li><b>Launch the App</b>: Run <code>java -jar dailychecklist.jar</code> or double-click the JAR file.</li>
+<li><b>Main Interface</b>: The app opens with tabs for Checklist, Add Task, and Settings.</li>
+</ol>
+
+<h2>Managing Tasks</h2>
+
+<h3>Adding a New Task</h3>
+<ul>
+<li>Click the "Add Task" tab.</li>
+<li>Fill in the task name (e.g., "Morning Exercise").</li>
+<li>Choose the time: Morning or Evening.</li>
+<li>Select frequency:
+<ul>
+<li><b>Daily</b>: Every day.</li>
+<li><b>Weekday</b>: Monday to Friday.</li>
+<li><b>Specific Day</b>: Pick a day like Monday or Tuesday.</li>
+</ul>
+</li>
+<li>Click "Add Task". The task appears in the Checklist tab under the chosen time.</li>
+</ul>
+
+<h3>Viewing Tasks</h3>
+<ul>
+<li>Go to the "Checklist" tab.</li>
+<li>Tasks are grouped by Morning and Evening.</li>
+<li>Each task shows its name and day.</li>
+</ul>
+
+<h3>Editing Tasks</h3>
+<ul>
+<li>Right-click a task in the Checklist.</li>
+<li>Choose "Rename" to change the name.</li>
+<li>Choose "Remove" to delete it.</li>
+<li>Confirm changes in the popup.</li>
+</ul>
+
+<h3>Reordering Tasks</h3>
+<ul>
+<li>Drag and drop tasks in the list to reorder them.</li>
+</ul>
+
+<h2>Using the Focus Timer</h2>
+
+<h3>Starting a Timer</h3>
+<ul>
+<li>Right-click a task in the Checklist.</li>
+<li>Select "Start Focus Timer".</li>
+<li>Enter the duration in minutes (e.g., 25 for Pomodoro).</li>
+<li>Click "OK" to begin.</li>
+</ul>
+
+<h3>During the Timer</h3>
+<ul>
+<li>A new window shows the countdown.</li>
+<li>Circles fill up as time passes (each circle = 5 minutes).</li>
+<li>Use controls:
+<ul>
+<li><b>Space</b>: Pause/Resume.</li>
+<li><b>Enter</b>: Start (if paused).</li>
+</ul>
+</li>
+<li>When time ends, a notification appears.</li>
+</ul>
+
+<h3>Tips for Focus</h3>
+<ul>
+<li>Use the timer for short bursts (e.g., 15-30 minutes).</li>
+<li>Take breaks between sessions.</li>
+<li>Track progress visually with the circles.</li>
+</ul>
+
+<h2>Settings</h2>
+
+<ul>
+<li>Access via the menu bar.</li>
+<li>Customize app behavior (e.g., default timer lengths).</li>
+</ul>
+
+<h2>Troubleshooting</h2>
+
+<ul>
+<li><b>App Won't Start</b>: Ensure Java is installed (<code>java -version</code>).</li>
+<li><b>Tasks Not Saving</b>: Check write permissions; tasks save to <code>tasks.xml</code>.</li>
+<li><b>Timer Issues</b>: Restart the app if the timer freezes.</li>
+</ul>
+
+<h2>Keyboard Shortcuts</h2>
+
+<ul>
+<li><b>Add Task</b>: Ctrl+A</li>
+<li><b>Refresh Tasks</b>: F5</li>
+<li><b>Timer Pause/Resume</b>: Space</li>
+</ul>
+
+<p>For more details, check the README.md file or visit the project repository.</p>
+
+<p>Enjoy staying productive!</p>
+</body></html>

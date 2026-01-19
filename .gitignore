@@ -32,7 +32,7 @@ bin/
 # Compiled class files
 *.class
 
-# Target directory (build output like Maven)
+# Target directory (build output)
 target/
 
 # JAR files in root directory
@@ -41,16 +41,6 @@ target/
 lib/
 *.jar
 .idea/
-
-# Maven files
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
-dependency-reduced-pom.xml
-buildNumber.properties
-.mvn/
 
 # Temporary files
 *.tmp
