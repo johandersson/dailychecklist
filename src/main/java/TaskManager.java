@@ -14,8 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */import java.time.LocalDateTime;
-import java.util.ArrayList;
+ */import java.util.ArrayList;
 import java.util.List;
 
 public class TaskManager {
@@ -79,57 +78,12 @@ public class TaskManager {
         return false;
     }
 
-    /**
-     * Gets reminders that are due within the next specified minutes.
-     * More efficient than checking all reminders.
-     */
     public List<Reminder> getDueReminders(int minutesAhead, java.util.Set<String> openedChecklists) {
-        if (repository instanceof XMLTaskRepository) {
-            return ((XMLTaskRepository) repository).getDueReminders(minutesAhead, openedChecklists);
-        }
-        // Fallback to old method if not XMLTaskRepository
-        List<Reminder> allReminders = repository.getReminders();
-        List<Reminder> dueReminders = new ArrayList<>();
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-
-        for (Reminder r : allReminders) {
-            String checklistName = r.getChecklistName();
-            if (checklistName != null && openedChecklists != null && openedChecklists.contains(checklistName)) {
-                continue;
-            }
-
-            java.time.LocalDateTime reminderTime = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-            if (!reminderTime.isAfter(now) && reminderTime.isAfter(now.minusMinutes(5))) {
-                dueReminders.add(r);
-            }
-        }
-        return dueReminders;
+        return repository.getDueReminders(minutesAhead, openedChecklists);
     }
 
-    /**
-     * Gets the next upcoming reminder time efficiently.
-     */
     public java.time.LocalDateTime getNextReminderTime(java.util.Set<String> openedChecklists) {
-        if (repository instanceof XMLTaskRepository) {
-            return ((XMLTaskRepository) repository).getNextReminderTime(openedChecklists);
-        }
-        // Fallback implementation
-        List<Reminder> reminders = repository.getReminders();
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        java.time.LocalDateTime nextTime = null;
-
-        for (Reminder r : reminders) {
-            String checklistName = r.getChecklistName();
-            if (checklistName != null && openedChecklists != null && openedChecklists.contains(checklistName)) {
-                continue;
-            }
-
-            java.time.LocalDateTime reminderTime = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-            if (reminderTime.isAfter(now) && (nextTime == null || reminderTime.isBefore(nextTime))) {
-                nextTime = reminderTime;
-            }
-        }
-        return nextTime;
+        return repository.getNextReminderTime(openedChecklists);
     }
 
     public void setTasks(List<Task> tasks) {
