@@ -50,10 +50,12 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private CustomChecklistPanel currentChecklistPanel;
     private String selectedChecklistName;
     private JButton addTaskButton;
+    private Set<String> allChecklistNames;
 
     public CustomChecklistsOverviewPanel(TaskManager taskManager, Runnable updateTasks) {
         this.taskManager = taskManager;
         this.updateTasks = updateTasks;
+        this.allChecklistNames = new java.util.HashSet<>();
         initialize();
     }
 
@@ -113,6 +115,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
 
         setLayout(new BorderLayout());
         add(splitPane, BorderLayout.CENTER);
+        
+        // Initialize with existing checklist names
+        allChecklistNames.addAll(taskManager.getCustomChecklistNames());
     }
 
     private void createNewChecklist() {
@@ -127,6 +132,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             return;
         }
         newChecklistField.setText("");
+        allChecklistNames.add(name);  // Track the new checklist
         selectChecklist(name);
         updateTasks.run();
         updateTasks();
@@ -181,11 +187,16 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     public void updateTasks() {
         listModel.clear();
         Set<String> names = taskManager.getCustomChecklistNames();
+        // Add all checklists that have tasks
         for (String name : names) {
             listModel.addElement(name);
+            allChecklistNames.add(name);  // Ensure we track all existing checklists
         }
-        if (selectedChecklistName != null && !listModel.contains(selectedChecklistName)) {
-            listModel.addElement(selectedChecklistName);
+        // Add all known checklists (including empty ones)
+        for (String name : allChecklistNames) {
+            if (!listModel.contains(name)) {
+                listModel.addElement(name);
+            }
         }
         if (currentChecklistPanel != null) {
             currentChecklistPanel.updateTasks();
@@ -232,6 +243,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 }
             }
             updateTasks.run();
+            allChecklistNames.remove(oldName);  // Remove old name
+            allChecklistNames.add(newName);     // Add new name
             selectChecklist(newName);
         }
     }
@@ -253,6 +266,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         } else if (choice == 2) { // Move to evening
             moveTasksToType(name, TaskType.EVENING);
         }
+        allChecklistNames.remove(name);  // Remove from tracked checklists
         updateTasks.run();
         // After deletion, select the first checklist if available
         if (listModel.size() > 0) {
