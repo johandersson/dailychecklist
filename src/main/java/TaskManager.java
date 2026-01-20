@@ -42,6 +42,23 @@ public class TaskManager {
         repository.updateTask(task);
     }
 
+    /**
+     * Updates a task without showing error dialogs.
+     * Returns true if successful, false if failed.
+     */
+    public boolean updateTaskQuiet(Task task) {
+        if (repository instanceof XMLTaskRepository) {
+            return ((XMLTaskRepository) repository).updateTaskQuiet(task);
+        }
+        // Fallback for other repository types
+        try {
+            repository.updateTask(task);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public void removeTask(Task task) {
         repository.removeTask(task);
     }

@@ -79,6 +79,12 @@ public class DailyChecklist {
             // Update settings manager with frame as parent component
             this.settingsManager = new SettingsManager(frame);
             this.settingsManager.load();
+            
+            // Set parent component for repository error dialogs
+            if (repository instanceof XMLTaskRepository) {
+                ((XMLTaskRepository) repository).setParentComponent(frame);
+            }
+            
             initializeUI();
         }
         addTaskPanel = new AddTaskPanel(checklistManager, tasks -> {
