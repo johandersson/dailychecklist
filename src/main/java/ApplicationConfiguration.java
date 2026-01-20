@@ -36,7 +36,7 @@ public final class ApplicationConfiguration {
 
     // Backup configuration
     public static final int MAX_BACKUP_FILES = 10;
-    public static final long BACKUP_INTERVAL_MINUTES = 30;
+    public static final long BACKUP_INTERVAL_MINUTES = 5;
     public static final long BACKUP_INTERVAL_MILLIS = BACKUP_INTERVAL_MINUTES * 60 * 1000;
 
     // UI Configuration

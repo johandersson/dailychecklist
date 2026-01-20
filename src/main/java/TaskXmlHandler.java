@@ -78,6 +78,9 @@ public class TaskXmlHandler {
      */
     public void writeDocument(Document document) throws TransformerException {
         Transformer transformer = transformerFactory.newTransformer();
+        transformer.setOutputProperty("encoding", "UTF-8");
+        transformer.setOutputProperty("indent", "yes");
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
         DOMSource source = new DOMSource(document);
         StreamResult result = new StreamResult(new File(fileName));
         transformer.transform(source, result);
