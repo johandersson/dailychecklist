@@ -42,7 +42,7 @@ public class DailyChecklist {
     private static FocusTimer focusTimerInstance = FocusTimer.getInstance();
     private static ReminderQueue reminderQueue;
     private static java.util.Set<String> openedChecklists = new java.util.HashSet<>();
-
+    private static java.util.Set<Reminder> shownReminders = new java.util.HashSet<>();    private TaskRepository repository;
     public DailyChecklist() {
         settingsManager = new SettingsManager();
         settingsManager.load();
@@ -100,13 +100,17 @@ public class DailyChecklist {
                     LocalDateTime now = LocalDateTime.now();
                     
                     for (Reminder r : dueReminders) {
-                        // These reminders are already filtered for opened checklists and time range
-                        reminderQueue.addReminder(r);
+                        // Only add reminders that haven't been shown in this session
+                        if (!shownReminders.contains(r)) {
+                            reminderQueue.addReminder(r);
+                            shownReminders.add(r);
+                        }
                         
                         // Also check for old reminders to clean up (less frequent check)
                         LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
                         if (now.minusHours(1).isAfter(reminderTime)) {
                             checklistManager.removeReminder(r);
+                            shownReminders.remove(r); // Clean up from shown reminders too
                         }
                     }
                 } catch (InterruptedException e) {
@@ -218,7 +222,8 @@ public class DailyChecklist {
     }
 
     private void initializeTaskManager() {
-        checklistManager = new TaskManager(new XMLTaskRepository());
+        repository = new XMLTaskRepository();
+        checklistManager = new TaskManager(repository);
     }
 
     private void addTabbedPane() {
@@ -271,6 +276,12 @@ public class DailyChecklist {
             frame.setExtendedState(JFrame.NORMAL);
             frame.toFront();
             frame.requestFocus();
+        }
+    }
+
+    public void shutdown() {
+        if (repository != null) {
+            repository.shutdown();
         }
     }
 }

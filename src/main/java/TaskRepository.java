@@ -44,4 +44,26 @@ public interface TaskRepository {
      * Returns null if no future reminders exist.
      */
     java.time.LocalDateTime getNextReminderTime(java.util.Set<String> openedChecklists);
+
+    /**
+     * Gets all custom checklist names (including empty ones).
+     */
+    java.util.Set<String> getChecklistNames();
+
+    /**
+     * Adds a checklist name to the persistent storage.
+     */
+    void addChecklistName(String name);
+
+    /**
+     * Removes a checklist name from the persistent storage.
+     */
+    void removeChecklistName(String name);
+
+    /**
+     * Shuts down the repository and cleans up resources.
+     */
+    default void shutdown() {
+        // Default implementation does nothing
+    }
 }
