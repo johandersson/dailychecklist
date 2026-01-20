@@ -42,8 +42,10 @@ public class ReminderQueue {
      * Adds a reminder to the queue and attempts to show it if no dialog is currently displayed.
      */
     public void addReminder(Reminder reminder) {
-        queue.add(reminder);
-        showNextReminder();
+        if (!queue.contains(reminder)) {
+            queue.add(reminder);
+            showNextReminder();
+        }
     }
 
     /**

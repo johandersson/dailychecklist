@@ -23,7 +23,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
-
+import java.util.Objects;
 import javax.swing.JFrame;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
@@ -145,7 +145,11 @@ public class DailyChecklist {
                 },
                 // On Done action
                 () -> {
-                    checklistManager.removeReminder(reminder);
+                    // Remove all reminders for this checklist
+                    List<Reminder> allReminders = checklistManager.getReminders();
+                    allReminders.stream()
+                        .filter(r -> Objects.equals(r.getChecklistName(), reminder.getChecklistName()))
+                        .forEach(checklistManager::removeReminder);
                 },
                 // On Remind Later (15 minutes)
                 () -> {
