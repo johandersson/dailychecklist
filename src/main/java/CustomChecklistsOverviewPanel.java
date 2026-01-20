@@ -171,18 +171,25 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Please select a checklist first.");
             return;
         }
-        String rawTaskName = JOptionPane.showInputDialog(this, "Enter task name:");
-        String taskName = TaskManager.validateInputWithError(rawTaskName, "Task name");
-        if (taskName != null) {
-            Task newTask = new Task(taskName, TaskType.CUSTOM, null, selectedChecklistName);
-            taskManager.addTask(newTask);
+        JDialog addTaskDialog = new JDialog();
+        addTaskDialog.setTitle("Add Tasks to " + selectedChecklistName);
+        addTaskDialog.setModal(true);
+        addTaskDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+
+        AddTaskPanel addPanel = new AddTaskPanel(taskManager, tasks -> {
             if (currentChecklistPanel != null) {
                 currentChecklistPanel.updateTasks();
                 rightPanel.revalidate();
                 rightPanel.repaint();
             }
             updateTasks.run();
-        }
+            addTaskDialog.dispose();
+        }, selectedChecklistName);
+
+        addTaskDialog.add(addPanel);
+        addTaskDialog.pack();
+        addTaskDialog.setLocationRelativeTo(this);
+        addTaskDialog.setVisible(true);
     }
 
     public void updateTasks() {
