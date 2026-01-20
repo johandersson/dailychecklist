@@ -15,21 +15,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.awt.event.ActionListener;
 
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 
 public class CustomAddTaskPanel extends BaseAddTaskPanel {
     private final String checklistName;
@@ -48,16 +36,19 @@ public class CustomAddTaskPanel extends BaseAddTaskPanel {
     protected ActionListener createAddActionListener() {
         return e -> {
             String[] tasks = taskField.getText().split("\\n");
+            int addedCount = 0;
             for (String taskName : tasks) {
                 if (!taskName.trim().isEmpty()) {
                     Task newTask = new Task(taskName.trim(), TaskType.CUSTOM, null, checklistName);
                     taskManager.addTask(newTask);
-                } else {
-                    JOptionPane.showMessageDialog(this, "Task name cannot be empty.", "Validation Error", JOptionPane.ERROR_MESSAGE);
-                    return;
+                    addedCount++;
                 }
             }
-            String message = String.format("Added %d custom tasks to %s successfully.", tasks.length, checklistName);
+            if (addedCount == 0) {
+                JOptionPane.showMessageDialog(this, "No valid tasks to add.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            String message = String.format("Added %d custom tasks to %s successfully.", addedCount, checklistName);
             JOptionPane.showMessageDialog(this, message, "Tasks Added", JOptionPane.INFORMATION_MESSAGE);
             taskField.setText("");
             updateTasks.run();

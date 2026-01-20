@@ -199,13 +199,10 @@ public class AddTaskPanel extends JPanel {
                         JOptionPane.showMessageDialog(this, "Invalid selection.", "Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
-                    String selectedWeekday = (weekdayComboBox.isEnabled() && type != TaskType.CUSTOM) ? (String) weekdayComboBox.getSelectedItem() : null;
+                    String selectedWeekday = (weekdayComboBox != null && weekdayComboBox.isEnabled() && type != TaskType.CUSTOM) ? (String) weekdayComboBox.getSelectedItem() : null;
                     Task newTask = new Task(taskName.trim(), type, selectedWeekday, checklistName);
                     taskManager.addTask(newTask);
                     addedTasks.add(newTask);
-                } else {
-                    JOptionPane.showMessageDialog(this, "Task name cannot be empty.", "Validation Error", JOptionPane.ERROR_MESSAGE);
-                    return;
                 }
             }
             
