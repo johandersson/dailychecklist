@@ -18,6 +18,9 @@
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,8 +76,8 @@ public class ReminderManager {
         List<Reminder> reminders = new ArrayList<>();
         Properties props = new Properties();
 
-        try (FileInputStream fis = new FileInputStream(reminderFileName)) {
-            props.load(fis);
+        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(reminderFileName), StandardCharsets.UTF_8)) {
+            props.load(reader);
 
             int reminderCount = 0;
             boolean exceededLimit = false;
@@ -169,8 +172,8 @@ public class ReminderManager {
             props.setProperty(key, value);
         }
 
-        try (FileOutputStream fos = new FileOutputStream(reminderFileName)) {
-            props.store(fos, "Daily Checklist Reminders");
+        try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(reminderFileName), StandardCharsets.UTF_8)) {
+            props.store(writer, "Daily Checklist Reminders");
         } catch (IOException e) {
             // Ignore errors
         }

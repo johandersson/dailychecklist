@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.Set;
 
 public class XMLTaskRepository implements TaskRepository {
-    private static String FILE_NAME = System.getProperty("user.home") + File.separator + "dailychecklist-tasks.xml";
-    private static String REMINDER_FILE_NAME = System.getProperty("user.home") + File.separator + "dailychecklist-reminders.properties";
-    private static String CHECKLIST_NAMES_FILE_NAME = System.getProperty("user.home") + File.separator + "dailychecklist-checklist-names.properties";
+    private static String FILE_NAME = ApplicationConfiguration.APPLICATION_DATA_DIR + File.separator + ApplicationConfiguration.DATA_FILE_NAME;
+    private static String REMINDER_FILE_NAME = ApplicationConfiguration.APPLICATION_DATA_DIR + File.separator + ApplicationConfiguration.REMINDERS_FILE_NAME;
+    private static String CHECKLIST_NAMES_FILE_NAME = ApplicationConfiguration.APPLICATION_DATA_DIR + File.separator + ApplicationConfiguration.CHECKLIST_NAMES_FILE_NAME;
 
     // Component managers
     private TaskXmlHandler taskXmlHandler;
@@ -167,7 +167,7 @@ public class XMLTaskRepository implements TaskRepository {
     public void addTask(Task task) {
         try {
             taskXmlHandler.addTask(task);
-            backupManager.createBackup("save");
+            backupManager.createBackup("add-task");
         } catch (Exception e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
@@ -179,7 +179,7 @@ public class XMLTaskRepository implements TaskRepository {
     public void updateTask(Task task) {
         try {
             taskXmlHandler.updateTask(task);
-            backupManager.createBackup("save");
+            backupManager.createBackup("update-task");
         } catch (Exception e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
@@ -191,7 +191,7 @@ public class XMLTaskRepository implements TaskRepository {
     public void removeTask(Task task) {
         try {
             taskXmlHandler.removeTask(task);
-            backupManager.createBackup("save");
+            backupManager.createBackup("remove-task");
         } catch (Exception e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
@@ -251,12 +251,12 @@ public class XMLTaskRepository implements TaskRepository {
     }
 
     @Override
-    public List<Reminder> getDueReminders(int minutesAhead, java.util.Set<String> openedChecklists) {
+    public List<Reminder> getDueReminders(int minutesAhead, Set<String> openedChecklists) {
         return reminderManager.getDueReminders(minutesAhead, openedChecklists);
     }
 
     @Override
-    public LocalDateTime getNextReminderTime(java.util.Set<String> openedChecklists) {
+    public LocalDateTime getNextReminderTime(Set<String> openedChecklists) {
         return reminderManager.getNextReminderTime(openedChecklists);
     }
 

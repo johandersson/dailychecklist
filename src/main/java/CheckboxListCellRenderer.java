@@ -26,7 +26,6 @@ import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.ListCellRenderer;
@@ -75,7 +74,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.weekdayColor = WEEKDAY_COLORS.get(task.getWeekday());
         this.isWeekdayTask = task.getWeekday() != null && WEEKDAY_ABBREVIATIONS.containsKey(task.getWeekday());
 
-        setFont(list.getFont()); // Keep the original list font for task text
+        setFont(new Font("Yu Gothic UI", Font.PLAIN, 14)); // Use consistent font for all task lists
         setOpaque(true); // Ensure background is painted
         setBackground(Color.WHITE); // Keep background neutral
 
