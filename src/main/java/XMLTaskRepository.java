@@ -187,6 +187,21 @@ public class XMLTaskRepository implements TaskRepository {
         }
     }
 
+    /**
+     * Updates a task without showing error dialogs (for UI state management).
+     * Returns true if successful, false if failed.
+     */
+    public boolean updateTaskQuiet(Task task) {
+        try {
+            taskXmlHandler.updateTask(task);
+            backupManager.createBackup("update-task");
+            return true;
+        } catch (Exception e) {
+            // Don't show error dialog, just return failure
+            return false;
+        }
+    }
+
     @Override
     public void removeTask(Task task) {
         try {

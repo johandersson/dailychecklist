@@ -19,7 +19,9 @@ import java.awt.BorderLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -267,6 +269,13 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         } else if (choice == 2) { // Move to evening
             moveTasksToType(name, TaskType.EVENING);
         }
+        
+        // Remove all reminders for this checklist
+        List<Reminder> allReminders = taskManager.getReminders();
+        allReminders.stream()
+            .filter(reminder -> Objects.equals(reminder.getChecklistName(), name))
+            .forEach(taskManager::removeReminder);
+            
         allChecklistNames.remove(name);  // Remove from tracked checklists
         taskManager.removeChecklistName(name);  // Remove from persistent storage
         updateTasks();  // Refresh the local checklist list
@@ -393,6 +402,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         @Override
         public java.awt.Component getListCellRendererComponent(javax.swing.JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
             super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            
+            setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 14)); // Match font with task lists
             
             if (value instanceof String) {
                 String checklistName = (String) value;

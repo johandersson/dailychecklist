@@ -21,6 +21,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -29,6 +30,7 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -212,11 +214,34 @@ public class TaskXmlHandler {
      * Updates an existing task XML element with new task data.
      */
     private void updateTaskElement(Element taskElement, Task task) {
-        taskElement.getElementsByTagName("name").item(0).setTextContent(task.getName());
-        taskElement.getElementsByTagName("type").item(0).setTextContent(task.getType().name());
-        taskElement.getElementsByTagName("weekday").item(0).setTextContent(task.getWeekday());
-        taskElement.getElementsByTagName("done").item(0).setTextContent(String.valueOf(task.isDone()));
-        taskElement.getElementsByTagName("doneDate").item(0).setTextContent(task.getDoneDate());
+        Document document = taskElement.getOwnerDocument();
+
+        // Update or create name element
+        updateOrCreateElement(taskElement, "name", task.getName());
+
+        // Update or create type element
+        updateOrCreateElement(taskElement, "type", task.getType().name());
+
+        // Update or create done element
+        updateOrCreateElement(taskElement, "done", String.valueOf(task.isDone()));
+
+        // Update or create doneDate element
+        updateOrCreateElement(taskElement, "doneDate", task.getDoneDate());
+
+        // Handle weekday (optional)
+        NodeList weekdayNodes = taskElement.getElementsByTagName("weekday");
+        if (task.getWeekday() != null) {
+            Element weekdayElement;
+            if (weekdayNodes.getLength() > 0) {
+                weekdayElement = (Element) weekdayNodes.item(0);
+            } else {
+                weekdayElement = document.createElement("weekday");
+                taskElement.appendChild(weekdayElement);
+            }
+            weekdayElement.setTextContent(task.getWeekday());
+        } else if (weekdayNodes.getLength() > 0) {
+            taskElement.removeChild(weekdayNodes.item(0));
+        }
 
         // Handle checklist name
         NodeList checklistNameNodes = taskElement.getElementsByTagName("checklistName");
@@ -225,13 +250,28 @@ public class TaskXmlHandler {
             if (checklistNameNodes.getLength() > 0) {
                 checklistNameElement = (Element) checklistNameNodes.item(0);
             } else {
-                checklistNameElement = taskElement.getOwnerDocument().createElement("checklistName");
+                checklistNameElement = document.createElement("checklistName");
                 taskElement.appendChild(checklistNameElement);
             }
             checklistNameElement.setTextContent(task.getChecklistName());
         } else if (checklistNameNodes.getLength() > 0) {
             taskElement.removeChild(checklistNameNodes.item(0));
         }
+    }
+
+    /**
+     * Updates an existing element or creates it if it doesn't exist.
+     */
+    private void updateOrCreateElement(Element parent, String tagName, String textContent) {
+        NodeList nodes = parent.getElementsByTagName(tagName);
+        Element element;
+        if (nodes.getLength() > 0) {
+            element = (Element) nodes.item(0);
+        } else {
+            element = parent.getOwnerDocument().createElement(tagName);
+            parent.appendChild(element);
+        }
+        element.setTextContent(textContent);
     }
 
     /**
