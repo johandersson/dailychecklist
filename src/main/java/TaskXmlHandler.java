@@ -20,7 +20,9 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -44,11 +46,22 @@ public class TaskXmlHandler {
     private final String fileName;
     private final DocumentBuilderFactory documentBuilderFactory;
     private final TransformerFactory transformerFactory;
+    private final Map<String, java.util.Date> dateCache = new HashMap<>();
 
     public TaskXmlHandler(String fileName) {
         this.fileName = fileName;
         this.documentBuilderFactory = DocumentBuilderFactory.newInstance();
         this.transformerFactory = TransformerFactory.newInstance();
+    }
+
+    /**
+     * Gets the parsed Date for a date string, using cache to avoid repeated parsing.
+     */
+    private java.util.Date getParsedDate(String dateStr) throws ParseException {
+        if (!dateCache.containsKey(dateStr)) {
+            dateCache.put(dateStr, new SimpleDateFormat("yyyy-MM-dd").parse(dateStr));
+        }
+        return dateCache.get(dateStr);
     }
 
     /**
@@ -321,8 +334,8 @@ public class TaskXmlHandler {
      */
     public void checkAndResetPastDoneDate(Task task, String today) throws ParseException {
         if (task.isDone() && task.getDoneDate() != null) {
-            java.util.Date doneDate = new SimpleDateFormat("yyyy-MM-dd").parse(task.getDoneDate());
-            java.util.Date todayDate = new SimpleDateFormat("yyyy-MM-dd").parse(today);
+            java.util.Date doneDate = getParsedDate(task.getDoneDate());
+            java.util.Date todayDate = getParsedDate(today);
             if (doneDate.before(todayDate)) {
                 task.setDone(false);
                 task.setDoneDate(null);
