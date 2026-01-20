@@ -37,6 +37,10 @@ public class XMLTaskRepository implements TaskRepository {
     // Backup system
     private BackupManager backupManager;
 
+    // Task caching
+    private List<Task> cachedTasks = null;
+    private boolean tasksCacheDirty = true;
+
     // Parent component for error dialogs
     private Component parentComponent;
 
@@ -99,31 +103,59 @@ public class XMLTaskRepository implements TaskRepository {
 
     @Override
     public List<Task> getDailyTasks() {
-        ensureDataFileExists();
-
-        List<Task> tasks = new ArrayList<>();
+        List<Task> tasks = getCachedTasks();
         String today = new SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date(System.currentTimeMillis()));
 
-        try {
-            List<Task> allTasks = taskXmlHandler.parseAllTasks();
-
-            // Memory safety check
-            if (MemorySafetyManager.checkTaskLimit(allTasks.size())) {
-                allTasks = allTasks.subList(0, Math.min(MemorySafetyManager.MAX_TASKS, allTasks.size()));
+        List<Task> dailyTasks = new ArrayList<>();
+        for (Task task : tasks) {
+            try {
+                taskXmlHandler.checkAndResetPastDoneDate(task, today);
+            } catch (ParseException e) {
+                // Log the error but continue processing other tasks
+                System.err.println("Failed to parse date for task " + task.getId() + ": " + e.getMessage());
             }
+            dailyTasks.add(task);
+        }
 
-            for (Task task : allTasks) {
-                try {
-                    taskXmlHandler.checkAndResetPastDoneDate(task, today);
-                } catch (ParseException e) {
-                    // Log the error but continue processing other tasks
-                    System.err.println("Failed to parse date for task " + task.getId() + ": " + e.getMessage());
+        return dailyTasks;
+    }
+
+    /**
+     * Gets all tasks from cache, loading from XML if cache is dirty.
+     * Applies memory safety checks.
+     */
+    private List<Task> getCachedTasks() {
+        if (tasksCacheDirty) {
+            ensureDataFileExists();
+            try {
+                cachedTasks = taskXmlHandler.parseAllTasks();
+                // Memory safety check
+                if (MemorySafetyManager.checkTaskLimit(cachedTasks.size())) {
+                    cachedTasks = cachedTasks.subList(0, Math.min(MemorySafetyManager.MAX_TASKS, cachedTasks.size()));
                 }
-                tasks.add(task);
+                tasksCacheDirty = false;
+            } catch (Exception e) {
+                if (parentComponent != null) {
+                    ApplicationErrorHandler.showDataLoadError(parentComponent, "cached tasks", e);
+                }
+                cachedTasks = new ArrayList<>();
             }
-        } catch (Exception e) {
-            if (parentComponent != null) {
-                ApplicationErrorHandler.showDataLoadError(parentComponent, "daily tasks", e);
+        }
+        return new ArrayList<>(cachedTasks);
+    }
+
+    @Override
+    public List<Task> getAllTasks() {
+        List<Task> tasks = getCachedTasks();
+        String today = new SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date(System.currentTimeMillis()));
+
+        // Check and reset past done dates
+        for (Task task : tasks) {
+            try {
+                taskXmlHandler.checkAndResetPastDoneDate(task, today);
+            } catch (ParseException e) {
+                // Log the error but continue processing other tasks
+                System.err.println("Failed to parse date for task " + task.getId() + ": " + e.getMessage());
             }
         }
 
@@ -131,43 +163,10 @@ public class XMLTaskRepository implements TaskRepository {
     }
 
     @Override
-    public List<Task> getAllTasks() {
-        ensureDataFileExists();
-
-        List<Task> tasks = new ArrayList<>();
-        String today = new SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date(System.currentTimeMillis()));
-
-        try {
-            tasks = taskXmlHandler.parseAllTasks();
-
-            // Memory safety check
-            if (MemorySafetyManager.checkTaskLimit(tasks.size())) {
-                tasks = tasks.subList(0, Math.min(MemorySafetyManager.MAX_TASKS, tasks.size()));
-            }
-
-            // Check and reset past done dates
-            for (Task task : tasks) {
-                try {
-                    taskXmlHandler.checkAndResetPastDoneDate(task, today);
-                } catch (ParseException e) {
-                    // Log the error but continue processing other tasks
-                    System.err.println("Failed to parse date for task " + task.getId() + ": " + e.getMessage());
-                }
-            }
-        } catch (Exception e) {
-            if (parentComponent != null) {
-                ApplicationErrorHandler.showDataLoadError(parentComponent, "all tasks", e);
-            }
-        }
-
-        return new ArrayList<>(tasks);
-    }
-
-    @Override
     public void addTask(Task task) {
         try {
             taskXmlHandler.addTask(task);
-            backupManager.createBackup("add-task");
+            tasksCacheDirty = true; // Mark cache as dirty
         } catch (Exception e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
@@ -179,7 +178,7 @@ public class XMLTaskRepository implements TaskRepository {
     public void updateTask(Task task) {
         try {
             taskXmlHandler.updateTask(task);
-            backupManager.createBackup("update-task");
+            tasksCacheDirty = true; // Mark cache as dirty
         } catch (Exception e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
@@ -194,7 +193,7 @@ public class XMLTaskRepository implements TaskRepository {
     public boolean updateTaskQuiet(Task task) {
         try {
             taskXmlHandler.updateTask(task);
-            backupManager.createBackup("update-task");
+            tasksCacheDirty = true; // Mark cache as dirty
             return true;
         } catch (Exception e) {
             // Don't show error dialog, just return failure
@@ -206,7 +205,7 @@ public class XMLTaskRepository implements TaskRepository {
     public void removeTask(Task task) {
         try {
             taskXmlHandler.removeTask(task);
-            backupManager.createBackup("remove-task");
+            tasksCacheDirty = true; // Mark cache as dirty
         } catch (Exception e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
@@ -216,29 +215,20 @@ public class XMLTaskRepository implements TaskRepository {
 
     @Override
     public boolean hasUndoneTasks() {
-        try {
-            List<Task> tasks = taskXmlHandler.parseAllTasks();
-            for (Task task : tasks) {
-                if (!task.isDone()) {
-                    return true;
-                }
+        List<Task> tasks = getCachedTasks();
+        for (Task task : tasks) {
+            if (!task.isDone()) {
+                return true;
             }
-        } catch (Exception e) {
-            if (parentComponent != null) {
-                ApplicationErrorHandler.showDataLoadError(parentComponent, "task status", e);
-            }
-            return false; // Default to no undone tasks on error
         }
         return false;
     }
 
     @Override
     public void setTasks(List<Task> tasks) {
-        // Create backup before saving
-        backupManager.createBackup("save");
-
         try {
             taskXmlHandler.setAllTasks(tasks);
+            tasksCacheDirty = true; // Mark cache as dirty
         } catch (Exception e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "tasks", e);
@@ -253,15 +243,11 @@ public class XMLTaskRepository implements TaskRepository {
 
     @Override
     public void addReminder(Reminder reminder) {
-        // Create backup before modifying reminders
-        backupManager.createBackup("add-reminder");
         reminderManager.addReminder(reminder);
     }
 
     @Override
     public void removeReminder(Reminder reminder) {
-        // Create backup before modifying reminders
-        backupManager.createBackup("remove-reminder");
         reminderManager.removeReminder(reminder);
     }
 
@@ -282,15 +268,11 @@ public class XMLTaskRepository implements TaskRepository {
 
     @Override
     public void addChecklistName(String name) {
-        // Create backup before modifying checklist names
-        backupManager.createBackup("add-checklist");
         checklistNameManager.addChecklistName(name);
     }
 
     @Override
     public void removeChecklistName(String name) {
-        // Create backup before modifying checklist names
-        backupManager.createBackup("remove-checklist");
         checklistNameManager.removeChecklistName(name);
     }
 
@@ -308,6 +290,18 @@ public class XMLTaskRepository implements TaskRepository {
 
     @Override
     public void shutdown() {
+        // Create final backup before shutting down
+        backupManager.createBackup("shutdown");
         shutdownBackupSystem();
+        
+        // Clear cache to free memory
+        cachedTasks = null;
+        tasksCacheDirty = true;
+    }
+
+    @Override
+    public void start() {
+        // Start the automatic backup system
+        backupManager.start();
     }
 }
