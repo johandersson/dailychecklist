@@ -10,14 +10,11 @@ if not exist build\classes mkdir build\classes
 echo.
 
 echo Compiling Java sources...
-echo Finding all Java source files...
-for /r src\main\java %%f in (*.java) do (
-    echo Compiling %%f
-    javac -cp "src\main\java" -d build\classes "%%f"
-    if %errorlevel% neq 0 (
-        echo ERROR: Compilation failed for %%f
-        exit /b %errorlevel%
-    )
+echo Compiling all Java files with proper classpath...
+javac -cp "src\main\java" -d build\classes src\main\java\*.java
+if %errorlevel% neq 0 (
+    echo ERROR: Java compilation failed
+    exit /b %errorlevel%
 )
 echo Java compilation complete.
 echo.
