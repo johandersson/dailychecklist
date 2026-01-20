@@ -48,9 +48,6 @@ public class XMLTaskRepository implements TaskRepository {
     private static String FILE_NAME = System.getProperty("user.home") + File.separator + "dailychecklist-tasks.xml";
     private static String REMINDER_FILE_NAME = System.getProperty("user.home") + File.separator + "dailychecklist-reminders.properties";
     private static String CHECKLIST_NAMES_FILE_NAME = System.getProperty("user.home") + File.separator + "dailychecklist-checklist-names.properties";
-    private static String BACKUP_DIR = System.getProperty("user.home") + File.separator + "dailychecklist-backups";
-    private static final int MAX_BACKUPS = 10; // Keep last 10 backups
-    private static final long BACKUP_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
     // Caching
     private List<Task> cachedTasks = null;
@@ -61,9 +58,7 @@ public class XMLTaskRepository implements TaskRepository {
     private boolean checklistNamesDirty = false;
 
     // Backup system
-    private Thread backupThread;
-    private volatile boolean backupRunning = true;
-    private long lastBackupTime = 0;
+    private BackupManager backupManager;
 
     @Override
     public void initialize() {
@@ -84,7 +79,10 @@ public class XMLTaskRepository implements TaskRepository {
         }
 
         // Initialize backup system
-        initializeBackupSystem();
+        String backupDir = System.getProperty("user.home") + File.separator + "dailychecklist-backups";
+        String[] dataFiles = {FILE_NAME, REMINDER_FILE_NAME, CHECKLIST_NAMES_FILE_NAME};
+        backupManager = new BackupManager(backupDir, 10, 30 * 60 * 1000, dataFiles);
+        backupManager.initialize();
     }
 
     @Override
@@ -334,7 +332,7 @@ public class XMLTaskRepository implements TaskRepository {
     @Override
     public void setTasks(List<Task> tasks) {
         // Create backup before saving
-        createBackup("save");
+        backupManager.createBackup("save");
 
         try {
             Document document = createDocument();
@@ -505,7 +503,7 @@ public class XMLTaskRepository implements TaskRepository {
     @Override
     public void addReminder(Reminder reminder) {
         // Create backup before modifying reminders
-        createBackup("add-reminder");
+        backupManager.createBackup("add-reminder");
 
         List<Reminder> reminders = getReminders();
         reminders.add(reminder);
@@ -517,7 +515,7 @@ public class XMLTaskRepository implements TaskRepository {
     @Override
     public void removeReminder(Reminder reminder) {
         // Create backup before modifying reminders
-        createBackup("remove-reminder");
+        backupManager.createBackup("remove-reminder");
 
         List<Reminder> reminders = getReminders();
         reminders.removeIf(r -> Objects.equals(r.getChecklistName(), reminder.getChecklistName()) &&
@@ -609,7 +607,7 @@ public class XMLTaskRepository implements TaskRepository {
     @Override
     public void addChecklistName(String name) {
         // Create backup before modifying checklist names
-        createBackup("add-checklist");
+        backupManager.createBackup("add-checklist");
 
         Set<String> names = getChecklistNames();
         names.add(name);
@@ -621,7 +619,7 @@ public class XMLTaskRepository implements TaskRepository {
     @Override
     public void removeChecklistName(String name) {
         // Create backup before modifying checklist names
-        createBackup("remove-checklist");
+        backupManager.createBackup("remove-checklist");
 
         Set<String> names = getChecklistNames();
         names.remove(name);
@@ -642,131 +640,15 @@ public class XMLTaskRepository implements TaskRepository {
         }
     }
 
-    // Backup system methods
-    private void initializeBackupSystem() {
-        // Create backup directory if it doesn't exist
-        File backupDir = new File(BACKUP_DIR);
-        if (!backupDir.exists()) {
-            backupDir.mkdirs();
-        }
-
-        // Start periodic backup thread
-        backupThread = new Thread(() -> {
-            while (backupRunning) {
-                try {
-                    Thread.sleep(BACKUP_INTERVAL_MS);
-                    createPeriodicBackup();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (Exception e) {
-                    // Log error but continue
-                    System.err.println("Backup error: " + e.getMessage());
-                }
-            }
-        });
-        backupThread.setDaemon(true);
-        backupThread.start();
-    }
-
-    private void createPeriodicBackup() {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastBackupTime >= BACKUP_INTERVAL_MS) {
-            createBackup("periodic");
-            lastBackupTime = currentTime;
-        }
-    }
-
-    private void createBackup(String reason) {
-        try {
-            // Create backup directory if needed
-            File backupDir = new File(BACKUP_DIR);
-            if (!backupDir.exists()) {
-                backupDir.mkdirs();
-            }
-
-            // Generate timestamp for backup filename
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
-            String timestamp = sdf.format(new java.util.Date());
-            String backupFileName = "dailychecklist-backup-" + timestamp + "-" + reason + ".zip";
-
-            // Create zip file containing all data files
-            createBackupZip(new File(backupDir, backupFileName));
-
-            // Clean up old backups (keep only MAX_BACKUPS)
-            cleanupOldBackups();
-
-        } catch (Exception e) {
-            System.err.println("Failed to create backup: " + e.getMessage());
-        }
-    }
-
-    private void createBackupZip(File zipFile) throws IOException {
-        try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(new FileOutputStream(zipFile))) {
-            // Add tasks XML
-            File tasksFile = new File(FILE_NAME);
-            if (tasksFile.exists()) {
-                addFileToZip(zos, tasksFile, "dailychecklist-tasks.xml");
-            }
-
-            // Add reminders properties
-            File remindersFile = new File(REMINDER_FILE_NAME);
-            if (remindersFile.exists()) {
-                addFileToZip(zos, remindersFile, "dailychecklist-reminders.properties");
-            }
-
-            // Add checklist names properties
-            File checklistNamesFile = new File(CHECKLIST_NAMES_FILE_NAME);
-            if (checklistNamesFile.exists()) {
-                addFileToZip(zos, checklistNamesFile, "dailychecklist-checklist-names.properties");
-            }
-        }
-    }
-
-    private void addFileToZip(java.util.zip.ZipOutputStream zos, File file, String entryName) throws IOException {
-        try (FileInputStream fis = new FileInputStream(file)) {
-            java.util.zip.ZipEntry zipEntry = new java.util.zip.ZipEntry(entryName);
-            zos.putNextEntry(zipEntry);
-
-            byte[] buffer = new byte[1024];
-            int length;
-            while ((length = fis.read(buffer)) > 0) {
-                zos.write(buffer, 0, length);
-            }
-            zos.closeEntry();
-        }
-    }
-
-    private void cleanupOldBackups() {
-        File backupDir = new File(BACKUP_DIR);
-        File[] backupFiles = backupDir.listFiles((dir, name) -> name.startsWith("dailychecklist-backup-") && name.endsWith(".zip"));
-
-        if (backupFiles != null && backupFiles.length > MAX_BACKUPS) {
-            // Sort by last modified time (oldest first)
-            java.util.Arrays.sort(backupFiles, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
-
-            // Delete oldest files
-            for (int i = 0; i < backupFiles.length - MAX_BACKUPS; i++) {
-                backupFiles[i].delete();
-            }
-        }
-    }
-
     // Public method to manually trigger backup
     public void createManualBackup() {
-        createBackup("manual");
+        backupManager.createManualBackup();
     }
 
     // Method to shutdown backup system
     public void shutdownBackupSystem() {
-        backupRunning = false;
-        if (backupThread != null) {
-            backupThread.interrupt();
-            try {
-                backupThread.join(1000); // Wait up to 1 second
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+        if (backupManager != null) {
+            backupManager.shutdown();
         }
     }
 
