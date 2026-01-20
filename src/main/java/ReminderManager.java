@@ -269,6 +269,15 @@ public class ReminderManager {
     }
 
     /**
+     * Checks if a checklist has any reminders.
+     */
+    public boolean hasReminders(String checklistName) {
+        List<Reminder> reminders = getReminders();
+        return reminders.stream().anyMatch(reminder -> 
+            Objects.equals(reminder.getChecklistName(), checklistName));
+    }
+
+    /**
      * Marks the reminder cache as dirty.
      */
     public void markDirty() {
