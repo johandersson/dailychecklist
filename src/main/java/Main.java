@@ -43,6 +43,9 @@ public class Main {
             lifecycleManager = new ApplicationLifecycleManager(checklist.getFrame());
             lifecycleManager.initialize(); // Re-initialize with proper parent
 
+            // Update the repository parent component for error dialogs
+            ((XMLTaskRepository) checklist.getRepository()).setParentComponent(checklist.getFrame());
+
             // Start background services
             lifecycleManager.start();
 

@@ -29,7 +29,7 @@ import javax.swing.JOptionPane;
  * error messages with recovery suggestions for common issues.
  */
 public class ApplicationErrorHandler {
-    private static final String HTML_HEADER = "<html><body style='font-family: Arial, sans-serif; margin: 10px;'>";
+    private static final String HTML_HEADER = "<html><head><style>h1 { font-size: 24pt; color: #333; } h2 { font-size: 18pt; color: #555; } h3 { font-size: 14pt; color: #777; } h4 { font-size: 12pt; color: #777; font-weight: bold; } body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }</style></head><body style='margin: 10px;'>";
     private static final String HTML_FOOTER = "</body></html>";
 
     /**
@@ -117,7 +117,7 @@ public class ApplicationErrorHandler {
         }
 
         sb.append("</ul>");
-        sb.append("<p style='color: #666; font-size: 11px;'>Error details: ").append(e.getMessage()).append("</p>");
+        sb.append("<p style='color: #777; font-size: 11pt;'>Error details: ").append(e.getMessage()).append("</p>");
         sb.append(HTML_FOOTER);
         return sb.toString();
     }
@@ -154,7 +154,7 @@ public class ApplicationErrorHandler {
         }
 
         sb.append("</ul>");
-        sb.append("<p style='color: #666; font-size: 11px;'>Error details: ").append(e.getMessage()).append("</p>");
+        sb.append("<p style='color: #777; font-size: 11pt;'>Error details: ").append(e.getMessage()).append("</p>");
         sb.append(HTML_FOOTER);
         return sb.toString();
     }
@@ -180,7 +180,7 @@ public class ApplicationErrorHandler {
         sb.append("<li>Restart the application</li>");
         sb.append("</ul>");
 
-        sb.append("<p style='color: #666; font-size: 11px;'>Error details: ").append(e.getMessage()).append("</p>");
+        sb.append("<p style='color: #777; font-size: 11pt;'>Error details: ").append(e.getMessage()).append("</p>");
         sb.append(HTML_FOOTER);
         return sb.toString();
     }
@@ -206,7 +206,7 @@ public class ApplicationErrorHandler {
         sb.append("<li>Close other programs that might be using the file</li>");
         sb.append("</ul>");
 
-        sb.append("<p style='color: #666; font-size: 11px;'>Error details: ").append(e.getMessage()).append("</p>");
+        sb.append("<p style='color: #777; font-size: 11pt;'>Error details: ").append(e.getMessage()).append("</p>");
         sb.append(HTML_FOOTER);
         return sb.toString();
     }
@@ -227,7 +227,7 @@ public class ApplicationErrorHandler {
         sb.append("<li>Try deleting temporary files or reinstalling</li>");
         sb.append("</ul>");
 
-        sb.append("<p style='color: #666; font-size: 11px;'>Error details: ").append(e.getMessage()).append("</p>");
+        sb.append("<p style='color: #777; font-size: 11pt;'>Error details: ").append(e.getMessage()).append("</p>");
         sb.append(HTML_FOOTER);
         return sb.toString();
     }
