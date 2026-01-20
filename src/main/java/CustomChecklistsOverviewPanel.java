@@ -269,7 +269,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         }
         allChecklistNames.remove(name);  // Remove from tracked checklists
         taskManager.removeChecklistName(name);  // Remove from persistent storage
-        updateTasks.run();
+        updateTasks();  // Refresh the local checklist list
+        updateTasks.run();  // Update other panels
         // After deletion, select the first checklist if available
         if (listModel.size() > 0) {
             String firstChecklist = listModel.get(0);
@@ -386,7 +387,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     }
 
     /**
-     * Custom cell renderer for checklist list that shows a smiley icon for checklists with reminders.
+     * Custom cell renderer for checklist list that shows a clock icon for checklists with reminders.
      */
     private class ChecklistListCellRenderer extends javax.swing.DefaultListCellRenderer {
         @Override
@@ -399,7 +400,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                     .anyMatch(reminder -> java.util.Objects.equals(reminder.getChecklistName(), checklistName));
                 
                 if (hasReminders) {
-                    setText("⏰ " + checklistName);
+                    setText("[R] " + checklistName);  // Use [R] instead of emoji for better compatibility
                 } else {
                     setText(checklistName);
                 }
