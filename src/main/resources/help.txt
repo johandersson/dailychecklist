@@ -158,10 +158,21 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 <h2>Troubleshooting</h2>
 
 <ul>
-<li><b>App Won't Start</b>: Ensure Java is installed (<code>java -version</code>).</li>
-<li><b>Tasks Not Saving</b>: Check write permissions; tasks save to <code>dailychecklist-tasks.xml</code> and reminders to <code>dailychecklist-reminders.properties</code>.</li>
+<li><b>App Won't Start</b>: Ensure Java is installed (<code>java -version</code>). If initialization fails, the app will show an error dialog with recovery suggestions.</li>
+<li><b>Data Loading Issues</b>: If data files are corrupted or missing, the app will display a clear error message with steps to recover from automatic backups or restore defaults.</li>
+<li><b>Tasks Not Saving</b>: Check write permissions; tasks save to <code>dailychecklist-tasks.xml</code> and reminders to <code>dailychecklist-reminders.properties</code>. The app creates automatic backups in the <code>backups</code> folder.</li>
 <li><b>Timer Issues</b>: Restart the app if the timer freezes.</li>
 <li><b>Checklists Not Appearing</b>: Checklists appear in the list once they contain tasks.</li>
+</ul>
+
+<h2>Data Backup and Recovery</h2>
+
+<p>The app automatically creates backups of your data:</p>
+<ul>
+<li>Backups are stored in the <code>backups</code> folder in your user directory.</li>
+<li>Automatic backups occur when the app starts and periodically during use.</li>
+<li>If data becomes corrupted, you can restore from a backup by following the error dialog instructions.</li>
+<li>Manual backups can be created via the menu options.</li>
 </ul>
 
 <h2>Keyboard Shortcuts</h2>
