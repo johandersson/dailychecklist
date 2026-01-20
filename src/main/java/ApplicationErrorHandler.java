@@ -160,28 +160,24 @@ public class ApplicationErrorHandler {
     }
 
     private static String buildDataLoadErrorMessage(String dataType, Exception e) {
-        StringBuilder sb = new StringBuilder(HTML_HEADER);
-        sb.append("<h3>Data Loading Problem</h3>");
-        sb.append("<p><b>Data Type:</b> ").append(dataType).append("</p>");
+        StringBuilder sb = new StringBuilder();
+        sb.append("Data Loading Problem\n\n");
+        sb.append("Data Type: ").append(dataType).append("\n\n");
 
         String errorType = analyzeException(e);
-        sb.append("<p><b>Problem:</b> ").append(errorType).append("</p>");
+        sb.append("Problem: ").append(errorType).append("\n\n");
 
-        sb.append("<h4>What this means:</h4>");
-        sb.append("<ul>");
-        sb.append("<li>The application will use default/empty data</li>");
-        sb.append("<li>Your data may not be lost - check the file location</li>");
-        sb.append("<li>You can try to recover from a backup</li>");
-        sb.append("</ul>");
+        sb.append("What this means:\n");
+        sb.append("- The application will use default/empty data\n");
+        sb.append("- Your data may not be lost - check the file location\n");
+        sb.append("- You can try to recover from a backup\n\n");
 
-        sb.append("<h4>Solutions:</h4><ul>");
-        sb.append("<li>Check if data files exist and are readable</li>");
-        sb.append("<li>Try restoring from a backup file</li>");
-        sb.append("<li>Restart the application</li>");
-        sb.append("</ul>");
+        sb.append("Solutions:\n");
+        sb.append("- Check if data files exist and are readable\n");
+        sb.append("- Try restoring from a backup file\n");
+        sb.append("- Restart the application\n\n");
 
-        sb.append("<p style='color: #777; font-size: 11pt;'>Error details: ").append(e.getMessage()).append("</p>");
-        sb.append(HTML_FOOTER);
+        sb.append("Error details: ").append(e.getMessage());
         return sb.toString();
     }
 
