@@ -120,15 +120,16 @@ public class TaskManager {
             return null;
         }
 
-        // Remove potentially dangerous characters for XML and file systems
-        // Allow alphanumeric, spaces, hyphens, underscores, and basic punctuation
-        if (!trimmed.matches("[\\w\\s\\-_.()]+")) {
+        // Allow a broader range of characters including international characters
+        // Allow letters (including accented), numbers, spaces, and common symbols
+        if (!trimmed.matches("[\\p{L}\\p{N}\\s\\-_.()]+")) {
             return null;
         }
 
-        // Additional security: prevent path traversal attempts
+        // Additional security: prevent path traversal attempts and XML injection
         if (trimmed.contains("..") || trimmed.contains("/") || trimmed.contains("\\") ||
-            trimmed.contains("<") || trimmed.contains(">") || trimmed.contains("&")) {
+            trimmed.contains("<") || trimmed.contains("&") || 
+            trimmed.contains("\"") || trimmed.contains("'")) {
             return null;
         }
 
@@ -146,7 +147,7 @@ public class TaskManager {
         if (validated == null && input != null && !input.trim().isEmpty()) {
             javax.swing.JOptionPane.showMessageDialog(null,
                 fieldName + " contains invalid characters or is too long.\n" +
-                "Use only letters, numbers, spaces, hyphens, underscores, dots, and parentheses.\n" +
+                "Use only letters (including international characters), numbers, spaces, hyphens, underscores, dots, parentheses, and angle brackets.\n" +
                 "Maximum length: 100 characters.",
                 "Invalid Input", javax.swing.JOptionPane.ERROR_MESSAGE);
         }
