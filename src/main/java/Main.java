@@ -21,7 +21,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
@@ -71,6 +70,11 @@ public class Main {
             SwingUtilities.invokeLater(() -> {
                 DailyChecklist checklist = new DailyChecklist();
                 checklist.setVisible(true);
+
+                // Add shutdown hook to properly close resources
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                    checklist.shutdown();
+                }));
             });
             return;
         }
@@ -81,6 +85,11 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             DailyChecklist checklist = new DailyChecklist();
             checklist.setVisible(true);
+
+            // Add shutdown hook to properly close resources
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                checklist.shutdown();
+            }));
 
             // Start listener thread
             new Thread(() -> {

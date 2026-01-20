@@ -60,14 +60,7 @@ public class TaskManager {
     }
 
     public java.util.Set<String> getCustomChecklistNames() {
-        List<Task> allTasks = repository.getAllTasks();
-        java.util.Set<String> names = new java.util.HashSet<>();
-        for (Task task : allTasks) {
-            if (task.getType() == TaskType.CUSTOM && task.getChecklistName() != null) {
-                names.add(task.getChecklistName());
-            }
-        }
-        return names;
+        return repository.getChecklistNames();
     }
 
     public boolean hasUndoneTasks() {
@@ -101,6 +94,23 @@ public class TaskManager {
 
     public void removeReminder(Reminder reminder) {
         repository.removeReminder(reminder);
+    }
+
+    public void addChecklistName(String name) {
+        repository.addChecklistName(name);
+    }
+
+    public void removeChecklistName(String name) {
+        repository.removeChecklistName(name);
+    }
+
+    /**
+     * Manually creates a backup of all data.
+     */
+    public void createManualBackup() {
+        if (repository instanceof XMLTaskRepository) {
+            ((XMLTaskRepository) repository).createManualBackup();
+        }
     }
 
     /**

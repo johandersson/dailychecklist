@@ -16,22 +16,13 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.IntStream;
-import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JDialog;
-import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -136,6 +127,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         }
         newChecklistField.setText("");
         allChecklistNames.add(name);  // Track the new checklist
+        taskManager.addChecklistName(name);  // Persist the checklist name
         updateTasks();  // Update the list model first
         selectChecklist(name);  // Then select it
         updateTasks.run();  // Update other panels
@@ -251,6 +243,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             updateTasks.run();
             allChecklistNames.remove(oldName);  // Remove old name
             allChecklistNames.add(newName);     // Add new name
+            taskManager.removeChecklistName(oldName);  // Remove old name from persistent storage
+            taskManager.addChecklistName(newName);     // Add new name to persistent storage
             selectChecklist(newName);
         }
     }
@@ -273,6 +267,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             moveTasksToType(name, TaskType.EVENING);
         }
         allChecklistNames.remove(name);  // Remove from tracked checklists
+        taskManager.removeChecklistName(name);  // Remove from persistent storage
         updateTasks.run();
         // After deletion, select the first checklist if available
         if (listModel.size() > 0) {
@@ -301,192 +296,10 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private void addReminder() {
         if (selectedChecklistName == null) return;
 
-        JDialog dialog = new JDialog();
-        dialog.setTitle("Add Reminder for " + selectedChecklistName);
-        dialog.setModal(true);
-        dialog.setLayout(new BorderLayout());
-        dialog.setResizable(false);
-
-        LocalDateTime now = LocalDateTime.now();
-
-        // Header
-        String currentTimeString = String.format("%02d:%02d on %d/%d/%d", 
-            now.getHour(), now.getMinute(), now.getMonthValue(), now.getDayOfMonth(), now.getYear());
-        JLabel headerLabel = new JLabel("<html>Set a reminder for: <b>" + selectedChecklistName + "</b><br><small>Current time is pre-selected: " + currentTimeString + "</small></html>", JLabel.CENTER);
-        headerLabel.setFont(headerLabel.getFont().deriveFont(14.0f));
-        headerLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        // Main content panel
-        JPanel contentPanel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new java.awt.Insets(5, 5, 5, 5);
-        gbc.anchor = GridBagConstraints.WEST;
-
-        // Date section
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
-        JLabel dateLabel = new JLabel("Date:");
-        dateLabel.setFont(dateLabel.getFont().deriveFont(Font.BOLD));
-        contentPanel.add(dateLabel, gbc);
-
-        gbc.gridwidth = 1;
-        gbc.gridy = 1;
-        contentPanel.add(new JLabel("Year:"), gbc);
-        gbc.gridx = 1;
-        JComboBox<Integer> yearBox = new JComboBox<>(IntStream.rangeClosed(now.getYear(), now.getYear() + 5).boxed().toArray(Integer[]::new));
-        yearBox.setSelectedItem(now.getYear());
-        contentPanel.add(yearBox, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 2;
-        contentPanel.add(new JLabel("Month:"), gbc);
-        gbc.gridx = 1;
-        JComboBox<Integer> monthBox = new JComboBox<>(IntStream.rangeClosed(1, 12).boxed().toArray(Integer[]::new));
-        monthBox.setSelectedItem(now.getMonthValue());
-        contentPanel.add(monthBox, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 3;
-        contentPanel.add(new JLabel("Day:"), gbc);
-        gbc.gridx = 1;
-        JComboBox<Integer> dayBox = new JComboBox<>(IntStream.rangeClosed(1, 31).boxed().toArray(Integer[]::new));
-        dayBox.setSelectedItem(now.getDayOfMonth());
-        contentPanel.add(dayBox, gbc);
-
-        // Time section
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2;
-        JLabel timeLabel = new JLabel("Time:");
-        timeLabel.setFont(timeLabel.getFont().deriveFont(Font.BOLD));
-        contentPanel.add(timeLabel, gbc);
-
-        gbc.gridwidth = 1;
-        gbc.gridy = 5;
-        contentPanel.add(new JLabel("Hour (0-23):"), gbc);
-        gbc.gridx = 1;
-        JComboBox<Integer> hourBox = new JComboBox<>(IntStream.rangeClosed(0, 23).boxed().toArray(Integer[]::new));
-        hourBox.setSelectedItem(now.getHour());
-        contentPanel.add(hourBox, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 6;
-        contentPanel.add(new JLabel("Minute:"), gbc);
-        gbc.gridx = 1;
-        JComboBox<Integer> minuteBox = new JComboBox<>(IntStream.rangeClosed(0, 59).boxed().toArray(Integer[]::new));
-        minuteBox.setSelectedItem((now.getMinute() / 5) * 5); // Round to nearest 5 minutes
-        contentPanel.add(minuteBox, gbc);
-
-        // Quick preset buttons
-        gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2;
-        JPanel presetPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        presetPanel.setBorder(BorderFactory.createTitledBorder("Quick Set"));
-
-        JButton in15MinButton = new JButton("In 15 min");
-        JButton in1HourButton = new JButton("In 1 hour");
-        JButton tomorrowButton = new JButton("Tomorrow");
-        JButton nextWeekButton = new JButton("Next week");
-
-        in15MinButton.addActionListener(e -> setTimeFromNow(hourBox, minuteBox, yearBox, monthBox, dayBox, 15));
-        in1HourButton.addActionListener(e -> setTimeFromNow(hourBox, minuteBox, yearBox, monthBox, dayBox, 60));
-        tomorrowButton.addActionListener(e -> setTimeTomorrow(hourBox, minuteBox, yearBox, monthBox, dayBox, now.getHour(), now.getMinute()));
-        nextWeekButton.addActionListener(e -> setTimeNextWeek(hourBox, minuteBox, yearBox, monthBox, dayBox, now.getHour(), now.getMinute()));
-
-        presetPanel.add(in15MinButton);
-        presetPanel.add(in1HourButton);
-        presetPanel.add(tomorrowButton);
-        presetPanel.add(nextWeekButton);
-
-        contentPanel.add(presetPanel, gbc);
-
-        // Buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout());
-        JButton okButton = new JButton("Add Reminder");
-        JButton cancelButton = new JButton("Cancel");
-
-        okButton.addActionListener(e -> {
-            try {
-                int year = (Integer) yearBox.getSelectedItem();
-                int month = (Integer) monthBox.getSelectedItem();
-                int day = (Integer) dayBox.getSelectedItem();
-                int hour = (Integer) hourBox.getSelectedItem();
-                int minute = (Integer) minuteBox.getSelectedItem();
-
-                // Validate date
-                java.time.LocalDateTime.of(year, month, day, hour, minute);
-
-                // Check if a reminder already exists for this checklist
-                List<Reminder> existingReminders = taskManager.getReminders().stream()
-                    .filter(r -> r.getChecklistName().equals(selectedChecklistName))
-                    .toList();
-                
-                if (!existingReminders.isEmpty()) {
-                    int choice = JOptionPane.showConfirmDialog(dialog, 
-                        "A reminder already exists for this checklist. Replace it?", 
-                        "Replace Reminder", JOptionPane.YES_NO_OPTION);
-                    if (choice != JOptionPane.YES_OPTION) {
-                        return; // Don't add the new reminder
-                    }
-                    // Remove existing reminders for this checklist
-                    for (Reminder existing : existingReminders) {
-                        taskManager.removeReminder(existing);
-                    }
-                }
-
-                Reminder reminder = new Reminder(selectedChecklistName, year, month, day, hour, minute);
-                taskManager.addReminder(reminder);
-                dialog.dispose();
-                
-                // Show informative success message
-                String timeString = String.format("%02d:%02d", hour, minute);
-                String dateString = String.format("%d/%d/%d", month, day, year);
-                String message = String.format("Reminder set successfully!\n\nChecklist: %s\nDate: %s\nTime: %s\n\nYou'll be reminded at the specified time.",
-                    selectedChecklistName, dateString, timeString);
-                JOptionPane.showMessageDialog(this, message, "Reminder Set", JOptionPane.INFORMATION_MESSAGE);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, "Invalid date/time. Please check your input.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
+        ReminderEditDialog dialog = new ReminderEditDialog(taskManager, selectedChecklistName, null, () -> {
+            updateTasks.run();
         });
-
-        cancelButton.addActionListener(e -> dialog.dispose());
-
-        buttonPanel.add(okButton);
-        buttonPanel.add(cancelButton);
-
-        dialog.add(headerLabel, BorderLayout.NORTH);
-        dialog.add(contentPanel, BorderLayout.CENTER);
-        dialog.add(buttonPanel, BorderLayout.SOUTH);
-
-        dialog.pack();
-        dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
-    }
-
-    private void setTimeFromNow(JComboBox<Integer> hourBox, JComboBox<Integer> minuteBox,
-                               JComboBox<Integer> yearBox, JComboBox<Integer> monthBox, JComboBox<Integer> dayBox,
-                               int minutesFromNow) {
-        LocalDateTime futureTime = LocalDateTime.now().plusMinutes(minutesFromNow);
-        yearBox.setSelectedItem(futureTime.getYear());
-        monthBox.setSelectedItem(futureTime.getMonthValue());
-        dayBox.setSelectedItem(futureTime.getDayOfMonth());
-        hourBox.setSelectedItem(futureTime.getHour());
-        minuteBox.setSelectedItem(futureTime.getMinute());
-    }
-
-    private void setTimeTomorrow(JComboBox<Integer> hourBox, JComboBox<Integer> minuteBox,
-                                JComboBox<Integer> yearBox, JComboBox<Integer> monthBox, JComboBox<Integer> dayBox,
-                                int hour, int minute) {
-        LocalDateTime tomorrow = LocalDateTime.now().plusDays(1);
-        yearBox.setSelectedItem(tomorrow.getYear());
-        monthBox.setSelectedItem(tomorrow.getMonthValue());
-        dayBox.setSelectedItem(tomorrow.getDayOfMonth());
-        hourBox.setSelectedItem(hour);
-        minuteBox.setSelectedItem(minute);
-    }
-
-    private void setTimeNextWeek(JComboBox<Integer> hourBox, JComboBox<Integer> minuteBox,
-                                JComboBox<Integer> yearBox, JComboBox<Integer> monthBox, JComboBox<Integer> dayBox,
-                                int hour, int minute) {
-        LocalDateTime nextWeek = LocalDateTime.now().plusWeeks(1);
-        yearBox.setSelectedItem(nextWeek.getYear());
-        monthBox.setSelectedItem(nextWeek.getMonthValue());
-        dayBox.setSelectedItem(nextWeek.getDayOfMonth());
-        hourBox.setSelectedItem(hour);
-        minuteBox.setSelectedItem(minute);
     }
 
     private void editReminders() {
@@ -567,146 +380,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     }
 
     private void editReminderDialog(Reminder reminder, Runnable onSave) {
-        JDialog dialog = new JDialog();
-        dialog.setTitle("Edit Reminder for " + reminder.getChecklistName());
-        dialog.setModal(true);
-        dialog.setLayout(new BorderLayout());
-        dialog.setResizable(false);
-
-        LocalDateTime now = LocalDateTime.now();
-
-        // Header
-        String currentTimeString = String.format("%02d:%02d on %d/%d/%d", 
-            now.getHour(), now.getMinute(), now.getMonthValue(), now.getDayOfMonth(), now.getYear());
-        String existingTimeString = String.format("%02d:%02d on %d/%d/%d",
-            reminder.getHour(), reminder.getMinute(), reminder.getMonth(), reminder.getDay(), reminder.getYear());
-        JLabel headerLabel = new JLabel("<html>Edit reminder for: <b>" + reminder.getChecklistName() + "</b><br><small>Current time: " + currentTimeString + "<br>Existing reminder: " + existingTimeString + "</small></html>", JLabel.CENTER);
-        headerLabel.setFont(headerLabel.getFont().deriveFont(14.0f));
-        headerLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        // Main content panel
-        JPanel contentPanel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new java.awt.Insets(5, 5, 5, 5);
-        gbc.anchor = GridBagConstraints.WEST;
-
-        // Date section
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
-        JLabel dateLabel = new JLabel("Date:");
-        dateLabel.setFont(dateLabel.getFont().deriveFont(Font.BOLD));
-        contentPanel.add(dateLabel, gbc);
-
-        gbc.gridwidth = 1;
-        gbc.gridy = 1;
-        contentPanel.add(new JLabel("Year:"), gbc);
-        gbc.gridx = 1;
-        JComboBox<Integer> yearBox = new JComboBox<>(IntStream.rangeClosed(now.getYear(), now.getYear() + 5).boxed().toArray(Integer[]::new));
-        yearBox.setSelectedItem(reminder.getYear());
-        contentPanel.add(yearBox, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 2;
-        contentPanel.add(new JLabel("Month:"), gbc);
-        gbc.gridx = 1;
-        JComboBox<Integer> monthBox = new JComboBox<>(IntStream.rangeClosed(1, 12).boxed().toArray(Integer[]::new));
-        monthBox.setSelectedItem(reminder.getMonth());
-        contentPanel.add(monthBox, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 3;
-        contentPanel.add(new JLabel("Day:"), gbc);
-        gbc.gridx = 1;
-        JComboBox<Integer> dayBox = new JComboBox<>(IntStream.rangeClosed(1, 31).boxed().toArray(Integer[]::new));
-        dayBox.setSelectedItem(reminder.getDay());
-        contentPanel.add(dayBox, gbc);
-
-        // Time section
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2;
-        JLabel timeLabel = new JLabel("Time:");
-        timeLabel.setFont(timeLabel.getFont().deriveFont(Font.BOLD));
-        contentPanel.add(timeLabel, gbc);
-
-        gbc.gridwidth = 1;
-        gbc.gridy = 5;
-        contentPanel.add(new JLabel("Hour (0-23):"), gbc);
-        gbc.gridx = 1;
-        JComboBox<Integer> hourBox = new JComboBox<>(IntStream.rangeClosed(0, 23).boxed().toArray(Integer[]::new));
-        hourBox.setSelectedItem(reminder.getHour());
-        contentPanel.add(hourBox, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 6;
-        contentPanel.add(new JLabel("Minute:"), gbc);
-        gbc.gridx = 1;
-        JComboBox<Integer> minuteBox = new JComboBox<>(IntStream.rangeClosed(0, 59).boxed().toArray(Integer[]::new));
-        minuteBox.setSelectedItem(reminder.getMinute());
-        contentPanel.add(minuteBox, gbc);
-
-        // Quick preset buttons
-        gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2;
-        JPanel presetPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        presetPanel.setBorder(BorderFactory.createTitledBorder("Quick Set"));
-
-        JButton in15MinButton = new JButton("In 15 min");
-        JButton in1HourButton = new JButton("In 1 hour");
-        JButton tomorrowButton = new JButton("Tomorrow");
-        JButton nextWeekButton = new JButton("Next week");
-
-        in15MinButton.addActionListener(e -> setTimeFromNow(hourBox, minuteBox, yearBox, monthBox, dayBox, 15));
-        in1HourButton.addActionListener(e -> setTimeFromNow(hourBox, minuteBox, yearBox, monthBox, dayBox, 60));
-        tomorrowButton.addActionListener(e -> setTimeTomorrow(hourBox, minuteBox, yearBox, monthBox, dayBox, now.getHour(), now.getMinute()));
-        nextWeekButton.addActionListener(e -> setTimeNextWeek(hourBox, minuteBox, yearBox, monthBox, dayBox, now.getHour(), now.getMinute()));
-
-        presetPanel.add(in15MinButton);
-        presetPanel.add(in1HourButton);
-        presetPanel.add(tomorrowButton);
-        presetPanel.add(nextWeekButton);
-
-        contentPanel.add(presetPanel, gbc);
-
-        // Buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout());
-        JButton saveButton = new JButton("Save Reminder");
-        JButton cancelButton = new JButton("Cancel");
-
-        saveButton.addActionListener(e -> {
-            try {
-                int year = (Integer) yearBox.getSelectedItem();
-                int month = (Integer) monthBox.getSelectedItem();
-                int day = (Integer) dayBox.getSelectedItem();
-                int hour = (Integer) hourBox.getSelectedItem();
-                int minute = (Integer) minuteBox.getSelectedItem();
-
-                // Validate date
-                java.time.LocalDateTime.of(year, month, day, hour, minute);
-
-                // Remove old reminder and add new one
-                taskManager.removeReminder(reminder);
-                Reminder newReminder = new Reminder(reminder.getChecklistName(), year, month, day, hour, minute);
-                taskManager.addReminder(newReminder);
-
-                dialog.dispose();
-                onSave.run();
-                
-                // Show informative success message
-                String timeString = String.format("%02d:%02d", hour, minute);
-                String dateString = String.format("%d/%d/%d", month, day, year);
-                String message = String.format("Reminder updated successfully!\n\nChecklist: %s\nDate: %s\nTime: %s\n\nYou'll be reminded at the specified time.",
-                    reminder.getChecklistName(), dateString, timeString);
-                JOptionPane.showMessageDialog(this, message, "Reminder Updated", JOptionPane.INFORMATION_MESSAGE);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, "Invalid date/time. Please check your input.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        cancelButton.addActionListener(e -> dialog.dispose());
-
-        buttonPanel.add(saveButton);
-        buttonPanel.add(cancelButton);
-
-        dialog.add(headerLabel, BorderLayout.NORTH);
-        dialog.add(contentPanel, BorderLayout.CENTER);
-        dialog.add(buttonPanel, BorderLayout.SOUTH);
-
-        dialog.pack();
-        dialog.setLocationRelativeTo(this);
+        ReminderEditDialog dialog = new ReminderEditDialog(taskManager, reminder.getChecklistName(), reminder, onSave);
         dialog.setVisible(true);
     }
 }
