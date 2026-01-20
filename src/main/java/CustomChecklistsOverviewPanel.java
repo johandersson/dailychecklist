@@ -56,6 +56,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private void initialize() {
         listModel = new DefaultListModel<>();
         checklistList = new JList<>(listModel);
+        checklistList.setCellRenderer(new ChecklistListCellRenderer());
         checklistList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 String selected = checklistList.getSelectedValue();
@@ -382,5 +383,29 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private void editReminderDialog(Reminder reminder, Runnable onSave) {
         ReminderEditDialog dialog = new ReminderEditDialog(taskManager, reminder.getChecklistName(), reminder, onSave);
         dialog.setVisible(true);
+    }
+
+    /**
+     * Custom cell renderer for checklist list that shows a smiley icon for checklists with reminders.
+     */
+    private class ChecklistListCellRenderer extends javax.swing.DefaultListCellRenderer {
+        @Override
+        public java.awt.Component getListCellRendererComponent(javax.swing.JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            
+            if (value instanceof String) {
+                String checklistName = (String) value;
+                boolean hasReminders = taskManager.getReminders().stream()
+                    .anyMatch(reminder -> java.util.Objects.equals(reminder.getChecklistName(), checklistName));
+                
+                if (hasReminders) {
+                    setText("⏰ " + checklistName);
+                } else {
+                    setText(checklistName);
+                }
+            }
+            
+            return this;
+        }
     }
 }
