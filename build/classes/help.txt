@@ -1,0 +1,189 @@
+<html><head><style>
+h1 { font-size: 24pt; color: #333; }
+h2 { font-size: 18pt; color: #555; }
+h3 { font-size: 14pt; color: #777; }
+body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
+</style></head><body>
+<h1>Daily Checklist Help</h1>
+
+<p>Daily Checklist is a specialized app for managing daily checklists, not general todo lists. It 'remembers' if you've completed tasks each day but resets fresh daily, without saving history. Unlike many todo apps that struggle with recurring tasks, this is designed specifically for daily checklists.</p>
+
+<p>Welcome to Daily Checklist! This guide will help you get started with managing your daily tasks, custom checklists, reminders, and using the focus timer.</p>
+
+<h2>Getting Started</h2>
+
+<ol>
+<li><b>Launch the App</b>: Run <code>java -jar dailychecklist.jar</code> or double-click the JAR file.</li>
+<li><b>Main Interface</b>: The app opens with a split-pane layout showing daily tasks on the left and custom checklists on the right.</li>
+</ol>
+
+<h2>Managing Daily Tasks</h2>
+
+<h3>Adding a New Daily Task</h3>
+<ul>
+<li>Click the "Add Task" button or use Ctrl+A.</li>
+<li>Fill in the task name (e.g., "Morning Exercise").</li>
+<li>Choose the time: Morning or Evening.</li>
+<li>Select frequency:
+<ul>
+<li><b>Daily</b>: Every day.</li>
+<li><b>Weekday</b>: Monday to Friday.</li>
+<li><b>Specific Day</b>: Pick a day like Monday or Tuesday.</li>
+</ul>
+</li>
+<li>Click "Add Task". The task appears in the left panel under the chosen time.</li>
+</ul>
+
+<h3>Viewing Daily Tasks</h3>
+<ul>
+<li>The left panel shows tasks grouped by Morning and Evening.</li>
+<li>Check the "Show weekday tasks" box to include weekday-specific tasks.</li>
+<li>Each task shows its name and completion status.</li>
+</ul>
+
+<h3>Editing Daily Tasks</h3>
+<ul>
+<li>Right-click a task in the left panel.</li>
+<li>Choose "Rename" to change the name.</li>
+<li>Choose "Remove" to delete it.</li>
+<li>Choose "Start Focus Timer" to begin a timed session.</li>
+<li>Confirm changes in the popup.</li>
+</ul>
+
+<h3>Completing Tasks</h3>
+<ul>
+<li>Check the checkbox next to a task to mark it complete.</li>
+<li>Completed tasks show a checkmark and are visually distinguished.</li>
+<li>Tasks reset daily - completed status doesn't carry over.</li>
+</ul>
+
+<h2>Managing Custom Checklists</h2>
+
+<h3>Creating a Custom Checklist</h3>
+<ul>
+<li>In the right panel, enter a name in the text field.</li>
+<li>Click "Create Checklist".</li>
+<li>The new checklist appears in the list below.</li>
+</ul>
+
+<h3>Adding Tasks to Custom Checklists</h3>
+<ul>
+<li>Select a checklist from the list in the right panel.</li>
+<li>Click "Add Task" in the checklist view.</li>
+<li>Enter the task name and click "Add".</li>
+<li>Tasks appear in the selected checklist.</li>
+</ul>
+
+<h3>Managing Checklists</h3>
+<ul>
+<li>Right-click a checklist name in the right panel.</li>
+<li>Choose "Rename" to change the checklist name.</li>
+<li>Choose "Delete" to remove the checklist and its tasks.</li>
+<li>Choose "Add Reminder" to set up a reminder for this checklist.</li>
+<li>Choose "View/Edit Reminders" to manage existing reminders.</li>
+</ul>
+
+<h3>Editing Custom Tasks</h3>
+<ul>
+<li>Right-click a task in a custom checklist.</li>
+<li>Choose "Rename" or "Remove" as needed.</li>
+<li>Drag and drop tasks to reorder them.</li>
+</ul>
+
+<h2>Using Reminders</h2>
+
+<h3>Adding Reminders</h3>
+<ul>
+<li>Right-click a checklist and select "Add Reminder".</li>
+<li>Set the date and time for the reminder.</li>
+<li>The app will notify you when the reminder time arrives.</li>
+</ul>
+
+<h3>Managing Reminders</h3>
+<ul>
+<li>Right-click a checklist and select "View/Edit Reminders".</li>
+<li>See all reminders for that checklist.</li>
+<li>Click "Edit" to modify a reminder's date/time.</li>
+<li>Click "Delete" to remove a reminder.</li>
+</ul>
+
+<h3>Reminder Notifications</h3>
+<ul>
+<li>When a reminder time arrives, a popup appears.</li>
+<li>Choose "Open" to view the checklist or "Done" to dismiss.</li>
+<li>The app checks for reminders every minute.</li>
+</ul>
+
+<h3>Reordering Tasks</h3>
+<ul>
+<li>Drag and drop tasks in any list to reorder them.</li>
+</ul>
+
+<h2>Using the Focus Timer</h2>
+
+<h3>Starting a Timer</h3>
+<ul>
+<li>Right-click any task and select "Start Focus Timer".</li>
+<li>Enter the duration in minutes (e.g., 25 for Pomodoro).</li>
+<li>Click "OK" to begin.</li>
+</ul>
+
+<h3>During the Timer</h3>
+<ul>
+<li>A new window shows the countdown.</li>
+<li>Circles fill up as time passes (each circle = 5 minutes).</li>
+<li>Use controls:
+<ul>
+<li><b>Space</b>: Pause/Resume.</li>
+<li><b>Enter</b>: Start (if paused).</li>
+</ul>
+</li>
+<li>When time ends, a notification appears.</li>
+</ul>
+
+<h3>Tips for Focus</h3>
+<ul>
+<li>Use the timer for short bursts (e.g., 15-30 minutes).</li>
+<li>Take breaks between sessions.</li>
+<li>Track progress visually with the circles.</li>
+</ul>
+
+<h2>Settings</h2>
+
+<ul>
+<li>Access via the menu bar.</li>
+<li>Customize app behavior (e.g., default timer lengths).</li>
+</ul>
+
+<h2>Troubleshooting</h2>
+
+<ul>
+<li><b>App Won't Start</b>: Ensure Java is installed (<code>java -version</code>). If initialization fails, the app will show an error dialog with recovery suggestions.</li>
+<li><b>Data Loading Issues</b>: If data files are corrupted or missing, the app will display a clear error message with steps to recover from automatic backups or restore defaults.</li>
+<li><b>Tasks Not Saving</b>: Check write permissions; tasks save to <code>dailychecklist-tasks.xml</code> and reminders to <code>dailychecklist-reminders.properties</code>. The app creates automatic backups in the <code>backups</code> folder.</li>
+<li><b>Timer Issues</b>: Restart the app if the timer freezes.</li>
+<li><b>Checklists Not Appearing</b>: Checklists appear in the list once they contain tasks.</li>
+</ul>
+
+<h2>Data Backup and Recovery</h2>
+
+<p>The app automatically creates backups of your data:</p>
+<ul>
+<li>Backups are stored in the <code>dailychecklist-backups</code> folder in your user directory.</li>
+<li>Automatic backups occur when the app starts and periodically during use.</li>
+<li>If data becomes corrupted, you can restore from a backup by extracting the ZIP file and copying the files to your user directory.</li>
+<li>Manual backups can be created via the menu options.</li>
+</ul>
+
+<h2>Keyboard Shortcuts</h2>
+
+<ul>
+<li><b>Add Task</b>: Ctrl+A</li>
+<li><b>Refresh Tasks</b>: F5</li>
+<li><b>Timer Pause/Resume</b>: Space</li>
+</ul>
+
+<p>For more details, check the README.md file or visit the project repository.</p>
+
+<p>Enjoy staying productive!</p>
+</body></html>
