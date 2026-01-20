@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import java.io.File;
+import java.awt.Component;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -25,14 +25,35 @@ import java.util.Properties;
 
 public class SettingsManager {
     private Properties settings = new Properties();
-    private String settingsPath = System.getProperty("user.home") + File.separator + "Documents" + File.separator + "settings.ini";
+    private String settingsPath = ApplicationConfiguration.SETTINGS_FILE_PATH;
     private String lastDate;
+    private Component parentComponent;
+
+    /**
+     * Creates a new SettingsManager with no parent component.
+     * Error dialogs will not be shown.
+     */
+    public SettingsManager() {
+        this(null);
+    }
+
+    /**
+     * Creates a new SettingsManager with a parent component for error dialogs.
+     *
+     * @param parentComponent Parent component for error dialogs, or null to disable dialogs
+     */
+    public SettingsManager(Component parentComponent) {
+        this.parentComponent = parentComponent;
+    }
 
     public void load() {
         try (FileInputStream fis = new FileInputStream(settingsPath)) {
             settings.load(fis);
         } catch (IOException e) {
-            // file not exist, use defaults
+            // File doesn't exist or can't be read, use defaults
+            if (parentComponent != null) {
+                ApplicationErrorHandler.showDataLoadError(parentComponent, "settings", e);
+            }
         }
         lastDate = settings.getProperty("lastDate", "");
     }
@@ -43,7 +64,9 @@ public class SettingsManager {
         try (FileOutputStream fos = new FileOutputStream(settingsPath)) {
             settings.store(fos, null);
         } catch (IOException e) {
-            e.printStackTrace();
+            if (parentComponent != null) {
+                ApplicationErrorHandler.showDataSaveError(parentComponent, "settings", e);
+            }
         }
     }
 

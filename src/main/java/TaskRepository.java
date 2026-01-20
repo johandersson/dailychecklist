@@ -20,11 +20,7 @@ public interface TaskRepository {
     void initialize();
     List<Task> getDailyTasks();
     List<Task> getAllTasks();
-
-    default void addTask(Task task) {
-
-    }
-
+    void addTask(Task task);
     void updateTask(Task task);
     void removeTask(Task task);
     boolean hasUndoneTasks();
@@ -63,7 +59,13 @@ public interface TaskRepository {
     /**
      * Shuts down the repository and cleans up resources.
      */
-    default void shutdown() {
+    void shutdown();
+
+    /**
+     * Starts background services like automatic backups.
+     * Should be called after the application is fully initialized.
+     */
+    default void start() {
         // Default implementation does nothing
     }
 }

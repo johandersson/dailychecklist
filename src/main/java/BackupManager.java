@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
+import java.awt.Component;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -33,6 +34,7 @@ public class BackupManager {
     private final int maxBackups;
     private final long backupIntervalMs;
     private final String[] dataFiles; // Array of file paths to backup
+    private final Component parentComponent; // Parent component for error dialogs
 
     private Thread backupThread;
     private volatile boolean backupRunning = true;
@@ -45,16 +47,19 @@ public class BackupManager {
      * @param maxBackups Maximum number of backups to keep
      * @param backupIntervalMs Interval between automatic backups in milliseconds
      * @param dataFiles Array of file paths to include in backups
+     * @param parentComponent Parent component for error dialogs
      */
-    public BackupManager(String backupDir, int maxBackups, long backupIntervalMs, String[] dataFiles) {
+    public BackupManager(String backupDir, int maxBackups, long backupIntervalMs, String[] dataFiles, Component parentComponent) {
         this.backupDir = backupDir;
         this.maxBackups = maxBackups;
         this.backupIntervalMs = backupIntervalMs;
         this.dataFiles = dataFiles;
+        this.parentComponent = parentComponent;
     }
 
     /**
-     * Initializes the backup system and starts the periodic backup thread.
+     * Initializes the backup system without starting background threads.
+     * Call start() to begin automatic backups.
      */
     public void initialize() {
         // Create backup directory if it doesn't exist
@@ -62,6 +67,18 @@ public class BackupManager {
         if (!backupDirFile.exists()) {
             backupDirFile.mkdirs();
         }
+    }
+
+    /**
+     * Starts the periodic backup thread.
+     * Should be called after initialization and when the application is ready.
+     */
+    public void start() {
+        if (backupThread != null && backupThread.isAlive()) {
+            return; // Already started
+        }
+
+        backupRunning = true;
 
         // Start periodic backup thread
         backupThread = new Thread(() -> {
@@ -73,8 +90,8 @@ public class BackupManager {
                     Thread.currentThread().interrupt();
                     break;
                 } catch (Exception e) {
-                    // Log error but continue
-                    System.err.println("Backup error: " + e.getMessage());
+                    // Show user-friendly error dialog
+                    ApplicationErrorHandler.showBackupError(parentComponent, e);
                 }
             }
         });
@@ -118,7 +135,7 @@ public class BackupManager {
             cleanupOldBackups();
 
         } catch (Exception e) {
-            System.err.println("Failed to create backup: " + e.getMessage());
+            ApplicationErrorHandler.showBackupError(parentComponent, e);
         }
     }
 
