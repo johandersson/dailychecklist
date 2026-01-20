@@ -170,8 +170,14 @@ public class TaskManager {
      * @return Validated and sanitized input, or null if invalid
      */
     public static String validateInputWithError(String input, String fieldName) {
+        if (input == null || input.trim().isEmpty()) {
+            javax.swing.JOptionPane.showMessageDialog(null,
+                fieldName + " cannot be empty.",
+                "Invalid Input", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
         String validated = validateAndSanitizeInput(input);
-        if (validated == null && input != null && !input.trim().isEmpty()) {
+        if (validated == null) {
             javax.swing.JOptionPane.showMessageDialog(null,
                 fieldName + " contains invalid characters or is too long.\n" +
                 "Use only letters (including international characters), numbers, spaces, hyphens, underscores, dots, parentheses, and angle brackets.\n" +
