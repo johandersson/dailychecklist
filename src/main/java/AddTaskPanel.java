@@ -24,6 +24,7 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionListener;
 import java.util.function.Consumer;
+
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -110,57 +111,60 @@ public class AddTaskPanel extends JPanel {
             add(timePanel, gbc);
         }
 
-        JLabel frequencyLabel = new JLabel("Frequency:");
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        add(frequencyLabel, gbc);
+        if (checklistName == null) {
+            JLabel frequencyLabel = new JLabel("Frequency:");
+            gbc.gridx = 0;
+            gbc.gridy = 2;
+            add(frequencyLabel, gbc);
 
-        JRadioButton dailyRadioButton = new JRadioButton("Daily");
-        JRadioButton weekdayRadioButton = new JRadioButton("Weekday");
-        ButtonGroup frequencyGroup = new ButtonGroup();
-        frequencyGroup.add(dailyRadioButton);
-        frequencyGroup.add(weekdayRadioButton);
+            JRadioButton dailyRadioButton = new JRadioButton("Daily");
+            JRadioButton weekdayRadioButton = new JRadioButton("Weekday");
+            ButtonGroup frequencyGroup = new ButtonGroup();
+            frequencyGroup.add(dailyRadioButton);
+            frequencyGroup.add(weekdayRadioButton);
 
-        JPanel frequencyPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        frequencyPanel.add(dailyRadioButton);
-        frequencyPanel.add(weekdayRadioButton);
-        gbc.gridx = 1;
-        gbc.gridy = 2;
-        add(frequencyPanel, gbc);
+            JPanel frequencyPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            frequencyPanel.add(dailyRadioButton);
+            frequencyPanel.add(weekdayRadioButton);
+            gbc.gridx = 1;
+            gbc.gridy = 2;
+            add(frequencyPanel, gbc);
 
-        JLabel weekdayLabel = new JLabel("Weekday:");
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        add(weekdayLabel, gbc);
-        String[] weekdays = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
-        weekdayComboBox = new JComboBox<>(weekdays);
-        weekdayComboBox.setEnabled(false);
-        gbc.gridx = 1;
-        gbc.gridy = 3;
-        add(weekdayComboBox, gbc);
-        weekdayRadioButton.addActionListener(e -> weekdayComboBox.setEnabled(true));
-        dailyRadioButton.addActionListener(e -> weekdayComboBox.setEnabled(false));
-        if (addMorningRadioButton != null) {
-            addMorningRadioButton.addActionListener(e -> {
-                frequencyLabel.setVisible(true);
-                frequencyPanel.setVisible(true);
-                weekdayLabel.setVisible(true);
-                weekdayComboBox.setVisible(true);
-            });
-        }
-        if (addEveningRadioButton != null) {
-            addEveningRadioButton.addActionListener(e -> {
-                frequencyLabel.setVisible(true);
-                frequencyPanel.setVisible(true);
-                weekdayLabel.setVisible(true);
-                weekdayComboBox.setVisible(true);
-            });
+            JLabel weekdayLabel = new JLabel("Weekday:");
+            gbc.gridx = 0;
+            gbc.gridy = 3;
+            add(weekdayLabel, gbc);
+            String[] weekdays = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+            weekdayComboBox = new JComboBox<>(weekdays);
+            weekdayComboBox.setEnabled(false);
+            gbc.gridx = 1;
+            gbc.gridy = 3;
+            add(weekdayComboBox, gbc);
+            weekdayRadioButton.addActionListener(e -> weekdayComboBox.setEnabled(true));
+            dailyRadioButton.addActionListener(e -> weekdayComboBox.setEnabled(false));
+            if (addMorningRadioButton != null) {
+                addMorningRadioButton.addActionListener(e -> {
+                    frequencyLabel.setVisible(true);
+                    frequencyPanel.setVisible(true);
+                    weekdayLabel.setVisible(true);
+                    weekdayComboBox.setVisible(true);
+                });
+            }
+            if (addEveningRadioButton != null) {
+                addEveningRadioButton.addActionListener(e -> {
+                    frequencyLabel.setVisible(true);
+                    frequencyPanel.setVisible(true);
+                    weekdayLabel.setVisible(true);
+                    weekdayComboBox.setVisible(true);
+                });
+            }
         }
 
         JButton addButton = new JButton("Add tasks");
         addButton.addActionListener(createAddMultipleTasksActionListener(taskField, addMorningRadioButton, addEveningRadioButton));
         gbc.gridx = 0;
-        gbc.gridy = 4;
+        int buttonRow = (checklistName == null) ? 4 : 1;
+        gbc.gridy = buttonRow;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
         add(addButton, gbc);
@@ -180,7 +184,7 @@ public class AddTaskPanel extends JPanel {
                         JOptionPane.showMessageDialog(this, "Please select Morning or Evening.", "Validation Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
-                    if (weekdayComboBox.isEnabled() && weekdayComboBox.getSelectedItem() == null) {
+                    if (weekdayComboBox != null && weekdayComboBox.isEnabled() && weekdayComboBox.getSelectedItem() == null) {
                         JOptionPane.showMessageDialog(this, "Please select a valid weekday.", "Validation Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
@@ -220,7 +224,7 @@ public class AddTaskPanel extends JPanel {
                 taskType = "Unknown";
             }
             String frequencyType;
-            if (weekdayComboBox.isEnabled() && taskType != "Custom checklist") {
+            if (weekdayComboBox != null && weekdayComboBox.isEnabled() && taskType != "Custom checklist") {
                 String selectedWeekday = (String) weekdayComboBox.getSelectedItem();
                 frequencyType = "Weekday: " + selectedWeekday;
             } else {
@@ -230,8 +234,10 @@ public class AddTaskPanel extends JPanel {
             taskField.setText("");
             if (morningRadioButton != null) morningRadioButton.setSelected(false);
             if (eveningRadioButton != null) eveningRadioButton.setSelected(false);
-            weekdayComboBox.setEnabled(false);
-            weekdayComboBox.setSelectedIndex(0);
+            if (weekdayComboBox != null) {
+                weekdayComboBox.setEnabled(false);
+                weekdayComboBox.setSelectedIndex(0);
+            }
         };
     }
 }
