@@ -18,6 +18,9 @@
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
@@ -45,8 +48,8 @@ public class ChecklistNameManager {
         Set<String> checklistNames = new HashSet<>();
         Properties props = new Properties();
 
-        try (FileInputStream fis = new FileInputStream(checklistNamesFileName)) {
-            props.load(fis);
+        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(checklistNamesFileName), StandardCharsets.UTF_8)) {
+            props.load(reader);
             for (String key : props.stringPropertyNames()) {
                 checklistNames.add(key);
             }
@@ -90,8 +93,8 @@ public class ChecklistNameManager {
             props.setProperty(name, "true");
         }
 
-        try (FileOutputStream fos = new FileOutputStream(checklistNamesFileName)) {
-            props.store(fos, "Daily Checklist Custom Checklist Names");
+        try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(checklistNamesFileName), StandardCharsets.UTF_8)) {
+            props.store(writer, "Daily Checklist Custom Checklist Names");
         } catch (IOException e) {
             // Ignore errors
         }

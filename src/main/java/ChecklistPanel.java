@@ -20,7 +20,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Date;
 import java.util.List;
-
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -232,6 +231,53 @@ public class ChecklistPanel extends JPanel {
     public void updateTasks() {
         List<Task> allTasks = taskManager.getAllTasks();
         taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected());
+        morningTaskList.revalidate();
+        morningTaskList.repaint();
+        eveningTaskList.revalidate();
+        eveningTaskList.repaint();
+    }
+
+    public void scrollToAndHighlightTasks(Task[] tasks) {
+        if (tasks == null || tasks.length == 0) return;
+        
+        SwingUtilities.invokeLater(() -> {
+            for (Task task : tasks) {
+                JList<Task> targetList;
+                DefaultListModel<Task> targetModel;
+                
+                if (task.getType() == TaskType.MORNING) {
+                    targetList = morningTaskList;
+                    targetModel = morningListModel;
+                } else if (task.getType() == TaskType.EVENING) {
+                    targetList = eveningTaskList;
+                    targetModel = eveningListModel;
+                } else {
+                    continue; // Skip custom tasks
+                }
+                
+                // Find the task in the model
+                for (int i = 0; i < targetModel.getSize(); i++) {
+                    if (targetModel.get(i).equals(task)) {
+                        final int index = i;
+                        final JList<Task> list = targetList;
+                        
+                        // Scroll to the task
+                        list.ensureIndexIsVisible(index);
+                        list.setSelectedIndex(index);
+                        
+                        // Highlight with animation effect
+                        highlightTask(list, index);
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
+    private void highlightTask(JList<Task> list, int index) {
+        // Simple highlight effect - could be enhanced with more sophisticated animation
+        list.requestFocus();
+        // The selection already provides visual feedback
     }
 
     public boolean isShowWeekdayTasks() {

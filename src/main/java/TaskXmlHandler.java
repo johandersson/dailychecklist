@@ -112,14 +112,26 @@ public class TaskXmlHandler {
         String checklistName = null;
         NodeList checklistNameNodes = element.getElementsByTagName("checklistName");
         if (checklistNameNodes.getLength() > 0) {
-            checklistName = checklistNameNodes.item(0).getTextContent();
+            String content = checklistNameNodes.item(0).getTextContent();
+            if (content != null && !content.trim().isEmpty()) {
+                checklistName = content;
+            }
+        }
+
+        String weekday = null;
+        NodeList weekdayNodes = element.getElementsByTagName("weekday");
+        if (weekdayNodes.getLength() > 0) {
+            weekday = weekdayNodes.item(0).getTextContent();
+            if (weekday != null && weekday.trim().isEmpty()) {
+                weekday = null;
+            }
         }
 
         return new Task(
                 element.getAttribute("id"),
                 element.getElementsByTagName("name").item(0).getTextContent(),
                 TaskType.valueOf(element.getElementsByTagName("type").item(0).getTextContent()),
-                element.getElementsByTagName("weekday").item(0).getTextContent(),
+                weekday,
                 Boolean.parseBoolean(element.getElementsByTagName("done").item(0).getTextContent()),
                 element.getElementsByTagName("doneDate").item(0).getTextContent(),
                 checklistName
@@ -141,9 +153,11 @@ public class TaskXmlHandler {
         typeElement.setTextContent(task.getType().name());
         taskElement.appendChild(typeElement);
 
-        Element weekdayElement = document.createElement("weekday");
-        weekdayElement.setTextContent(task.getWeekday());
-        taskElement.appendChild(weekdayElement);
+        if (task.getWeekday() != null) {
+            Element weekdayElement = document.createElement("weekday");
+            weekdayElement.setTextContent(task.getWeekday());
+            taskElement.appendChild(weekdayElement);
+        }
 
         Element doneElement = document.createElement("done");
         doneElement.setTextContent(String.valueOf(task.isDone()));
@@ -153,7 +167,7 @@ public class TaskXmlHandler {
         doneDateElement.setTextContent(task.getDoneDate());
         taskElement.appendChild(doneDateElement);
 
-        if (task.getChecklistName() != null) {
+        if (task.getChecklistName() != null && !task.getChecklistName().trim().isEmpty()) {
             Element checklistNameElement = document.createElement("checklistName");
             checklistNameElement.setTextContent(task.getChecklistName());
             taskElement.appendChild(checklistNameElement);

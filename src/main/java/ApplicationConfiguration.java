@@ -66,9 +66,9 @@ public final class ApplicationConfiguration {
     public static final String USER_HOME = System.getProperty("user.home");
     public static final String APPLICATION_DATA_DIR = USER_HOME + File.separator + ".dailychecklist";
     public static final String BACKUP_DIRECTORY = USER_HOME + File.separator + BACKUP_DIRECTORY_NAME;
-    public static final String SETTINGS_FILE_PATH = APPLICATION_DATA_DIR + File.separator + SETTINGS_FILE_NAME;
-    public static final String REMINDERS_FILE_PATH = APPLICATION_DATA_DIR + File.separator + REMINDERS_FILE_NAME;
-    public static final String CHECKLIST_NAMES_FILE_PATH = APPLICATION_DATA_DIR + File.separator + CHECKLIST_NAMES_FILE_NAME;
+    public static final String SETTINGS_FILE_PATH = USER_HOME + File.separator + ".dailychecklist" + File.separator + SETTINGS_FILE_NAME;
+    public static final String REMINDERS_FILE_PATH = USER_HOME + File.separator + ".dailychecklist" + File.separator + REMINDERS_FILE_NAME;
+    public static final String CHECKLIST_NAMES_FILE_PATH = USER_HOME + File.separator + ".dailychecklist" + File.separator + CHECKLIST_NAMES_FILE_NAME;
 
     // XML Configuration
     public static final String XML_ROOT_ELEMENT = "tasks";

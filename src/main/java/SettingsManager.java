@@ -16,9 +16,13 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import java.awt.Component;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
@@ -47,11 +51,14 @@ public class SettingsManager {
     }
 
     public void load() {
-        try (FileInputStream fis = new FileInputStream(settingsPath)) {
-            settings.load(fis);
+        ApplicationConfiguration.ensureDataDirectoryExists();
+        
+        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(settingsPath), StandardCharsets.UTF_8)) {
+            settings.load(reader);
         } catch (IOException e) {
             // File doesn't exist or can't be read, use defaults
-            if (parentComponent != null) {
+            // Only show error dialog if file exists but can't be read (not for missing file on first run)
+            if (new File(settingsPath).exists() && parentComponent != null) {
                 ApplicationErrorHandler.showDataLoadError(parentComponent, "settings", e);
             }
         }
@@ -59,10 +66,11 @@ public class SettingsManager {
     }
 
     public void save(boolean showWeekdayTasks) {
+        ApplicationConfiguration.ensureDataDirectoryExists();
         settings.setProperty("showWeekdayTasks", String.valueOf(showWeekdayTasks));
         settings.setProperty("lastDate", new SimpleDateFormat("yyyy-MM-dd").format(new Date()));
-        try (FileOutputStream fos = new FileOutputStream(settingsPath)) {
-            settings.store(fos, null);
+        try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(settingsPath), StandardCharsets.UTF_8)) {
+            settings.store(writer, null);
         } catch (IOException e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "settings", e);

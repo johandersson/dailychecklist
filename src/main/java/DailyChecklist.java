@@ -81,8 +81,9 @@ public class DailyChecklist {
             this.settingsManager.load();
             initializeUI();
         }
-        addTaskPanel = new AddTaskPanel(checklistManager, () -> {
+        addTaskPanel = new AddTaskPanel(checklistManager, tasks -> {
             checklistPanel.updateTasks();
+            checklistPanel.scrollToAndHighlightTasks(tasks);
             customChecklistsOverviewPanel.updateTasks();
         });
         customChecklistsOverviewPanel = new CustomChecklistsOverviewPanel(checklistManager, () -> {
