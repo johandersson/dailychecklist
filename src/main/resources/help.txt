@@ -61,7 +61,7 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 
 <h3>Creating a Custom Checklist</h3>
 <ul>
-<li>In the right panel, enter a name in the text field.</li>
+<li>In the right panel, enter a name in the text field (name cannot be empty).</li>
 <li>Click "Create Checklist".</li>
 <li>The new checklist appears in the list below.</li>
 </ul>
@@ -69,8 +69,9 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 <h3>Adding Tasks to Custom Checklists</h3>
 <ul>
 <li>Select a checklist from the list in the right panel.</li>
-<li>Click "Add Task" in the checklist view.</li>
-<li>Enter the task name and click "Add".</li>
+<li>In the "Add Tasks" area below the task list, enter one task per line.</li>
+<li>Click "Add Tasks" to add all entered tasks at once.</li>
+<li>Empty lines are automatically skipped.</li>
 <li>Tasks appear in the selected checklist.</li>
 </ul>
 
@@ -81,6 +82,7 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 <li>Choose "Delete" to remove the checklist and its tasks.</li>
 <li>Choose "Add Reminder" to set up a reminder for this checklist.</li>
 <li>Choose "View/Edit Reminders" to manage existing reminders.</li>
+<li>Checklists with active reminders display a clock icon (⏰) next to their name.</li>
 </ul>
 
 <h3>Editing Custom Tasks</h3>

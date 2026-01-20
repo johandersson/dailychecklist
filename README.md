@@ -7,8 +7,8 @@ Stay organized and boost your productivity with the **Daily Checklist** applicat
 ## Features
 
 - **Daily Task Management**: Add, edit, rename, and remove tasks for your morning and evening routines with flexible scheduling (daily, weekday, or specific days).
-- **Custom Checklists**: Create named checklists for specific projects, habits, or one-off task lists.
-- **Reminders**: Set date/time reminders for any checklist with notifications.
+- **Custom Checklists**: Create named checklists for specific projects, habits, or one-off task lists with support for adding multiple tasks at once.
+- **Reminders**: Set date/time reminders for any checklist with notifications and visual clock icons.
 - **Focus Timer**: Start a customizable timer for any task to maintain focus and track progress with visual indicators.
 - **Split-Pane UI**: Modern interface with daily tasks on the left and custom checklists on the right.
 - **Interactive Features**: Context menus, drag-and-drop reordering, keyboard shortcuts, and visual feedback.
@@ -87,14 +87,15 @@ To build the JAR manually:
 ### Managing Custom Checklists
 
 #### 1. Create a Custom Checklist
-- In the right panel, enter a name in the text field.
+- In the right panel, enter a name in the text field (name cannot be empty).
 - Click "Create Checklist".
 - The checklist appears in the list and is automatically selected.
 
 #### 2. Add Tasks to Custom Checklists
 - Select a checklist from the list.
-- Click "Add Task" in the checklist view.
-- Enter the task name and click "Add".
+- In the "Add Tasks" area below the task list, enter one task per line.
+- Click "Add Tasks" to add all entered tasks at once.
+- Empty lines are automatically skipped.
 
 #### 3. Manage Checklists and Tasks
 - Right-click a checklist name for options:
