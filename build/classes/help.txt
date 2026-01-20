@@ -169,9 +169,9 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 
 <p>The app automatically creates backups of your data:</p>
 <ul>
-<li>Backups are stored in the <code>backups</code> folder in your user directory.</li>
+<li>Backups are stored in the <code>dailychecklist-backups</code> folder in your user directory.</li>
 <li>Automatic backups occur when the app starts and periodically during use.</li>
-<li>If data becomes corrupted, you can restore from a backup by following the error dialog instructions.</li>
+<li>If data becomes corrupted, you can restore from a backup by extracting the ZIP file and copying the files to your user directory.</li>
 <li>Manual backups can be created via the menu options.</li>
 </ul>
 
