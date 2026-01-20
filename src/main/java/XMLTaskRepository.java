@@ -41,6 +41,13 @@ public class XMLTaskRepository implements TaskRepository {
     private Component parentComponent;
 
     /**
+     * Sets the parent component for error dialogs.
+     */
+    public void setParentComponent(Component parentComponent) {
+        this.parentComponent = parentComponent;
+    }
+
+    /**
      * Creates a new XMLTaskRepository with no parent component.
      * Error dialogs will not be shown.
      */

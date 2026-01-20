@@ -1,20 +1,20 @@
 @echo off
 echo Compiling Java sources...
-if not exist target mkdir target
-if not exist target\classes mkdir target\classes
+if not exist build mkdir build
+if not exist build\classes mkdir build\classes
 
-javac -d target\classes src\main\java\*.java
+javac -d build\classes src\main\java\*.java
 if %errorlevel% neq 0 exit /b %errorlevel%
 
 echo Copying resources...
-xcopy src\main\resources\* target\classes\ /s /i /y
+xcopy src\main\resources\* build\classes\ /s /i /y
 
 echo Copying documentation...
-copy license.md target\
-copy README.md target\
+copy license.md build\
+copy README.md build\
 
 echo Creating JAR...
-jar -cfe target\dailychecklist.jar Main -C target\classes . -C target license.md -C target README.md
+jar -cfe build\dailychecklist.jar Main -C build\classes . -C build license.md -C build README.md
 if %errorlevel% neq 0 exit /b %errorlevel%
 
-echo Build complete. JAR created at target\dailychecklist.jar
+echo Build complete. JAR created at build\dailychecklist.jar

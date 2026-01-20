@@ -52,6 +52,10 @@ public class DailyChecklist {
         initializeComponents(lifecycleManager);
     }
 
+    public TaskRepository getRepository() {
+        return repository;
+    }
+
     private void initializeComponents(ApplicationLifecycleManager lifecycleManager) {
         if (lifecycleManager != null) {
             // Use provided lifecycle manager components
@@ -68,6 +72,7 @@ public class DailyChecklist {
 
         this.taskUpdater = new TaskUpdater();
         this.checklistManager = new TaskManager(repository);
+        this.checklistPanel = new ChecklistPanel(checklistManager, taskUpdater);
 
         if (!GraphicsEnvironment.isHeadless()) {
             frame = new JFrame();
