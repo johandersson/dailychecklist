@@ -34,6 +34,7 @@ bin/
 
 # Target directory (build output)
 target/
+build/
 
 # JAR files in root directory
 /*.jar
