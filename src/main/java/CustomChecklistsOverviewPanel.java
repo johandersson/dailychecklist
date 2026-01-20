@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -45,7 +46,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private JPanel rightPanel;
     private CustomChecklistPanel currentChecklistPanel;
     private String selectedChecklistName;
-    private JButton addTaskButton;
+    private AddTaskPanel currentAddPanel;
     private Set<String> allChecklistNames;
 
     public CustomChecklistsOverviewPanel(TaskManager taskManager, Runnable updateTasks) {
@@ -102,12 +103,10 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         leftPanel.add(topPanel, BorderLayout.NORTH);
         leftPanel.add(new JScrollPane(checklistList), BorderLayout.CENTER);
 
-        rightPanel = new JPanel(new BorderLayout());
-        addTaskButton = new JButton("Add Task");
-        addTaskButton.addActionListener(e -> addTaskToSelected());
-        rightPanel.add(addTaskButton, BorderLayout.SOUTH);
+        rightPanel = new JPanel();
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
 
-        splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
+        splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, new JScrollPane(rightPanel));
         splitPane.setResizeWeight(0.3);
 
         setLayout(new BorderLayout());
@@ -155,41 +154,28 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         if (currentChecklistPanel != null) {
             rightPanel.remove(currentChecklistPanel);
         }
+        if (currentAddPanel != null) {
+            rightPanel.remove(currentAddPanel);
+        }
         if (checklistName != null) {
             currentChecklistPanel = new CustomChecklistPanel(taskManager, new TaskUpdater(), checklistName);
             currentChecklistPanel.updateTasks();
-            rightPanel.add(currentChecklistPanel, BorderLayout.CENTER);
+            rightPanel.add(currentChecklistPanel);
+            currentAddPanel = new AddTaskPanel(taskManager, tasks -> {
+                if (currentChecklistPanel != null) {
+                    currentChecklistPanel.updateTasks();
+                    rightPanel.revalidate();
+                    rightPanel.repaint();
+                }
+                updateTasks.run();
+            }, checklistName);
+            rightPanel.add(currentAddPanel);
         } else {
             currentChecklistPanel = null;
+            currentAddPanel = null;
         }
         rightPanel.revalidate();
         rightPanel.repaint();
-    }
-
-    private void addTaskToSelected() {
-        if (selectedChecklistName == null) {
-            JOptionPane.showMessageDialog(this, "Please select a checklist first.");
-            return;
-        }
-        JDialog addTaskDialog = new JDialog();
-        addTaskDialog.setTitle("Add Tasks to " + selectedChecklistName);
-        addTaskDialog.setModal(true);
-        addTaskDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-
-        AddTaskPanel addPanel = new AddTaskPanel(taskManager, tasks -> {
-            if (currentChecklistPanel != null) {
-                currentChecklistPanel.updateTasks();
-                rightPanel.revalidate();
-                rightPanel.repaint();
-            }
-            updateTasks.run();
-            addTaskDialog.dispose();
-        }, selectedChecklistName);
-
-        addTaskDialog.add(addPanel);
-        addTaskDialog.pack();
-        addTaskDialog.setLocationRelativeTo(this);
-        addTaskDialog.setVisible(true);
     }
 
     public void updateTasks() {
