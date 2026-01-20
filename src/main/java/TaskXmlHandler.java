@@ -21,7 +21,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.JOptionPane;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -263,27 +262,14 @@ public class TaskXmlHandler {
     /**
      * Checks if a task's done date is in the past and resets it if needed.
      */
-    public void checkAndResetPastDoneDate(Task task, String today) {
+    public void checkAndResetPastDoneDate(Task task, String today) throws ParseException {
         if (task.isDone() && task.getDoneDate() != null) {
-            try {
-                java.util.Date doneDate = new SimpleDateFormat("yyyy-MM-dd").parse(task.getDoneDate());
-                java.util.Date todayDate = new SimpleDateFormat("yyyy-MM-dd").parse(today);
-                if (doneDate.before(todayDate)) {
-                    task.setDone(false);
-                    task.setDoneDate(null);
-                }
-            } catch (ParseException e) {
-                showErrorDialog("Failed to parse date: " + e.getMessage(), "Date Parse Error");
+            java.util.Date doneDate = new SimpleDateFormat("yyyy-MM-dd").parse(task.getDoneDate());
+            java.util.Date todayDate = new SimpleDateFormat("yyyy-MM-dd").parse(today);
+            if (doneDate.before(todayDate)) {
+                task.setDone(false);
+                task.setDoneDate(null);
             }
-        }
-    }
-
-    /**
-     * Shows an error dialog if not in headless mode.
-     */
-    private void showErrorDialog(String message, String title) {
-        if (!java.awt.GraphicsEnvironment.isHeadless()) {
-            JOptionPane.showMessageDialog(null, message, title, JOptionPane.ERROR_MESSAGE);
         }
     }
 }

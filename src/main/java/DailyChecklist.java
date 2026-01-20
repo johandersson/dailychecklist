@@ -31,28 +31,51 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
 public class DailyChecklist {
-    private static JFrame frame;
-    private static TaskManager checklistManager;
+    private JFrame frame;
+    private TaskManager checklistManager;
     private TaskUpdater taskUpdater;
     private SettingsManager settingsManager;
     private ChecklistPanel checklistPanel;
     private AddTaskPanel addTaskPanel;
-    private static CustomChecklistsOverviewPanel customChecklistsOverviewPanel;
-    private static JTabbedPane tabbedPane;
-    private static FocusTimer focusTimerInstance = FocusTimer.getInstance();
-    private static ReminderQueue reminderQueue;
-    private static java.util.Set<String> openedChecklists = new java.util.HashSet<>();
-    private static java.util.Set<Reminder> shownReminders = new java.util.HashSet<>();    private TaskRepository repository;
+    private CustomChecklistsOverviewPanel customChecklistsOverviewPanel;
+    private JTabbedPane tabbedPane;
+    private ReminderQueue reminderQueue;
+    private java.util.Set<String> openedChecklists = new java.util.HashSet<>();
+    private java.util.Set<Reminder> shownReminders = new java.util.HashSet<>();
+    private TaskRepository repository;
+
     public DailyChecklist() {
-        settingsManager = new SettingsManager();
-        settingsManager.load();
-        taskUpdater = new TaskUpdater();
-        initializeTaskManager();
+        initializeComponents(null);
+    }
+
+    public DailyChecklist(ApplicationLifecycleManager lifecycleManager) {
+        initializeComponents(lifecycleManager);
+    }
+
+    private void initializeComponents(ApplicationLifecycleManager lifecycleManager) {
+        if (lifecycleManager != null) {
+            // Use provided lifecycle manager components
+            this.repository = lifecycleManager.getRepository();
+            this.settingsManager = lifecycleManager.getSettingsManager();
+        } else {
+            // Create components manually
+            this.settingsManager = new SettingsManager();
+            this.settingsManager.load();
+            this.repository = new XMLTaskRepository();
+            this.repository.initialize();
+            this.repository.start();
+        }
+
+        this.taskUpdater = new TaskUpdater();
+        this.checklistManager = new TaskManager(repository);
+
         if (!GraphicsEnvironment.isHeadless()) {
             frame = new JFrame();
+            // Update settings manager with frame as parent component
+            this.settingsManager = new SettingsManager(frame);
+            this.settingsManager.load();
             initializeUI();
         }
-        checklistPanel = new ChecklistPanel(checklistManager, taskUpdater);
         addTaskPanel = new AddTaskPanel(checklistManager, () -> {
             checklistPanel.updateTasks();
             customChecklistsOverviewPanel.updateTasks();
@@ -129,7 +152,7 @@ public class DailyChecklist {
     /**
      * Shows a reminder dialog using the ReminderDialog class.
      */
-    private static void showReminderDialog(Reminder reminder) {
+    private void showReminderDialog(Reminder reminder) {
         SwingUtilities.invokeLater(() -> {
             ReminderDialog dialog = new ReminderDialog(frame, reminder,
                 // On Open action
@@ -174,7 +197,7 @@ public class DailyChecklist {
     /**
      * Reschedules a reminder to occur in the specified number of minutes from now.
      */
-    private static void rescheduleReminder(Reminder originalReminder, int minutesLater) {
+    private void rescheduleReminder(Reminder originalReminder, int minutesLater) {
         LocalDateTime newTime = LocalDateTime.now().plusMinutes(minutesLater);
         Reminder newReminder = new Reminder(
             originalReminder.getChecklistName(),
@@ -191,7 +214,7 @@ public class DailyChecklist {
     /**
      * Reschedules a reminder to occur tomorrow at the same time.
      */
-    private static void rescheduleReminderTomorrow(Reminder originalReminder) {
+    private void rescheduleReminderTomorrow(Reminder originalReminder) {
         LocalDateTime tomorrow = LocalDateTime.now().plusDays(1);
         Reminder newReminder = new Reminder(
             originalReminder.getChecklistName(),
@@ -222,7 +245,7 @@ public class DailyChecklist {
     }
 
     private void initializeTaskManager() {
-        repository = new XMLTaskRepository();
+        repository = new XMLTaskRepository(frame);
         checklistManager = new TaskManager(repository);
     }
 
@@ -277,6 +300,10 @@ public class DailyChecklist {
             frame.toFront();
             frame.requestFocus();
         }
+    }
+
+    public JFrame getFrame() {
+        return frame;
     }
 
     public void shutdown() {

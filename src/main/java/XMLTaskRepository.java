@@ -15,14 +15,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import java.awt.GraphicsEnvironment;
+import java.awt.Component;
 import java.io.File;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import javax.swing.JOptionPane;
 
 public class XMLTaskRepository implements TaskRepository {
     private static String FILE_NAME = System.getProperty("user.home") + File.separator + "dailychecklist-tasks.xml";
@@ -37,6 +37,26 @@ public class XMLTaskRepository implements TaskRepository {
     // Backup system
     private BackupManager backupManager;
 
+    // Parent component for error dialogs
+    private Component parentComponent;
+
+    /**
+     * Creates a new XMLTaskRepository with no parent component.
+     * Error dialogs will not be shown.
+     */
+    public XMLTaskRepository() {
+        this(null);
+    }
+
+    /**
+     * Creates a new XMLTaskRepository with a parent component for error dialogs.
+     *
+     * @param parentComponent Parent component for error dialogs, or null to disable dialogs
+     */
+    public XMLTaskRepository(Component parentComponent) {
+        this.parentComponent = parentComponent;
+    }
+
     @Override
     public void initialize() {
         // Initialize component managers
@@ -44,29 +64,36 @@ public class XMLTaskRepository implements TaskRepository {
         reminderManager = new ReminderManager(REMINDER_FILE_NAME, FILE_NAME);
         checklistNameManager = new ChecklistNameManager(CHECKLIST_NAMES_FILE_NAME);
 
-        // Create the XML file if it doesn't exist
+        // Initialize backup system (but don't start threads yet)
+        String[] dataFiles = {FILE_NAME, REMINDER_FILE_NAME, CHECKLIST_NAMES_FILE_NAME, ApplicationConfiguration.SETTINGS_FILE_PATH};
+        backupManager = new BackupManager(ApplicationConfiguration.BACKUP_DIRECTORY, ApplicationConfiguration.MAX_BACKUP_FILES, ApplicationConfiguration.BACKUP_INTERVAL_MILLIS, dataFiles, parentComponent);
+        backupManager.initialize();
+    }
+
+    /**
+     * Ensures the data file exists, creating it if necessary.
+     * This is called lazily when first accessing data.
+     */
+    private void ensureDataFileExists() {
         File file = new File(FILE_NAME);
         if (!file.exists()) {
             try {
                 // Create an empty tasks document
                 taskXmlHandler.setAllTasks(new ArrayList<>());
             } catch (Exception e) {
-                if (!GraphicsEnvironment.isHeadless()) {
-                    JOptionPane.showMessageDialog(null, "Failed to initialize task file: " + e.getMessage(), "Initialization Error", JOptionPane.ERROR_MESSAGE);
+                // Show user-friendly error dialog and re-throw as runtime exception
+                if (parentComponent != null) {
+                    ApplicationErrorHandler.showDataSaveError(parentComponent, "data file", e);
                 }
+                throw new RuntimeException("Failed to create data file: " + e.getMessage(), e);
             }
         }
-
-        // Initialize backup system
-        String backupDir = System.getProperty("user.home") + File.separator + "dailychecklist-backups";
-        String settingsFile = System.getProperty("user.home") + File.separator + "Documents" + File.separator + "settings.ini";
-        String[] dataFiles = {FILE_NAME, REMINDER_FILE_NAME, CHECKLIST_NAMES_FILE_NAME, settingsFile};
-        backupManager = new BackupManager(backupDir, 10, 30 * 60 * 1000, dataFiles);
-        backupManager.initialize();
     }
 
     @Override
     public List<Task> getDailyTasks() {
+        ensureDataFileExists();
+
         List<Task> tasks = new ArrayList<>();
         String today = new SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date(System.currentTimeMillis()));
 
@@ -79,12 +106,17 @@ public class XMLTaskRepository implements TaskRepository {
             }
 
             for (Task task : allTasks) {
-                taskXmlHandler.checkAndResetPastDoneDate(task, today);
+                try {
+                    taskXmlHandler.checkAndResetPastDoneDate(task, today);
+                } catch (ParseException e) {
+                    // Log the error but continue processing other tasks
+                    System.err.println("Failed to parse date for task " + task.getId() + ": " + e.getMessage());
+                }
                 tasks.add(task);
             }
         } catch (Exception e) {
-            if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(null, "Failed to load daily tasks: " + e.getMessage(), "Load Error", JOptionPane.ERROR_MESSAGE);
+            if (parentComponent != null) {
+                ApplicationErrorHandler.showDataLoadError(parentComponent, "daily tasks", e);
             }
         }
 
@@ -93,6 +125,8 @@ public class XMLTaskRepository implements TaskRepository {
 
     @Override
     public List<Task> getAllTasks() {
+        ensureDataFileExists();
+
         List<Task> tasks = new ArrayList<>();
         String today = new SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date(System.currentTimeMillis()));
 
@@ -106,11 +140,16 @@ public class XMLTaskRepository implements TaskRepository {
 
             // Check and reset past done dates
             for (Task task : tasks) {
-                taskXmlHandler.checkAndResetPastDoneDate(task, today);
+                try {
+                    taskXmlHandler.checkAndResetPastDoneDate(task, today);
+                } catch (ParseException e) {
+                    // Log the error but continue processing other tasks
+                    System.err.println("Failed to parse date for task " + task.getId() + ": " + e.getMessage());
+                }
             }
         } catch (Exception e) {
-            if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(null, "Failed to load all tasks: " + e.getMessage(), "Load Error", JOptionPane.ERROR_MESSAGE);
+            if (parentComponent != null) {
+                ApplicationErrorHandler.showDataLoadError(parentComponent, "all tasks", e);
             }
         }
 
@@ -123,8 +162,8 @@ public class XMLTaskRepository implements TaskRepository {
             taskXmlHandler.addTask(task);
             backupManager.createBackup("save");
         } catch (Exception e) {
-            if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(null, "Failed to add task: " + e.getMessage(), "Add Task Error", JOptionPane.ERROR_MESSAGE);
+            if (parentComponent != null) {
+                ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
             }
         }
     }
@@ -135,8 +174,8 @@ public class XMLTaskRepository implements TaskRepository {
             taskXmlHandler.updateTask(task);
             backupManager.createBackup("save");
         } catch (Exception e) {
-            if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(null, "Failed to update task: " + e.getMessage(), "Update Task Error", JOptionPane.ERROR_MESSAGE);
+            if (parentComponent != null) {
+                ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
             }
         }
     }
@@ -147,8 +186,8 @@ public class XMLTaskRepository implements TaskRepository {
             taskXmlHandler.removeTask(task);
             backupManager.createBackup("save");
         } catch (Exception e) {
-            if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(null, "Failed to remove task: " + e.getMessage(), "Remove Task Error", JOptionPane.ERROR_MESSAGE);
+            if (parentComponent != null) {
+                ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
             }
         }
     }
@@ -163,9 +202,10 @@ public class XMLTaskRepository implements TaskRepository {
                 }
             }
         } catch (Exception e) {
-            if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(null, "Failed to check for undone tasks: " + e.getMessage(), "Check Error", JOptionPane.ERROR_MESSAGE);
+            if (parentComponent != null) {
+                ApplicationErrorHandler.showDataLoadError(parentComponent, "task status", e);
             }
+            return false; // Default to no undone tasks on error
         }
         return false;
     }
@@ -178,8 +218,8 @@ public class XMLTaskRepository implements TaskRepository {
         try {
             taskXmlHandler.setAllTasks(tasks);
         } catch (Exception e) {
-            if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(null, "Failed to set tasks: " + e.getMessage(), "Set Tasks Error", JOptionPane.ERROR_MESSAGE);
+            if (parentComponent != null) {
+                ApplicationErrorHandler.showDataSaveError(parentComponent, "tasks", e);
             }
         }
     }
