@@ -21,7 +21,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class XMLTaskRepository implements TaskRepository {
@@ -39,6 +41,7 @@ public class XMLTaskRepository implements TaskRepository {
 
     // Task caching
     private List<Task> cachedTasks = null;
+    private Map<String, Task> taskMap = null;
     private boolean tasksCacheDirty = true;
 
     // Parent component for error dialogs
@@ -133,12 +136,18 @@ public class XMLTaskRepository implements TaskRepository {
                 if (MemorySafetyManager.checkTaskLimit(cachedTasks.size())) {
                     cachedTasks = cachedTasks.subList(0, Math.min(MemorySafetyManager.MAX_TASKS, cachedTasks.size()));
                 }
+                // Populate task map for fast lookups
+                taskMap = new HashMap<>();
+                for (Task task : cachedTasks) {
+                    taskMap.put(task.getId(), task);
+                }
                 tasksCacheDirty = false;
             } catch (Exception e) {
                 if (parentComponent != null) {
                     ApplicationErrorHandler.showDataLoadError(parentComponent, "cached tasks", e);
                 }
                 cachedTasks = new ArrayList<>();
+                taskMap = new HashMap<>();
             }
         }
         return new ArrayList<>(cachedTasks);
@@ -160,6 +169,15 @@ public class XMLTaskRepository implements TaskRepository {
         }
 
         return tasks;
+    }
+
+    /**
+     * Gets a task by its ID using the fast lookup map.
+     * Returns null if not found.
+     */
+    public Task getTaskById(String id) {
+        getCachedTasks(); // Ensure cache is loaded
+        return taskMap.get(id);
     }
 
     @Override
