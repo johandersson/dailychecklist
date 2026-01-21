@@ -38,28 +38,45 @@ public class ReminderClockIcon implements Icon {
         // Enable anti-aliasing for smoother rendering
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // Draw clock face (circle)
+        // Draw alarm bells on top
+        g2.setColor(CLOCK_COLOR.darker());
+        int bellRadius = 3;
+        int bellY = y + 2;
+        // Left bell
+        g2.fillOval(x + 4, bellY, bellRadius * 2, bellRadius * 2);
+        // Right bell
+        g2.fillOval(x + ICON_SIZE - 4 - bellRadius * 2, bellY, bellRadius * 2, bellRadius * 2);
+        // Bell hammer
+        g2.setStroke(new BasicStroke(1));
+        g2.drawLine(x + ICON_SIZE / 2 - 2, bellY + bellRadius, x + ICON_SIZE / 2 + 2, bellY + bellRadius);
+
+        // Draw clock face (circle) - slightly smaller to make room for bells
+        int clockSize = ICON_SIZE - 6;
+        int clockX = x + 3;
+        int clockY = y + 6;
         g2.setColor(CLOCK_COLOR);
-        g2.fillOval(x, y, ICON_SIZE, ICON_SIZE);
+        g2.fillOval(clockX, clockY, clockSize, clockSize);
 
         // Draw clock outline
         g2.setColor(CLOCK_COLOR.darker());
         g2.setStroke(new BasicStroke(1));
-        g2.drawOval(x, y, ICON_SIZE, ICON_SIZE);
+        g2.drawOval(clockX, clockY, clockSize, clockSize);
 
         // Draw clock hands
         g2.setColor(Color.WHITE);
         g2.setStroke(new BasicStroke(1));
 
-        // Hour hand (shorter, thicker)
-        g2.setStroke(new BasicStroke(2));
-        int centerX = x + ICON_SIZE / 2;
-        int centerY = y + ICON_SIZE / 2;
-        g2.drawLine(centerX, centerY, centerX + 3, centerY - 2);
+        // Calculate center
+        int centerX = clockX + clockSize / 2;
+        int centerY = clockY + clockSize / 2;
 
-        // Minute hand (longer, thinner)
+        // Hour hand (shorter, thicker) - pointing to 10 o'clock
+        g2.setStroke(new BasicStroke(2));
+        g2.drawLine(centerX, centerY, centerX - 3, centerY - 4);
+
+        // Minute hand (longer, thinner) - pointing to 12 o'clock
         g2.setStroke(new BasicStroke(1));
-        g2.drawLine(centerX, centerY, centerX + 5, centerY + 1);
+        g2.drawLine(centerX, centerY, centerX, centerY - 5);
 
         g2.dispose();
     }
