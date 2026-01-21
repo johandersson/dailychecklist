@@ -79,7 +79,7 @@ public class SettingsManager {
     }
 
     public boolean getShowWeekdayTasks() {
-        return Boolean.parseBoolean(settings.getProperty("showWeekdayTasks", "false"));
+        return Boolean.parseBoolean(settings.getProperty("showWeekdayTasks", "true"));
     }
 
     public void checkDateAndUpdate(TaskManager taskManager, Runnable updateTasks, boolean showWeekdayTasks) {

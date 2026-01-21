@@ -23,8 +23,10 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionListener;
+import java.time.LocalDate;
+import java.time.format.TextStyle;
+import java.util.Locale;
 import java.util.function.Consumer;
-
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -139,6 +141,8 @@ public class AddTaskPanel extends JPanel {
             add(weekdayLabel, gbc);
             String[] weekdays = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
             weekdayComboBox = new JComboBox<>(weekdays);
+            String currentWeekday = LocalDate.now().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+            weekdayComboBox.setSelectedItem(currentWeekday);
             weekdayComboBox.setEnabled(false);
             gbc.gridx = 1;
             gbc.gridy = 3;

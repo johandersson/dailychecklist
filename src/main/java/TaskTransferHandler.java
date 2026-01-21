@@ -153,7 +153,7 @@ public class TaskTransferHandler extends TransferHandler {
                 taskManager.updateTask(task);
                 // Restore focus to the target list for custom checklists
                 if (!("MORNING".equals(checklistName) || "EVENING".equals(checklistName))) {
-                    try { FocusUtils.restoreFocusLater(list); } catch (Exception ignore) {}
+                    list.requestFocusInWindow();
                 }
                 return true;
             }
