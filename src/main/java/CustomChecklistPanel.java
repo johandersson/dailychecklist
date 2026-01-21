@@ -18,6 +18,7 @@
 import java.awt.BorderLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import javax.swing.DefaultListModel;
@@ -172,9 +173,26 @@ public class CustomChecklistPanel extends JPanel {
                     reminder.getYear(), reminder.getMonth(), reminder.getDay(),
                     reminder.getHour(), reminder.getMinute());
 
-            JLabel reminderLabel = new JLabel("[R] " + reminderText);
+            // Compute reminder state (overdue, due soon within 60 minutes, or future)
+            Calendar now = Calendar.getInstance();
+            Calendar remCal = Calendar.getInstance();
+            remCal.set(reminder.getYear(), reminder.getMonth() - 1, reminder.getDay(), reminder.getHour(), reminder.getMinute(), 0);
+            long diff = remCal.getTimeInMillis() - now.getTimeInMillis();
+            ReminderClockIcon.State state = diff < 0
+                    ? ReminderClockIcon.State.OVERDUE
+                    : (diff <= 60L * 60L * 1000L ? ReminderClockIcon.State.DUE_SOON : ReminderClockIcon.State.FUTURE);
+
+            ReminderClockIcon icon = new ReminderClockIcon(reminder.getHour(), reminder.getMinute(), state);
+            JLabel reminderLabel = new JLabel(reminderText, icon, JLabel.LEADING);
+            reminderLabel.setIconTextGap(6);
             reminderLabel.setFont(reminderLabel.getFont().deriveFont(11.0f));
-            reminderLabel.setForeground(java.awt.Color.BLUE);
+            if (state == ReminderClockIcon.State.OVERDUE) {
+                reminderLabel.setForeground(java.awt.Color.RED);
+            } else if (state == ReminderClockIcon.State.DUE_SOON) {
+                reminderLabel.setForeground(java.awt.Color.ORANGE);
+            } else {
+                reminderLabel.setForeground(java.awt.Color.BLUE);
+            }
 
             // Add right-click menu to remove the reminder
             reminderLabel.addMouseListener(new MouseAdapter() {
