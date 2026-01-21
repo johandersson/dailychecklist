@@ -280,4 +280,11 @@ public class CustomChecklistPanel extends JPanel {
             }
         }
     }
+
+    /**
+     * Expose the internal task list for diagnostics and targeted focus checks.
+     */
+    public JList<Task> getTaskList() {
+        return customTaskList;
+    }
 }
