@@ -240,8 +240,12 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 }
                 int res = JOptionPane.showConfirmDialog(this, "Remove reminder(s) for '" + selectedChecklistName + "'?", "Confirm", JOptionPane.YES_NO_OPTION);
                 if (res == JOptionPane.YES_OPTION) {
+                    java.awt.Component beforeRemoveFocus = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                    System.out.println("[DEBUG] deleteReminder: focus before removing reminders: " + (beforeRemoveFocus == null ? "null" : beforeRemoveFocus.getClass().getName()));
                     toRemove.forEach(taskManager::removeReminder);
                     updateTasks.run();
+                    java.awt.Component afterRemoveFocus = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                    System.out.println("[DEBUG] deleteReminder: focus after removing reminders: " + (afterRemoveFocus == null ? "null" : afterRemoveFocus.getClass().getName()));
                 }
             });
             menu.add(removeReminderItem);
@@ -354,6 +358,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 .orElse(null);
 
         ReminderEditDialog dialog = new ReminderEditDialog(taskManager, selectedChecklistName, existingReminder, () -> {
+            System.out.println("[DEBUG] onSave callback: focus at start: " + (java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null ? "null" : java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner().getClass().getName()));
             // Refresh this overview (updates right panel) and also notify outer panels
             updateTasks();
             updateTasks.run();
@@ -361,6 +366,11 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             if (selectedChecklistName != null) {
                 checklistList.setSelectedValue(selectedChecklistName, true);
                 // Use delayed focus restore to avoid focus being stolen by closing dialogs
+                // Try a double-invokeLater focus request as an aggressive fallback
+                javax.swing.SwingUtilities.invokeLater(() -> javax.swing.SwingUtilities.invokeLater(() -> {
+                    System.out.println("[DEBUG] double-invokeLater: requesting focus on checklistList, current owner: " + (java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null ? "null" : java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner().getClass().getName()));
+                    checklistList.requestFocusInWindow();
+                }));
                 FocusUtils.restoreFocusLater(checklistList);
                 // Refresh right panel and request focus on its checklist panel later
                 if (rightPanel != null) {

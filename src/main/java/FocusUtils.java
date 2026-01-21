@@ -19,27 +19,22 @@ public class FocusUtils {
             public void actionPerformed(java.awt.event.ActionEvent e) {
                 attempts++;
                 java.awt.Component current = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                System.out.println("[DEBUG] FocusUtils initial timer fired (attempt " + attempts + "), current focus owner: " + (current == null ? "null" : current.getClass().getName()));
+                System.out.println("[DEBUG] FocusUtils timer fired (attempt " + attempts + "), current focus owner: " + (current == null ? "null" : current.getClass().getName()));
                 if (comp.isShowing() && comp.requestFocusInWindow()) {
                     System.out.println("[DEBUG] FocusUtils: requestFocusInWindow() returned true on attempt " + attempts);
                     ((Timer) e.getSource()).stop();
                     return;
                 }
-                // Retry once after another delay if the first attempt didn't get focus
-                if (attempts >= 1) {
-                    // schedule one more try
-                    Timer retry = new Timer(200, evt -> {
-                        java.awt.Component currentRetry = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                        System.out.println("[DEBUG] FocusUtils retry timer fired, current focus owner: " + (currentRetry == null ? "null" : currentRetry.getClass().getName()));
-                        if (comp.isShowing()) comp.requestFocusInWindow();
-                    });
+                // If not succeeded and attempts < 3, schedule another try
+                if (attempts < 3) {
+                    Timer retry = new Timer(300, this);
                     retry.setRepeats(false);
                     retry.start();
                 }
             }
         };
-        // 200ms delay to give windowing system more time to complete focus transfers
-        Timer t = new Timer(200, al);
+        // 300ms initial delay to give windowing system more time to complete focus transfers
+        Timer t = new Timer(300, al);
         t.setRepeats(false);
         SwingUtilities.invokeLater(t::start);
     }
