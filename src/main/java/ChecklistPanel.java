@@ -86,6 +86,7 @@ public class ChecklistPanel extends JPanel {
     private JList<Task> createTaskList(DefaultListModel<Task> listModel, String checklistName) {
         JList<Task> taskList = new JList<>(listModel);
         taskList.setCellRenderer(new CheckboxListCellRenderer());
+        taskList.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         if (!java.awt.GraphicsEnvironment.isHeadless()) {
             taskList.setDragEnabled(true);
             taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklistName, () -> {
@@ -103,7 +104,15 @@ public class ChecklistPanel extends JPanel {
                 if (index >= 0) {
                     if (SwingUtilities.isRightMouseButton(e)) {
                         showContextMenu(e, list, index);
+                    } else if ((e.getModifiersEx() & java.awt.event.InputEvent.CTRL_DOWN_MASK) != 0) {
+                        // Ctrl+click: toggle selection
+                        if (list.isSelectedIndex(index)) {
+                            list.removeSelectionInterval(index, index);
+                        } else {
+                            list.addSelectionInterval(index, index);
+                        }
                     } else {
+                        // Normal click: toggle done
                         Task task = list.getModel().getElementAt(index);
                         task.setDone(!task.isDone());
                         if (task.isDone()) {
@@ -117,7 +126,36 @@ public class ChecklistPanel extends JPanel {
                 }
             }
         });
+        taskList.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                if (e.getKeyCode() == java.awt.event.KeyEvent.VK_DELETE) {
+                    deleteSelectedTasks(taskList);
+                }
+            }
+        });
         return taskList;
+    }
+
+    private void deleteSelectedTasks(JList<Task> list) {
+        int[] selectedIndices = list.getSelectedIndices();
+        if (selectedIndices.length == 0) return;
+        java.util.List<Task> tasksToDelete = new java.util.ArrayList<>();
+        for (int index : selectedIndices) {
+            tasksToDelete.add(list.getModel().getElementAt(index));
+        }
+        String taskNames = tasksToDelete.stream().map(Task::getName).reduce((a, b) -> a + ", " + b).orElse("");
+        int response = javax.swing.JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to delete the selected tasks: " + taskNames + "?",
+                "Confirm Deletion",
+                javax.swing.JOptionPane.YES_NO_OPTION);
+        if (response == javax.swing.JOptionPane.YES_OPTION) {
+            for (Task task : tasksToDelete) {
+                taskManager.removeTask(task);
+            }
+            // Update the UI
+            updateTasks();
+        }
     }
 
     private void showContextMenu(MouseEvent e, JList<Task> list, int index) {
