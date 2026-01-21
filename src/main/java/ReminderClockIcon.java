@@ -40,11 +40,17 @@ public class ReminderClockIcon implements Icon {
     private final int hour;
     private final int minute;
     private final State state;
+    private final boolean showTimeText;
 
     public ReminderClockIcon(int hour, int minute, State state) {
+        this(hour, minute, state, true);
+    }
+
+    public ReminderClockIcon(int hour, int minute, State state, boolean showTimeText) {
         this.hour = hour;
         this.minute = minute;
         this.state = state;
+        this.showTimeText = showTimeText;
     }
 
     private Color colorForState() {
@@ -91,28 +97,26 @@ public class ReminderClockIcon implements Icon {
         g2.drawLine(centerX, centerY, hourHandX, hourHandY);
         g2.drawLine(centerX, centerY, minuteHandX, minuteHandY);
 
-        // Draw time text (e.g., "9:30") if it fits — render small on the right side
-        String timeText = String.format("%d:%02d", hour, minute);
-        Font orig = g2.getFont();
-        Font f = orig.deriveFont(11f);
-        g2.setFont(f);
-        FontMetrics fm = g2.getFontMetrics();
-        int tw = fm.stringWidth(timeText);
-        int th = fm.getAscent();
-        // Draw text outside the clock to the right if space, otherwise skip
-        int textX = x + ICON_SIZE + 4;
-        int textY = y + (ICON_SIZE + th) / 2 - 1;
+        // Optionally draw time text (e.g., "9:30") to the right of the icon
+        if (showTimeText) {
+            String timeText = String.format("%d:%02d", hour, minute);
+            Font orig = g2.getFont();
+            Font f = orig.deriveFont(11f);
+            g2.setFont(f);
+            FontMetrics fm = g2.getFontMetrics();
+            int th = fm.getAscent();
+            int textX = x + ICON_SIZE + 4;
+            int textY = y + (ICON_SIZE + th) / 2 - 1;
 
-        // Use white for the time text when the parent component indicates selection
-        boolean selected = false;
-        if (c != null) {
-            Object sel = c instanceof javax.swing.JComponent ? ((javax.swing.JComponent) c).getClientProperty("selected") : null;
-            if (sel instanceof Boolean) selected = (Boolean) sel;
+            boolean selected = false;
+            if (c != null) {
+                Object sel = c instanceof javax.swing.JComponent ? ((javax.swing.JComponent) c).getClientProperty("selected") : null;
+                if (sel instanceof Boolean) selected = (Boolean) sel;
+            }
+            g2.setColor(selected ? Color.WHITE : colorForState().darker());
+            g2.drawString(timeText, textX, textY);
+            g2.setFont(orig);
         }
-        g2.setColor(selected ? Color.WHITE : colorForState().darker());
-        g2.drawString(timeText, textX, textY);
-
-        g2.setFont(orig);
         g2.dispose();
     }
 
