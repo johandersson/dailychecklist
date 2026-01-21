@@ -262,9 +262,21 @@ public class CustomChecklistPanel extends JPanel {
      */
     public void requestSelectionFocus() {
         if (customTaskList != null) {
-            customTaskList.requestFocusInWindow();
-            if (customTaskList.getSelectedIndex() >= 0) {
-                customTaskList.ensureIndexIsVisible(customTaskList.getSelectedIndex());
+            try {
+                try { java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner(); } catch (Exception ignore) {}
+                javax.swing.SwingUtilities.invokeLater(() -> javax.swing.SwingUtilities.invokeLater(() -> {
+                    boolean ok = customTaskList.requestFocusInWindow();
+                    if (!ok) customTaskList.grabFocus();
+                    System.out.println("[DEBUG] requestSelectionFocus: requestFocusInWindow returned " + ok + ", focus owner now: " + (java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null ? "null" : java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner().getClass().getName()));
+                    if (customTaskList.getSelectedIndex() >= 0) {
+                        customTaskList.ensureIndexIsVisible(customTaskList.getSelectedIndex());
+                    }
+                }));
+            } catch (Exception ex) {
+                customTaskList.requestFocusInWindow();
+                if (customTaskList.getSelectedIndex() >= 0) {
+                    customTaskList.ensureIndexIsVisible(customTaskList.getSelectedIndex());
+                }
             }
         }
     }
