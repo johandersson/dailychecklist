@@ -20,7 +20,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Date;
 import java.util.List;
-
 import javax.swing.DefaultListModel;
 import javax.swing.DropMode;
 import javax.swing.JLabel;
@@ -176,6 +175,24 @@ public class CustomChecklistPanel extends JPanel {
             JLabel reminderLabel = new JLabel("[R] " + reminderText);
             reminderLabel.setFont(reminderLabel.getFont().deriveFont(11.0f));
             reminderLabel.setForeground(java.awt.Color.BLUE);
+
+            // Add right-click menu to remove the reminder
+            reminderLabel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    if (SwingUtilities.isRightMouseButton(e)) {
+                        showReminderPopup(e, reminder);
+                    }
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    if (SwingUtilities.isRightMouseButton(e)) {
+                        showReminderPopup(e, reminder);
+                    }
+                }
+            });
+
             panel.add(reminderLabel, BorderLayout.WEST);
         } else {
             JLabel noReminderLabel = new JLabel("No reminder set");
@@ -185,6 +202,21 @@ public class CustomChecklistPanel extends JPanel {
         }
 
         return panel;
+    }
+
+    private void showReminderPopup(MouseEvent e, Reminder reminder) {
+        JPopupMenu menu = new JPopupMenu();
+        JMenuItem removeItem = new JMenuItem("Remove reminder");
+        removeItem.addActionListener(ae -> {
+            int res = JOptionPane.showConfirmDialog(this, "Remove this reminder?", "Confirm", JOptionPane.YES_NO_OPTION);
+            if (res == JOptionPane.YES_OPTION) {
+                taskManager.removeReminder(reminder);
+                if (updateAllPanels != null) updateAllPanels.run();
+                updateTasks();
+            }
+        });
+        menu.add(removeItem);
+        menu.show(e.getComponent(), e.getX(), e.getY());
     }
 
     public void updateTasks() {
