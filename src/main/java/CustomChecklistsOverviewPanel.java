@@ -393,6 +393,31 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                         }
                     }
                 }
+                // Stronger fallback: after a short delay, clear focus, bring window to front and request task-list focus
+                javax.swing.Timer delayed = new javax.swing.Timer(500, ev -> {
+                    try {
+                        System.out.println("[DEBUG] delayed fallback: clearing focus owner and requesting task-list focus");
+                        try { java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner(); } catch (Exception ignore) {}
+                        // Bring window to front
+                        java.awt.Window w = javax.swing.SwingUtilities.getWindowAncestor(CustomChecklistsOverviewPanel.this);
+                        if (w != null) {
+                            try {
+                                w.toFront();
+                                w.requestFocus();
+                            } catch (Exception ignore) {}
+                        }
+                        if (rightPanel != null && rightPanel.getComponentCount() > 0) {
+                            java.awt.Component c = rightPanel.getComponent(0);
+                            if (c instanceof CustomChecklistPanel) {
+                                ((CustomChecklistPanel) c).requestSelectionFocus();
+                            }
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                });
+                delayed.setRepeats(false);
+                delayed.start();
             }
         });
         dialog.setVisible(true);
