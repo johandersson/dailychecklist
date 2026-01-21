@@ -18,7 +18,6 @@
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
-
 import javax.swing.DefaultListModel;
 import javax.swing.JList;
 import javax.swing.TransferHandler;
@@ -77,6 +76,14 @@ public class ChecklistListTransferHandler extends TransferHandler {
             task.setChecklistName(targetChecklistName);
             taskManager.updateTask(task);
             updateTasks.run();
+            // If the drop originated from a JList, try to select the target checklist in the UI
+            try {
+                Object comp = support.getComponent();
+                if (comp instanceof JList<?> list) {
+                    list.setSelectedValue(targetChecklistName, true);
+                }
+            } catch (Exception ignored) {
+            }
             return true;
         } catch (UnsupportedFlavorException | IOException e) {
             return false;

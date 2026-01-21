@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.DropMode;
@@ -258,8 +257,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private void deleteChecklist() {
         String name = selectedChecklistName;
         if (name == null) return;
-        Object[] options = {"Delete list", "Move to morning", "Move to evening"};
-        int choice = JOptionPane.showOptionDialog(this, "What to do with the tasks in '" + name + "'?", "Delete Checklist", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+        Object[] options = {"Delete list", "Move to morning", "Move to evening", "Cancel"};
+        int choice = JOptionPane.showOptionDialog(this, "What to do with the tasks in '" + name + "'?", "Delete Checklist", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[3]);
         switch (choice) {
             case 0 -> {
                 // Delete list
@@ -274,8 +273,14 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 moveTasksToType(name, TaskType.MORNING);
             case 2 -> // Move to evening
                 moveTasksToType(name, TaskType.EVENING);
-            default -> {
-            }
+            case 3 -> // Cancel - do nothing
+                {
+                    return;
+                }
+            default -> // closed dialog or unexpected value - treat as cancel
+                {
+                    return;
+                }
         }
         
         // Remove all reminders for this checklist
