@@ -16,7 +16,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import java.util.List;
-
 import javax.swing.Icon;
 
 /**
@@ -26,8 +25,8 @@ import javax.swing.Icon;
 public class ChecklistCellRenderer extends IconListCellRenderer<String> {
     private static final long serialVersionUID = 1L;
 
-    private transient TaskManager taskManager;
-    private final ReminderClockIcon clockIcon = new ReminderClockIcon();
+    private final transient TaskManager taskManager;
+    private final ReminderClockIcon defaultClockIcon = new ReminderClockIcon(0, 0, ReminderClockIcon.State.FUTURE);
 
     public ChecklistCellRenderer(TaskManager taskManager) {
         this.taskManager = taskManager;
@@ -35,8 +34,12 @@ public class ChecklistCellRenderer extends IconListCellRenderer<String> {
 
     @Override
     protected Icon getIconForValue(String checklistName) {
-        if (checklistName != null && hasReminders(checklistName)) {
-            return clockIcon;
+        if (checklistName != null) {
+            Reminder nearest = nearestReminderForChecklist(checklistName);
+            if (nearest != null) {
+                ReminderClockIcon.State state = computeState(nearest);
+                return new ReminderClockIcon(nearest.getHour(), nearest.getMinute(), state);
+            }
         }
         return null;
     }
@@ -53,5 +56,32 @@ public class ChecklistCellRenderer extends IconListCellRenderer<String> {
         List<Reminder> reminders = taskManager.getReminders();
         return reminders.stream()
             .anyMatch(reminder -> java.util.Objects.equals(reminder.getChecklistName(), checklistName));
+    }
+
+    private Reminder nearestReminderForChecklist(String checklistName) {
+        if (taskManager == null) return null;
+        List<Reminder> reminders = taskManager.getReminders();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        Reminder best = null;
+        long bestDiff = Long.MAX_VALUE;
+        for (Reminder r : reminders) {
+            if (!java.util.Objects.equals(r.getChecklistName(), checklistName)) continue;
+            java.time.LocalDateTime dt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+            long diff = Math.abs(java.time.Duration.between(now, dt).toMinutes());
+            if (diff < bestDiff) {
+                bestDiff = diff;
+                best = r;
+            }
+        }
+        return best;
+    }
+
+    private ReminderClockIcon.State computeState(Reminder r) {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime dt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+        if (dt.isBefore(now)) return ReminderClockIcon.State.OVERDUE;
+        long minutes = java.time.Duration.between(now, dt).toMinutes();
+        if (minutes <= 60) return ReminderClockIcon.State.DUE_SOON;
+        return ReminderClockIcon.State.FUTURE;
     }
 }
