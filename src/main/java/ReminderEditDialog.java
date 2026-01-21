@@ -23,7 +23,6 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.time.LocalDateTime;
 import java.util.stream.IntStream;
-
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -74,14 +73,14 @@ public class ReminderEditDialog extends JDialog {
 
     private JPanel createHeaderPanel() {
         LocalDateTime now = LocalDateTime.now();
-        String currentTimeString = String.format("%02d:%02d on %d/%d/%d",
-            now.getHour(), now.getMinute(), now.getMonthValue(), now.getDayOfMonth(), now.getYear());
+        String currentTimeString = String.format("%02d:%02d on %04d-%02d-%02d",
+            now.getHour(), now.getMinute(), now.getYear(), now.getMonthValue(), now.getDayOfMonth());
 
         String headerText;
         if (existingReminder != null) {
-            String existingTimeString = String.format("%02d:%02d on %d/%d/%d",
+            String existingTimeString = String.format("%02d:%02d on %04d-%02d-%02d",
                 existingReminder.getHour(), existingReminder.getMinute(),
-                existingReminder.getMonth(), existingReminder.getDay(), existingReminder.getYear());
+                existingReminder.getYear(), existingReminder.getMonth(), existingReminder.getDay());
             headerText = String.format("<html>Edit reminder for: <b>%s</b><br><small>Current time: %s<br>Existing reminder: %s</small></html>",
                 checklistName, currentTimeString, existingTimeString);
         } else {
