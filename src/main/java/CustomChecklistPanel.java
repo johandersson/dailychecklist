@@ -190,7 +190,7 @@ public class CustomChecklistPanel extends JPanel {
             String dateText = String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
             String timeText = String.format("%02d:%02d", reminder.getHour(), reminder.getMinute());
             JLabel reminderLabel = new JLabel(dateText + " " + timeText, icon, JLabel.LEADING);
-            reminderLabel.setIconTextGap(6);
+            reminderLabel.setIconTextGap(4);
 
             reminderLabel.setFont(reminderLabel.getFont().deriveFont(11.0f));
             switch (state) {
