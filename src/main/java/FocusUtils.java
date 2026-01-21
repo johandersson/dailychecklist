@@ -13,11 +13,28 @@ public class FocusUtils {
     public static void restoreFocusLater(final JComponent comp) {
         if (comp == null) return;
         // Use a short timer so that dialogs/dispose sequences finish first
-        ActionListener al = e -> {
-            if (comp.isShowing()) comp.requestFocusInWindow();
+        ActionListener al = new ActionListener() {
+            private int attempts = 0;
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                attempts++;
+                if (comp.isShowing() && comp.requestFocusInWindow()) {
+                    ((Timer) e.getSource()).stop();
+                    return;
+                }
+                // Retry once after another delay if the first attempt didn't get focus
+                if (attempts >= 1) {
+                    // schedule one more try
+                    Timer retry = new Timer(200, evt -> {
+                        if (comp.isShowing()) comp.requestFocusInWindow();
+                    });
+                    retry.setRepeats(false);
+                    retry.start();
+                }
+            }
         };
-        // 100ms delay should be enough
-        Timer t = new Timer(100, al);
+        // 200ms delay to give windowing system more time to complete focus transfers
+        Timer t = new Timer(200, al);
         t.setRepeats(false);
         SwingUtilities.invokeLater(t::start);
     }
