@@ -293,11 +293,12 @@ public class ReminderEditDialog extends JDialog {
             java.awt.Component beforeDispose = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
             System.out.println("[DEBUG] Focus owner before dispose: " + (beforeDispose == null ? "null" : beforeDispose.getClass().getName()));
             // Make save button temporarily non-focusable so it can't retain focus after dialog close
-            boolean previousFocusable = true;
+            boolean previousFocusableLocal = true;
             if (saveButton != null) {
-                previousFocusable = saveButton.isFocusable();
+                previousFocusableLocal = saveButton.isFocusable();
                 saveButton.setFocusable(false);
             }
+            final boolean previousFocusable = previousFocusableLocal;
             dispose();
             if (onSave != null) {
                 java.awt.Component before = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
