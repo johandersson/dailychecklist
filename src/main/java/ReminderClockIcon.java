@@ -102,7 +102,9 @@ public class ReminderClockIcon implements Icon {
         // Draw text outside the clock to the right if space, otherwise skip
         int textX = x + ICON_SIZE + 2;
         int textY = y + (ICON_SIZE + th) / 2 - 1;
-        g2.setColor(colorForState().darker());
+
+        // Use white for the time text to ensure high contrast with selection
+        g2.setColor(Color.WHITE);
         g2.drawString(timeText, textX, textY);
 
         g2.setFont(orig);
