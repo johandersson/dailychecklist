@@ -308,6 +308,8 @@ public class ReminderEditDialog extends JDialog {
 
             // Request focus on sink, then after a short delay dispose and run onSave
             javax.swing.SwingUtilities.invokeLater(() -> {
+                // First attempt to focus the sink inside the main frame
+                try { DailyChecklist.focusMainSink(); } catch (Exception ignore) {}
                 boolean moved = focusSink.requestFocusInWindow();
                 System.out.println("[DEBUG] focusSink.requestFocusInWindow returned: " + moved + ", owner: " + (java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null ? "null" : java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner().getClass().getName() + "@" + System.identityHashCode(java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner())));
                 // Small timer to let focus settle

@@ -28,7 +28,6 @@ import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
-
 import javax.swing.JFrame;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
@@ -36,6 +35,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
 public class DailyChecklist {
+    private static volatile DailyChecklist instance;
     private JFrame frame;
     private TaskManager checklistManager;
     private TaskUpdater taskUpdater;
@@ -51,10 +51,12 @@ public class DailyChecklist {
 
     public DailyChecklist() {
         initializeComponents(null);
+        instance = this;
     }
 
     public DailyChecklist(ApplicationLifecycleManager lifecycleManager) {
         initializeComponents(lifecycleManager);
+        instance = this;
     }
 
     public TaskRepository getRepository() {
@@ -261,6 +263,36 @@ public class DailyChecklist {
         frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
+
+        // Add a hidden focus sink button to the main frame so dialogs can transfer focus to it
+        try {
+            javax.swing.JButton focusSink = new javax.swing.JButton();
+            focusSink.setFocusable(true);
+            focusSink.setVisible(false);
+            frame.getContentPane().add(focusSink, java.awt.BorderLayout.SOUTH);
+        } catch (Exception ignore) {}
+    }
+
+    /**
+     * Request focus on the hidden main focus sink. Safe to call from dialogs.
+     */
+    public static void focusMainSink() {
+        DailyChecklist inst = instance;
+        if (inst == null) return;
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            try {
+                java.awt.Container content = inst.frame.getContentPane();
+                for (java.awt.Component c : content.getComponents()) {
+                    if (c instanceof javax.swing.JButton && !c.isVisible()) {
+                        boolean ok = c.requestFocusInWindow();
+                        System.out.println("[DEBUG] DailyChecklist: requested main focus sink, owner: " + (java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null ? "null" : java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner().getClass().getName() + "@" + System.identityHashCode(java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner())) + ", requestFocusInWindow returned: " + ok);
+                        return;
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     private void initializeTaskManager() {
