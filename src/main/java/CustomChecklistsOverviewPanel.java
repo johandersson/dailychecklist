@@ -59,6 +59,10 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         this.updateTasks = updateTasks;
         this.allChecklistNames = new java.util.HashSet<>();
         initialize();
+        // Listen for model changes and refresh overview
+        try {
+            taskManager.addTaskChangeListener(() -> javax.swing.SwingUtilities.invokeLater(this::updateTasks));
+        } catch (Exception ignore) {}
     }
 
     private void initialize() {
@@ -355,14 +359,47 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 .findFirst()
                 .orElse(null);
 
-        ReminderEditDialog dialog = new ReminderEditDialog(taskManager, selectedChecklistName, existingReminder, () -> {
-            // Minimal onSave: refresh models and keep selection
-            updateTasks();
-            updateTasks.run();
-            if (selectedChecklistName != null) {
-                checklistList.setSelectedValue(selectedChecklistName, true);
+        // Save logical selection state
+        final String checklistToRestore = selectedChecklistName;
+        final String selectedTaskId;
+        String _tmpSelectedTaskId = null;
+        if (rightPanel != null && rightPanel.getComponentCount() > 0) {
+            java.awt.Component c = rightPanel.getComponent(0);
+                if (c instanceof CustomChecklistPanel) {
+                    try { _tmpSelectedTaskId = ((CustomChecklistPanel) c).getTaskList().getSelectedValue() == null ? null : ((CustomChecklistPanel) c).getTaskList().getSelectedValue().getId(); } catch (Exception ignore) {}
+                }
             }
-        });
+        selectedTaskId = _tmpSelectedTaskId;
+
+        ReminderEditDialog dialog = new ReminderEditDialog(taskManager, selectedChecklistName, existingReminder, null);
         dialog.setVisible(true);
+
+        // After dialog returns (modal), reapply selection
+        if (checklistToRestore != null) {
+            checklistList.setSelectedValue(checklistToRestore, true);
+            // Restore selection on right panel's task list if available
+            if (rightPanel != null && rightPanel.getComponentCount() > 0) {
+                java.awt.Component c = rightPanel.getComponent(0);
+                if (c instanceof CustomChecklistPanel) {
+                    CustomChecklistPanel panel = (CustomChecklistPanel) c;
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        try {
+                            if (selectedTaskId != null) {
+                                // Try to restore selected task by id
+                                JList<Task> list = panel.getTaskList();
+                                for (int i = 0; i < list.getModel().getSize(); i++) {
+                                    Task t = list.getModel().getElementAt(i);
+                                    if (t != null && t.getId() != null && t.getId().equals(selectedTaskId)) {
+                                        list.setSelectedIndex(i);
+                                        list.ensureIndexIsVisible(i);
+                                        break;
+                                    }
+                                }
+                            }
+                        } catch (Exception ignore) {}
+                    });
+                }
+            }
+        }
     }
 }

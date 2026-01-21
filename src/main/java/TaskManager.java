@@ -14,17 +14,27 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */import java.util.ArrayList;
+ */
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TaskManager {
     private final TaskRepository repository;
+    private final List<TaskChangeListener> listeners = new CopyOnWriteArrayList<>();
 
     public TaskManager(TaskRepository repository) {
         this.repository = repository;
         this.repository.initialize();
     }
+
+    /** Lightweight listener for model changes. */
+    public interface TaskChangeListener { void onChange(); }
+
+    public void addTaskChangeListener(TaskChangeListener l) { if (l != null) listeners.add(l); }
+    public void removeTaskChangeListener(TaskChangeListener l) { if (l != null) listeners.remove(l); }
+    private void notifyListeners() { for (TaskChangeListener l : listeners) { try { l.onChange(); } catch (Exception ignore) {} } }
 
     public List<Task> getDailyTasks() {
         return repository.getDailyTasks();
@@ -49,10 +59,12 @@ public class TaskManager {
 
     public void addTask(Task task) {
         repository.addTask(task);
+        notifyListeners();
     }
 
     public void updateTask(Task task) {
         repository.updateTask(task);
+        notifyListeners();
     }
 
     /**
@@ -74,6 +86,7 @@ public class TaskManager {
 
     public void removeTask(Task task) {
         repository.removeTask(task);
+        notifyListeners();
     }
 
     public List<Task> getTasks(TaskType type, String checklistName) {
@@ -112,6 +125,7 @@ public class TaskManager {
 
     public void setTasks(List<Task> tasks) {
         repository.setTasks(tasks);
+        notifyListeners();
     }
 
     public List<Reminder> getReminders() {
@@ -120,18 +134,22 @@ public class TaskManager {
 
     public void addReminder(Reminder reminder) {
         repository.addReminder(reminder);
+        notifyListeners();
     }
 
     public void removeReminder(Reminder reminder) {
         repository.removeReminder(reminder);
+        notifyListeners();
     }
 
     public void addChecklistName(String name) {
         repository.addChecklistName(name);
+        notifyListeners();
     }
 
     public void removeChecklistName(String name) {
         repository.removeChecklistName(name);
+        notifyListeners();
     }
 
     /**

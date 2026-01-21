@@ -19,7 +19,6 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.io.File;
 import java.util.List;
-
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
@@ -140,8 +139,7 @@ public class BackupRestoreDialog {
 
         // Header panel with warning
         JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 20, 10, 20));
-        headerPanel.setBackground(new java.awt.Color(255, 243, 224)); // Light orange background
+        headerPanel.setBackground(new java.awt.Color(255, 220, 180)); // Darker orange background
 
         String headerHtml = "<html><body style='font-family: Arial, sans-serif; font-size: 14px;'>" +
             "<div style='text-align: center; margin-bottom: 15px;'>" +
@@ -168,8 +166,8 @@ public class BackupRestoreDialog {
 
         JButton restoreButton = new JButton("Restore from Backup");
         restoreButton.setFont(restoreButton.getFont().deriveFont(java.awt.Font.BOLD, 12.0f));
-        restoreButton.setBackground(new java.awt.Color(220, 53, 69));
-        restoreButton.setForeground(java.awt.Color.WHITE);
+        restoreButton.setBackground(new java.awt.Color(200, 50, 50));
+        restoreButton.setForeground(java.awt.Color.BLACK);
         restoreButton.setFocusPainted(false);
         restoreButton.setPreferredSize(new java.awt.Dimension(160, 35));
 

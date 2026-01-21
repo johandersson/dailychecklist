@@ -1,41 +1,16 @@
-import java.awt.event.ActionListener;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
-import javax.swing.Timer;
 
 /**
- * Small helper to restore focus to components with a slight delay when needed.
+ * Small helper to restore focus to components.
  */
 public class FocusUtils {
-    /**
-     * Request focus on the component after a short delay to avoid focus being stolen by dialogs.
-     */
     public static void restoreFocusLater(final JComponent comp) {
         if (comp == null) return;
-        // Use a short timer so that dialogs/dispose sequences finish first
-        ActionListener al = new ActionListener() {
-            private int attempts = 0;
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-                attempts++;
-                java.awt.Component current = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                // FocusUtils timer fired; no debug logging
-                if (comp.isShowing() && comp.requestFocusInWindow()) {
-                    // FocusUtils: requestFocusInWindow() succeeded
-                    ((Timer) e.getSource()).stop();
-                    return;
-                }
-                // If not succeeded and attempts < 3, schedule another try
-                if (attempts < 3) {
-                    Timer retry = new Timer(300, this);
-                    retry.setRepeats(false);
-                    retry.start();
-                }
+        SwingUtilities.invokeLater(() -> {
+            if (comp.isShowing()) {
+                comp.requestFocusInWindow();
             }
-        };
-        // 300ms initial delay to give windowing system more time to complete focus transfers
-        Timer t = new Timer(300, al);
-        t.setRepeats(false);
-        SwingUtilities.invokeLater(t::start);
+        });
     }
 }

@@ -20,7 +20,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Date;
 import java.util.List;
-
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -51,6 +50,13 @@ public class ChecklistPanel extends JPanel {
     public ChecklistPanel(TaskManager taskManager, TaskUpdater taskUpdater) {
         this.taskManager = taskManager;
         this.taskUpdater = taskUpdater;
+        taskManager.addTaskChangeListener(() -> SwingUtilities.invokeLater(() -> {
+            java.awt.Component focused = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+            updateTasks();
+            if (focused != null && focused.isShowing() && focused.isFocusable()) {
+                focused.requestFocusInWindow();
+            }
+        }));
         initialize();
     }
 
@@ -203,6 +209,7 @@ public class ChecklistPanel extends JPanel {
             weekdayItem.addActionListener(event -> {
                 Task task = list.getModel().getElementAt(index);
                 task.setWeekday(weekday.toLowerCase());
+                showWeekdayTasksCheckbox.setSelected(true);
                 taskManager.updateTask(task);
                 list.repaint(list.getCellBounds(index, index));
             });

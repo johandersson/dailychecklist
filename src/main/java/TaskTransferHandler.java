@@ -121,7 +121,7 @@ public class TaskTransferHandler extends TransferHandler {
                     }
                     listModel.remove(currentIndex);
                     listModel.add(dropIndex, task);
-                    FocusUtils.restoreFocusLater(list);
+                    // Focus restore removed — model-driven updates will refresh UI
                     return true;
                 }
             } else {
@@ -130,20 +130,6 @@ public class TaskTransferHandler extends TransferHandler {
                 boolean isTargetDaily = "MORNING".equals(checklistName) || "EVENING".equals(checklistName);
                 if (isSourceDaily != isTargetDaily) {
                     return false; // Disallow moving between daily and custom checklists
-                }
-
-                // Remove from source model if applicable
-                if (sourceModel != null) {
-                    int currentIndex = -1;
-                    for (int i = 0; i < sourceModel.getSize(); i++) {
-                        if (sourceModel.get(i).getId().equals(taskId)) {
-                            currentIndex = i;
-                            break;
-                        }
-                    }
-                    if (currentIndex >= 0) {
-                        sourceModel.remove(currentIndex);
-                    }
                 }
 
                 // Update the task's properties
@@ -165,19 +151,16 @@ public class TaskTransferHandler extends TransferHandler {
                 }
 
                 taskManager.updateTask(task);
-                // Add to the target list
-                listModel.add(dropIndex, task);
-                // Update all panels to reflect the move
-                if (updateAllPanels != null) {
-                    updateAllPanels.run();
+                // Restore focus to the target list for custom checklists
+                if (!("MORNING".equals(checklistName) || "EVENING".equals(checklistName))) {
+                    try { FocusUtils.restoreFocusLater(list); } catch (Exception ignore) {}
                 }
-                FocusUtils.restoreFocusLater(list);
                 return true;
             }
-            return false;
         } catch (UnsupportedFlavorException | IOException e) {
             return false;
         }
+        return false;
     }
 
     private Task findTaskById(String taskId) {
