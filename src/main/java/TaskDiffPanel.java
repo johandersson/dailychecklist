@@ -15,16 +15,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import java.awt.Color;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
+import java.awt.BorderLayout;
 import java.util.List;
-import java.util.Map;
 
-import javax.swing.JLabel;
+import javax.swing.JEditorPane;
 import javax.swing.JPanel;
-import javax.swing.JTextArea;
+import javax.swing.JScrollPane;
 
 /**
  * Panel that displays differences between current and backup task lists.
@@ -33,39 +29,88 @@ public class TaskDiffPanel extends JPanel {
     private static final long serialVersionUID = 1L;
 
     public TaskDiffPanel(List<Task> currentTasks, List<Task> backupTasks) {
-        setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.anchor = GridBagConstraints.WEST;
+        setLayout(new BorderLayout());
+        setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         // Calculate differences
         TaskListDiff diff = new TaskListDiff(currentTasks, backupTasks);
 
-        // Summary
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        add(new JLabel("Summary of changes:"), gbc);
+        // Create HTML content
+        String htmlContent = createHtmlContent(diff);
 
-        gbc.gridy = 1;
-        JTextArea summaryArea = new JTextArea(diff.getSummary());
-        summaryArea.setEditable(false);
-        summaryArea.setBackground(getBackground());
-        summaryArea.setWrapStyleWord(true);
-        summaryArea.setLineWrap(true);
-        add(summaryArea, gbc);
+        // Create HTML editor pane
+        JEditorPane editorPane = new JEditorPane();
+        editorPane.setContentType("text/html");
+        editorPane.setText(htmlContent);
+        editorPane.setEditable(false);
+        editorPane.setBackground(getBackground());
 
-        // Details
-        gbc.gridy = 2;
-        gbc.gridwidth = 1;
-        add(new JLabel("Detailed changes:"), gbc);
+        // Add scroll pane
+        JScrollPane scrollPane = new JScrollPane(editorPane);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        add(scrollPane, BorderLayout.CENTER);
+    }
 
-        gbc.gridy = 3;
-        gbc.gridwidth = 2;
-        JTextArea detailsArea = new JTextArea(diff.getDetailedChanges());
-        detailsArea.setEditable(false);
-        detailsArea.setBackground(getBackground());
-        detailsArea.setFont(new java.awt.Font(java.awt.Font.MONOSPACED, java.awt.Font.PLAIN, 12));
-        add(new javax.swing.JScrollPane(detailsArea), gbc);
+    private String createHtmlContent(TaskListDiff diff) {
+        StringBuilder html = new StringBuilder();
+        html.append("<html><body style='font-family: Arial, sans-serif; font-size: 12px; margin: 10px;'>");
+
+        // Summary section
+        html.append("<div style='margin-bottom: 20px;'>");
+        html.append("<h3 style='color: #2E86AB; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px;'>📊 Summary of Changes</h3>");
+        html.append("<div style='background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px;'>");
+
+        String[] summaryLines = diff.getSummary().split("\n");
+        for (String line : summaryLines) {
+            if (line.contains("Current tasks:") || line.contains("Backup tasks:")) {
+                html.append("<div style='margin-bottom: 5px;'><strong>").append(line).append("</strong></div>");
+            } else {
+                html.append("<div style='margin-bottom: 3px; color: #495057;'>").append(line).append("</div>");
+            }
+        }
+        html.append("</div></div>");
+
+        // Detailed changes section
+        html.append("<div>");
+        html.append("<h3 style='color: #2E86AB; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px;'>🔍 Detailed Changes</h3>");
+        html.append("<div style='background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; font-family: \"Courier New\", monospace; font-size: 11px;'>");
+
+        String details = diff.getDetailedChanges();
+        if (details.trim().isEmpty()) {
+            html.append("<div style='color: #6c757d; font-style: italic;'>No differences found - backup matches current data.</div>");
+        } else {
+            // Process each line and add appropriate styling
+            String[] lines = details.split("\n");
+            for (String line : lines) {
+                if (line.startsWith("ADDED TASKS:")) {
+                    html.append("<div style='color: #28a745; font-weight: bold; margin-top: 15px; margin-bottom: 5px;'>").append(line).append("</div>");
+                } else if (line.startsWith("REMOVED TASKS:")) {
+                    html.append("<div style='color: #dc3545; font-weight: bold; margin-top: 15px; margin-bottom: 5px;'>").append(line).append("</div>");
+                } else if (line.startsWith("MODIFIED TASKS:")) {
+                    html.append("<div style='color: #ffc107; font-weight: bold; margin-top: 15px; margin-bottom: 5px;'>").append(line).append("</div>");
+                } else if (line.startsWith("+ ")) {
+                    html.append("<div style='color: #28a745; margin-left: 10px; margin-bottom: 2px;'>").append(escapeHtml(line)).append("</div>");
+                } else if (line.startsWith("- ")) {
+                    html.append("<div style='color: #dc3545; margin-left: 10px; margin-bottom: 2px;'>").append(escapeHtml(line)).append("</div>");
+                } else if (line.startsWith("~ ")) {
+                    html.append("<div style='color: #ffc107; margin-left: 10px; margin-bottom: 2px;'>").append(escapeHtml(line)).append("</div>");
+                } else if (!line.trim().isEmpty()) {
+                    html.append("<div style='margin-left: 10px; margin-bottom: 2px;'>").append(escapeHtml(line)).append("</div>");
+                }
+            }
+        }
+        html.append("</div></div>");
+
+        html.append("</body></html>");
+        return html.toString();
+    }
+
+    private String escapeHtml(String text) {
+        return text.replace("&", "&amp;")
+                  .replace("<", "&lt;")
+                  .replace(">", "&gt;")
+                  .replace("\"", "&quot;")
+                  .replace("'", "&#39;");
     }
 }
