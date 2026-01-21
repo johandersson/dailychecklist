@@ -273,6 +273,10 @@ public class XMLTaskRepository implements TaskRepository {
     @Override
     public void setTasks(List<Task> tasks) {
         try {
+            // Create a backup before replacing all tasks
+            if (backupManager != null) {
+                backupManager.createBackup("before-set-all-tasks");
+            }
             taskXmlHandler.setAllTasks(tasks);
             tasksCacheDirty = true; // Mark cache as dirty
         } catch (Exception e) {

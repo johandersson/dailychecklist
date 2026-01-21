@@ -943,6 +943,13 @@ public class MenuBarBuilder {
         refreshItem.addActionListener(e -> updateTasks.run());
         fileMenu.add(refreshItem);
 
+        //Add restore from backup option
+        JMenuItem restoreItem = new JMenuItem("Restore from Backup");
+        restoreItem.addActionListener(e -> {
+            BackupRestoreDialog.showRestoreDialog(parent, taskManager, updateTasks);
+        });
+        fileMenu.add(restoreItem);
+
         menuBar.add(fileMenu);
         return menuBar;
     }
