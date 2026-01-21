@@ -41,7 +41,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private static final long serialVersionUID = 1L;
     private JList<String> checklistList;
     private DefaultListModel<String> listModel;
-    private transient TaskManager taskManager;
+    private final transient TaskManager taskManager;
     private transient Runnable updateTasks;
     private JTextField newChecklistField;
     private JButton createButton;
@@ -225,24 +225,27 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         JMenuItem addReminderItem = new JMenuItem(hasReminderForSelected ? "Edit Reminder" : "Set Reminder");
         addReminderItem.addActionListener(e -> setReminder());
         menu.add(addReminderItem);
-        JMenuItem removeReminderItem = new JMenuItem("Remove Reminder");
-        removeReminderItem.addActionListener(e -> {
-            if (selectedChecklistName == null) return;
-            List<Reminder> allReminders = taskManager.getReminders();
-            List<Reminder> toRemove = allReminders.stream()
-                    .filter(r -> r.getChecklistName().equals(selectedChecklistName))
-                    .toList();
-            if (toRemove.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "No reminders to remove for '" + selectedChecklistName + "'.");
-                return;
-            }
-            int res = JOptionPane.showConfirmDialog(this, "Remove reminder(s) for '" + selectedChecklistName + "'?", "Confirm", JOptionPane.YES_NO_OPTION);
-            if (res == JOptionPane.YES_OPTION) {
-                toRemove.forEach(taskManager::removeReminder);
-                updateTasks.run();
-            }
-        });
-        menu.add(removeReminderItem);
+        // Only offer remove when there actually are reminders
+        if (selectedChecklistName != null && taskManager.getReminders().stream().anyMatch(r -> r.getChecklistName().equals(selectedChecklistName))) {
+            JMenuItem removeReminderItem = new JMenuItem("Remove Reminder");
+            removeReminderItem.addActionListener(e -> {
+                if (selectedChecklistName == null) return;
+                List<Reminder> allReminders = taskManager.getReminders();
+                List<Reminder> toRemove = allReminders.stream()
+                        .filter(r -> r.getChecklistName().equals(selectedChecklistName))
+                        .toList();
+                if (toRemove.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "No reminders to remove for '" + selectedChecklistName + "'.");
+                    return;
+                }
+                int res = JOptionPane.showConfirmDialog(this, "Remove reminder(s) for '" + selectedChecklistName + "'?", "Confirm", JOptionPane.YES_NO_OPTION);
+                if (res == JOptionPane.YES_OPTION) {
+                    toRemove.forEach(taskManager::removeReminder);
+                    updateTasks.run();
+                }
+            });
+            menu.add(removeReminderItem);
+        }
         menu.show(checklistList, x, y);
     }
 
