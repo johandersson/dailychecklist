@@ -359,7 +359,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                     rightPanel.repaint();
                     if (rightPanel.getComponentCount() > 0) {
                         java.awt.Component comp = rightPanel.getComponent(0);
-                        if (comp != null) comp.requestFocusInWindow();
+                        if (comp instanceof CustomChecklistPanel) {
+                            ((CustomChecklistPanel) comp).requestSelectionFocus();
+                        } else if (comp != null) comp.requestFocusInWindow();
                     }
                 }
             }

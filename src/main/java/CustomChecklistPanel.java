@@ -256,4 +256,16 @@ public class CustomChecklistPanel extends JPanel {
             populateReminderPanel(reminderStatusPanel);
         }
     }
+
+    /**
+     * Request focus for the task list so the selected checklist keeps focus after external actions.
+     */
+    public void requestSelectionFocus() {
+        if (customTaskList != null) {
+            customTaskList.requestFocusInWindow();
+            if (customTaskList.getSelectedIndex() >= 0) {
+                customTaskList.ensureIndexIsVisible(customTaskList.getSelectedIndex());
+            }
+        }
+    }
 }
