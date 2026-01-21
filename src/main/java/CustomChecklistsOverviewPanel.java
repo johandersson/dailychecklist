@@ -443,7 +443,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                                     java.awt.Component now = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
                                     if (now == null) {
                                         // keep trying
-                                    } else if (now == panel || now == panel.customTaskList || now.getClass().getName().contains("JList")) {
+                                    } else if (now == panel || now == panel.getTaskList() || now.getClass().getName().contains("JList")) {
                                         System.out.println("[DEBUG] focus retrier: success on attempt " + attempt + ", focus owner: " + now.getClass().getName());
                                         ((javax.swing.Timer) e.getSource()).stop();
                                         return;
