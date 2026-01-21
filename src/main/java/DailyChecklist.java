@@ -369,6 +369,41 @@ public class DailyChecklist {
         return image;
     }
 
+    /**
+     * Creates the application icon for the window and taskbar.
+     */
+    private Image createAppIcon() {
+        int size = 32; // Standard icon size
+        BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = image.createGraphics();
+
+        // Enable anti-aliasing
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Background
+        g2.setColor(new Color(46, 134, 171)); // Same color as reminder dialogs
+        g2.fillRoundRect(2, 2, size - 4, size - 4, 8, 8);
+
+        // Checklist lines (representing tasks)
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(2));
+        int lineY = 8;
+        for (int i = 0; i < 4; i++) {
+            g2.drawLine(8, lineY, size - 8, lineY);
+            // Checkmark for completed tasks
+            if (i < 2) {
+                g2.setColor(new Color(76, 175, 80)); // Green checkmark
+                g2.drawLine(8, lineY - 2, 12, lineY + 2);
+                g2.drawLine(12, lineY + 2, 18, lineY - 4);
+                g2.setColor(Color.WHITE);
+            }
+            lineY += 6;
+        }
+
+        g2.dispose();
+        return image;
+    }
+
     public void shutdown() {
         if (repository != null) {
             repository.shutdown();
