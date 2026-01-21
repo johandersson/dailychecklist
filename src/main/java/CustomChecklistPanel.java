@@ -182,9 +182,14 @@ public class CustomChecklistPanel extends JPanel {
                     ? ReminderClockIcon.State.OVERDUE
                     : (diff <= 60L * 60L * 1000L ? ReminderClockIcon.State.DUE_SOON : ReminderClockIcon.State.FUTURE);
 
-            ReminderClockIcon icon = new ReminderClockIcon(reminder.getHour(), reminder.getMinute(), state);
-            JLabel reminderLabel = new JLabel(reminderText, icon, JLabel.LEADING);
+            // Create icon without its own time text; we'll show date then time in the label
+            ReminderClockIcon icon = new ReminderClockIcon(reminder.getHour(), reminder.getMinute(), state, false);
+            String dateText = String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
+            String timeText = String.format("%02d:%02d", reminder.getHour(), reminder.getMinute());
+            JLabel reminderLabel = new JLabel(dateText + "  " , icon, JLabel.LEADING);
             reminderLabel.setIconTextGap(6);
+            // Append the time after the icon
+            reminderLabel.setText(dateText + " " + timeText);
             reminderLabel.setFont(reminderLabel.getFont().deriveFont(11.0f));
             if (state == ReminderClockIcon.State.OVERDUE) {
                 reminderLabel.setForeground(java.awt.Color.RED);
