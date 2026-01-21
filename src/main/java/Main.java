@@ -39,10 +39,6 @@ public class Main {
             checklist = new DailyChecklist(lifecycleManager);
             checklist.setVisible(true);
 
-            // Update lifecycle manager with the frame as parent component
-            lifecycleManager = new ApplicationLifecycleManager(checklist.getFrame());
-            lifecycleManager.initialize(); // Re-initialize with proper parent
-
             // Update the repository parent component for error dialogs
             ((XMLTaskRepository) checklist.getRepository()).setParentComponent(checklist.getFrame());
 

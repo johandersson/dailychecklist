@@ -17,7 +17,6 @@
  */
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.FlowLayout;
 import java.io.File;
 import java.util.List;
 
@@ -46,20 +45,6 @@ public class BackupRestoreDialog {
             return;
         }
 
-        // Show warning dialog
-        int confirm = JOptionPane.showConfirmDialog(parent,
-            "Restoring from backup will overwrite your current data.\n" +
-            "This action cannot be undone.\n\n" +
-            "Backup file: " + latestBackup.getName() + "\n\n" +
-            "Do you want to proceed?",
-            "Confirm Restore",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.WARNING_MESSAGE);
-
-        if (confirm != JOptionPane.YES_OPTION) {
-            return;
-        }
-
         // Load backup data
         List<Task> backupTasks = loadBackupTasks(latestBackup);
         if (backupTasks == null) {
@@ -73,8 +58,8 @@ public class BackupRestoreDialog {
         // Load current data
         List<Task> currentTasks = taskManager.getAllTasks();
 
-        // Show diff dialog
-        showDiffDialog(parent, currentTasks, backupTasks, () -> {
+        // Show diff dialog with confirmation
+        showDiffDialog(parent, currentTasks, backupTasks, latestBackup, () -> {
             // Perform restore
             try {
                 taskManager.setTasks(backupTasks);
@@ -146,20 +131,52 @@ public class BackupRestoreDialog {
         }
     }
 
-    private static void showDiffDialog(Component parent, List<Task> currentTasks, List<Task> backupTasks, Runnable onRestore) {
-        JDialog dialog = new JDialog((java.awt.Frame) parent, "Backup Differences", true);
+    private static void showDiffDialog(Component parent, List<Task> currentTasks, List<Task> backupTasks, File backupFile, Runnable onRestore) {
+        JDialog dialog = new JDialog((java.awt.Frame) parent, "Restore from Backup", true);
         dialog.setLayout(new BorderLayout());
-        dialog.setSize(800, 600);
+        dialog.setSize(900, 700);
         dialog.setLocationRelativeTo(parent);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+
+        // Header panel with warning
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 20, 10, 20));
+        headerPanel.setBackground(new java.awt.Color(255, 243, 224)); // Light orange background
+
+        String headerHtml = "<html><body style='font-family: Arial, sans-serif; font-size: 14px;'>" +
+            "<div style='text-align: center; margin-bottom: 15px;'>" +
+            "<h2 style='color: #d9534f; margin: 0 0 10px 0; font-size: 18px;'>⚠️ Restore from Backup</h2>" +
+            "<div style='color: #666; font-size: 12px; margin-bottom: 10px;'>Backup file: <b>" + backupFile.getName() + "</b></div>" +
+            "</div>" +
+            "<div style='background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 10px 0;'>" +
+            "<div style='color: #856404; font-weight: bold; margin-bottom: 8px;'>⚠️ Warning: This will overwrite your current data!</div>" +
+            "<div style='color: #856404; font-size: 12px;'>Review the differences below and confirm if you want to proceed with the restoration.</div>" +
+            "</div>" +
+            "</body></html>";
+
+        javax.swing.JLabel headerLabel = new javax.swing.JLabel(headerHtml);
+        headerPanel.add(headerLabel, BorderLayout.CENTER);
+        dialog.add(headerPanel, BorderLayout.NORTH);
 
         // Diff panel
         TaskDiffPanel diffPanel = new TaskDiffPanel(currentTasks, backupTasks);
         dialog.add(new javax.swing.JScrollPane(diffPanel), BorderLayout.CENTER);
 
         // Button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout());
-        JButton restoreButton = new JButton("Restore");
+        JPanel buttonPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 20, 10));
+        buttonPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 20, 20, 20));
+
+        JButton restoreButton = new JButton("Restore from Backup");
+        restoreButton.setFont(restoreButton.getFont().deriveFont(java.awt.Font.BOLD, 12.0f));
+        restoreButton.setBackground(new java.awt.Color(220, 53, 69));
+        restoreButton.setForeground(java.awt.Color.WHITE);
+        restoreButton.setFocusPainted(false);
+        restoreButton.setPreferredSize(new java.awt.Dimension(160, 35));
+
         JButton cancelButton = new JButton("Cancel");
+        cancelButton.setFont(cancelButton.getFont().deriveFont(12.0f));
+        cancelButton.setFocusPainted(false);
+        cancelButton.setPreferredSize(new java.awt.Dimension(100, 35));
 
         restoreButton.addActionListener(e -> {
             dialog.dispose();
@@ -168,8 +185,8 @@ public class BackupRestoreDialog {
 
         cancelButton.addActionListener(e -> dialog.dispose());
 
-        buttonPanel.add(restoreButton);
         buttonPanel.add(cancelButton);
+        buttonPanel.add(restoreButton);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
         dialog.setVisible(true);
