@@ -21,12 +21,15 @@ import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 
+@SuppressWarnings("serial")
 public class ChecklistWindow extends JFrame {
+    private static final long serialVersionUID = 1L;
     private CustomChecklistPanel checklistPanel;
-    private TaskManager taskManager;
+    private transient TaskManager taskManager;
     private String checklistName;
-    private Runnable updateTasks;
+    private transient Runnable updateTasks;
 
+    @SuppressWarnings("this-escape")
     public ChecklistWindow(TaskManager taskManager, Runnable updateTasks, String checklistName) {
         this.taskManager = taskManager;
         this.updateTasks = updateTasks;
@@ -41,7 +44,7 @@ public class ChecklistWindow extends JFrame {
         setSize(400, 700); // Increased height for split
         setLocationRelativeTo(null);
 
-        checklistPanel = new CustomChecklistPanel(taskManager, new TaskUpdater(), checklistName);
+        checklistPanel = new CustomChecklistPanel(taskManager, checklistName);
         JScrollPane checklistScroll = new JScrollPane(checklistPanel);
 
         CustomAddTaskPanel addPanel = new CustomAddTaskPanel(taskManager, () -> {

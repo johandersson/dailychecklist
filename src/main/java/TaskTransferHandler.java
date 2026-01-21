@@ -26,12 +26,14 @@ import javax.swing.JComponent;
 import javax.swing.JList;
 import javax.swing.TransferHandler;
 
+@SuppressWarnings("serial")
 public class TaskTransferHandler extends TransferHandler {
+    private static final long serialVersionUID = 1L;
     private JList<Task> list;
     private final DefaultListModel<Task> listModel;
-    private final TaskManager taskManager;
+    private transient final TaskManager taskManager;
     private final String checklistName; // null for daily checklists
-    private final Runnable updateAllPanels;
+    private transient final Runnable updateAllPanels;
     private final DefaultListModel<Task> morningListModel;
     private final DefaultListModel<Task> eveningListModel;
 

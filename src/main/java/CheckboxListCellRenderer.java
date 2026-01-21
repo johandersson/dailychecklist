@@ -26,11 +26,14 @@ import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.ListCellRenderer;
 
+@SuppressWarnings("serial")
 public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer<Task> {
+    private static final long serialVersionUID = 1L;
     private boolean isChecked;
     private String taskName;
     private String weekdayAbbreviation;
@@ -61,6 +64,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         WEEKDAY_COLORS.put("sunday", new Color(199, 21, 133));   // Dark Pink
     }
 
+    @SuppressWarnings("this-escape")
     public CheckboxListCellRenderer() {
         setPreferredSize(new Dimension(200, 40)); // Increase size for visibility
         this.circleFont = getAvailableFont("Yu Gothic UI", Font.BOLD, 12); // Font for circle text

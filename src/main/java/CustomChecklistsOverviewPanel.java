@@ -38,11 +38,13 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 
+@SuppressWarnings("serial")
 public class CustomChecklistsOverviewPanel extends JPanel {
+    private static final long serialVersionUID = 1L;
     private JList<String> checklistList;
     private DefaultListModel<String> listModel;
-    private TaskManager taskManager;
-    private Runnable updateTasks;
+    private transient TaskManager taskManager;
+    private transient Runnable updateTasks;
     private JTextField newChecklistField;
     private JButton createButton;
     private JSplitPane splitPane;
@@ -53,6 +55,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private Set<String> allChecklistNames;
     private Map<String, CustomChecklistPanel> panelMap = new HashMap<>();
 
+    @SuppressWarnings("this-escape")
     public CustomChecklistsOverviewPanel(TaskManager taskManager, Runnable updateTasks) {
         this.taskManager = taskManager;
         this.updateTasks = updateTasks;
@@ -164,7 +167,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             rightPanel.remove(currentAddPanel);
         }
         if (checklistName != null) {
-            currentChecklistPanel = new CustomChecklistPanel(taskManager, new TaskUpdater(), checklistName, this::updateTasks);
+            currentChecklistPanel = new CustomChecklistPanel(taskManager, checklistName, this::updateTasks);
             panelMap.put(checklistName, currentChecklistPanel);
             currentChecklistPanel.updateTasks();
             rightPanel.add(currentChecklistPanel);
@@ -403,6 +406,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
      * Custom cell renderer for checklist list that shows a clock icon for checklists with reminders.
      */
     private class ChecklistListCellRenderer extends javax.swing.DefaultListCellRenderer {
+        private static final long serialVersionUID = 1L;
         @Override
         public java.awt.Component getListCellRendererComponent(javax.swing.JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
             super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);

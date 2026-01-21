@@ -67,7 +67,7 @@ public class ChecklistNameManager {
      */
     public void addChecklistName(String name) {
         Set<String> names = getChecklistNames();
-        names.add(name);
+        names.add(name.trim());
         saveChecklistNamesToProperties(names);
         cachedChecklistNames = names;
         checklistNamesDirty = false;

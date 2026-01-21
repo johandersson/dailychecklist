@@ -3,10 +3,12 @@ import java.awt.event.ActionEvent;
 import javax.swing.AbstractAction;
 import javax.swing.JOptionPane;
 
+@SuppressWarnings("serial")
 public class KeyBindingAddAction extends AbstractAction {
-    private java.awt.Component parent;
-    private TaskManager taskManager;
-    private Runnable updateTasks;
+    private static final long serialVersionUID = 1L;
+    private transient java.awt.Component parent;
+    private transient TaskManager taskManager;
+    private transient Runnable updateTasks;
 
     public KeyBindingAddAction(java.awt.Component parent, TaskManager taskManager, Runnable updateTasks) {
         this.parent = parent;

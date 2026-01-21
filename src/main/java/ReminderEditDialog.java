@@ -23,6 +23,7 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.time.LocalDateTime;
 import java.util.stream.IntStream;
+
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -34,11 +35,13 @@ import javax.swing.JPanel;
 /**
  * A dialog for adding or editing reminders with full date/time selection and preset buttons.
  */
+@SuppressWarnings("serial")
 public class ReminderEditDialog extends JDialog {
-    private final TaskManager taskManager;
+    private static final long serialVersionUID = 1L;
+    private transient final TaskManager taskManager;
     private final String checklistName;
     private final Reminder existingReminder;
-    private final Runnable onSave;
+    private transient final Runnable onSave;
 
     // UI Components
     private JComboBox<Integer> yearBox, monthBox, dayBox, hourBox, minuteBox;

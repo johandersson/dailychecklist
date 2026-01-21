@@ -34,7 +34,9 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 
+@SuppressWarnings("serial")
 public class ChecklistPanel extends JPanel {
+    private static final long serialVersionUID = 1L;
     private JPanel morningPanel;
     private JPanel eveningPanel;
     private JList<Task> morningTaskList;
@@ -42,9 +44,10 @@ public class ChecklistPanel extends JPanel {
     private DefaultListModel<Task> morningListModel;
     private DefaultListModel<Task> eveningListModel;
     private JCheckBox showWeekdayTasksCheckbox;
-    private TaskUpdater taskUpdater;
-    private TaskManager taskManager;
+    private transient TaskUpdater taskUpdater;
+    private transient TaskManager taskManager;
 
+    @SuppressWarnings("this-escape")
     public ChecklistPanel(TaskManager taskManager, TaskUpdater taskUpdater) {
         this.taskManager = taskManager;
         this.taskUpdater = taskUpdater;
@@ -84,6 +87,7 @@ public class ChecklistPanel extends JPanel {
         }
         taskList.addMouseListener(new MouseAdapter() {
             @Override
+            @SuppressWarnings("unchecked")
             public void mouseClicked(MouseEvent e) {
                 JList<Task> list = (JList<Task>) e.getSource();
                 int index = list.locationToIndex(e.getPoint());

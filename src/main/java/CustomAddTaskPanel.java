@@ -19,7 +19,9 @@ import java.awt.event.ActionListener;
 
 import javax.swing.JOptionPane;
 
+@SuppressWarnings("serial")
 public class CustomAddTaskPanel extends BaseAddTaskPanel {
+    private static final long serialVersionUID = 1L;
     private final String checklistName;
 
     public CustomAddTaskPanel(TaskManager taskManager, Runnable updateTasks, String checklistName) {

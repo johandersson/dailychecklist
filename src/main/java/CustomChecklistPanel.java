@@ -31,21 +31,22 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 
+@SuppressWarnings("serial")
 public class CustomChecklistPanel extends JPanel {
+    private static final long serialVersionUID = 1L;
     private JList<Task> customTaskList;
     private DefaultListModel<Task> customListModel;
-    private TaskUpdater taskUpdater;
-    private TaskManager taskManager;
+    private transient TaskManager taskManager;
     private String checklistName;
-    private Runnable updateAllPanels;
+    private transient Runnable updateAllPanels;
 
-    public CustomChecklistPanel(TaskManager taskManager, TaskUpdater taskUpdater, String checklistName) {
-        this(taskManager, taskUpdater, checklistName, null);
+    public CustomChecklistPanel(TaskManager taskManager, String checklistName) {
+        this(taskManager, checklistName, null);
     }
 
-    public CustomChecklistPanel(TaskManager taskManager, TaskUpdater taskUpdater, String checklistName, Runnable updateAllPanels) {
+    @SuppressWarnings("this-escape")
+    public CustomChecklistPanel(TaskManager taskManager, String checklistName, Runnable updateAllPanels) {
         this.taskManager = taskManager;
-        this.taskUpdater = taskUpdater;
         this.checklistName = checklistName;
         this.updateAllPanels = updateAllPanels;
         initialize();
@@ -69,6 +70,7 @@ public class CustomChecklistPanel extends JPanel {
         }
         taskList.addMouseListener(new MouseAdapter() {
             @Override
+            @SuppressWarnings("unchecked")
             public void mouseClicked(MouseEvent e) {
                 JList<Task> list = (JList<Task>) e.getSource();
                 int index = list.locationToIndex(e.getPoint());

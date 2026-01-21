@@ -14,12 +14,19 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */import javax.swing.*;
-import java.awt.*;
+ */import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
 
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+@SuppressWarnings("serial")
 public class CirclePanel extends JPanel {
+    private static final long serialVersionUID = 1L;
     private JLabel[] circles;
 
+    @SuppressWarnings("this-escape")
     public CirclePanel() {
         setLayout(new FlowLayout());
         setBackground(Color.WHITE);

@@ -129,7 +129,7 @@ public class TaskXmlHandler {
         if (checklistNameNodes.getLength() > 0) {
             String content = checklistNameNodes.item(0).getTextContent();
             if (content != null && !content.trim().isEmpty()) {
-                checklistName = content;
+                checklistName = content.trim();
             }
         }
 
@@ -184,7 +184,7 @@ public class TaskXmlHandler {
 
         if (task.getChecklistName() != null && !task.getChecklistName().trim().isEmpty()) {
             Element checklistNameElement = document.createElement("checklistName");
-            checklistNameElement.setTextContent(task.getChecklistName());
+            checklistNameElement.setTextContent(task.getChecklistName().trim());
             taskElement.appendChild(checklistNameElement);
         }
 

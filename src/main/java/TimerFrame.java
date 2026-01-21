@@ -25,6 +25,7 @@ public class TimerFrame {
     private JFrame frame;
     private TimerPanel timerPanel;
 
+    @SuppressWarnings("this-escape")
     public TimerFrame() {
         if (!GraphicsEnvironment.isHeadless()) {
             frame = new JFrame();
