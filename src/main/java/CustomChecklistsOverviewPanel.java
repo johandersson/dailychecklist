@@ -346,6 +346,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 .orElse(null);
 
         ReminderEditDialog dialog = new ReminderEditDialog(taskManager, selectedChecklistName, existingReminder, () -> {
+            // Refresh this overview (updates right panel) and also notify outer panels
+            updateTasks();
             updateTasks.run();
         });
         dialog.setVisible(true);
