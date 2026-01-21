@@ -16,7 +16,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashMap;
@@ -66,7 +65,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private void initialize() {
         listModel = new DefaultListModel<>();
         checklistList = new JList<>(listModel);
-        checklistList.setCellRenderer(new ChecklistListCellRenderer());
+        checklistList.setCellRenderer(new ChecklistCellRenderer(taskManager));
         checklistList.setTransferHandler(new ChecklistListTransferHandler(listModel, taskManager, this::updateTasks));
         checklistList.setDropMode(DropMode.ON);
         checklistList.addListSelectionListener(e -> {
@@ -327,72 +326,5 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             updateTasks.run();
         });
         dialog.setVisible(true);
-    }
-
-
-
-    /**
-     * Custom cell renderer for checklist list that shows a clock icon for checklists with reminders.
-     */
-    private class ChecklistListCellRenderer extends javax.swing.JPanel implements javax.swing.ListCellRenderer<Object> {
-        private static final long serialVersionUID = 1L;
-        private String checklistName;
-        private boolean hasReminders;
-        private boolean isSelected;
-        private ReminderClockIcon clockIcon = new ReminderClockIcon();
-
-        @SuppressWarnings("this-escape")
-        public ChecklistListCellRenderer() {
-            setPreferredSize(new Dimension(200, 30));
-            setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 14));
-        }
-
-        @Override
-        public java.awt.Component getListCellRendererComponent(javax.swing.JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-            this.isSelected = isSelected;
-            setOpaque(true);
-
-            if (isSelected) {
-                setBackground(list.getSelectionBackground());
-                setForeground(list.getSelectionForeground());
-            } else {
-                setBackground(list.getBackground());
-                setForeground(list.getForeground());
-            }
-
-            if (value instanceof String) {
-                this.checklistName = (String) value;
-                this.hasReminders = taskManager.getReminders().stream()
-                    .anyMatch(reminder -> java.util.Objects.equals(reminder.getChecklistName(), checklistName));
-            }
-
-            return this;
-        }
-
-        @Override
-        protected void paintComponent(java.awt.Graphics g) {
-            super.paintComponent(g);
-            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g;
-
-            // Enable anti-aliasing
-            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-            int iconX = 5;
-            int textX = 30; // Space for icon
-
-            // Draw clock icon if checklist has reminders
-            if (hasReminders) {
-                clockIcon.paintIcon(this, g2, iconX, getHeight() / 2 - clockIcon.getIconHeight() / 2);
-                textX = iconX + clockIcon.getIconWidth() + 10;
-            }
-
-            // Draw checklist name
-            g2.setColor(getForeground());
-            g2.setFont(getFont());
-            java.awt.FontMetrics fm = g2.getFontMetrics();
-            int textY = getHeight() / 2 + (fm.getAscent() - fm.getDescent()) / 2;
-            g2.drawString(checklistName, textX, textY);
-        }
     }
 }
