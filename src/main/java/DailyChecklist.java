@@ -264,13 +264,7 @@ public class DailyChecklist {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
 
-        // Add a hidden focus sink button to the main frame so dialogs can transfer focus to it
-        try {
-            javax.swing.JButton focusSink = new javax.swing.JButton();
-            focusSink.setFocusable(true);
-            focusSink.setVisible(false);
-            frame.getContentPane().add(focusSink, java.awt.BorderLayout.SOUTH);
-        } catch (Exception ignore) {}
+            // No-op: main focus sink removed
     }
 
     /**

@@ -294,9 +294,7 @@ public class ReminderEditDialog extends JDialog {
             } else {
                 handleEditReminder(year, month, day, hour, minute);
             }
-            // Run onSave and close the dialog; UI will reflect the updated reminder
             // Close the dialog first so windowing focus events settle, then run onSave
-            java.awt.Component beforeDispose = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
             // Close the dialog and run the onSave callback immediately afterwards.
             try {
                 dispose();

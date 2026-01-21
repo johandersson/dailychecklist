@@ -52,6 +52,18 @@ public class CustomChecklistPanel extends JPanel {
         this.checklistName = checklistName;
         this.updateAllPanels = updateAllPanels;
         initialize();
+        // Listen for model changes and refresh UI
+        try {
+            taskManager.addTaskChangeListener(() -> {
+                SwingUtilities.invokeLater(() -> {
+                    java.awt.Component focused = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                    updateTasks();
+                    if (focused != null && focused.isShowing() && focused.isFocusable()) {
+                        focused.requestFocusInWindow();
+                    }
+                });
+            });
+        } catch (Exception ignore) {}
     }
 
     private void initialize() {
@@ -262,22 +274,17 @@ public class CustomChecklistPanel extends JPanel {
      */
     public void requestSelectionFocus() {
         if (customTaskList != null) {
-            try {
-                try { java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner(); } catch (Exception ignore) {}
-                javax.swing.SwingUtilities.invokeLater(() -> javax.swing.SwingUtilities.invokeLater(() -> {
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                try {
                     boolean ok = customTaskList.requestFocusInWindow();
                     if (!ok) customTaskList.grabFocus();
-                    // requestSelectionFocus: no-op logging removed
                     if (customTaskList.getSelectedIndex() >= 0) {
                         customTaskList.ensureIndexIsVisible(customTaskList.getSelectedIndex());
                     }
-                }));
-            } catch (Exception ex) {
-                customTaskList.requestFocusInWindow();
-                if (customTaskList.getSelectedIndex() >= 0) {
-                    customTaskList.ensureIndexIsVisible(customTaskList.getSelectedIndex());
+                } catch (Exception ex) {
+                    try { customTaskList.requestFocusInWindow(); } catch (Exception ignore) {}
                 }
-            }
+            });
         }
     }
 
