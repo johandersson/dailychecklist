@@ -81,7 +81,7 @@ public class TaskManager {
         List<Task> filtered = new ArrayList<>();
         for (Task task : allTasks) {
             if (task.getType() == type) {
-                if (type != TaskType.CUSTOM || checklistName == null || Objects.equals(checklistName, task.getChecklistName())) {
+                if (type != TaskType.CUSTOM || checklistName == null || Objects.equals(checklistName.trim(), task.getChecklistName())) {
                     filtered.add(task);
                 }
             }
@@ -138,7 +138,7 @@ public class TaskManager {
      * Moves a task to a different custom checklist.
      */
     public void moveTaskToChecklist(Task task, String newChecklistName) {
-        task.setChecklistName(newChecklistName);
+        task.setChecklistName(newChecklistName.trim());
         updateTask(task);
     }
 
@@ -170,7 +170,7 @@ public class TaskManager {
 
         // Allow a broader range of characters including international characters
         // Allow letters (including accented), numbers, spaces, and common symbols
-        if (!trimmed.matches("[\\p{L}\\p{N}\\s\\-_.()]+")) {
+        if (!trimmed.matches("[\\p{L}\\p{N}\\s\\-_.()!]+")) {
             return null;
         }
 

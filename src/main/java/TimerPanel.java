@@ -28,17 +28,20 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
 
+@SuppressWarnings("serial")
 public class TimerPanel extends JPanel {
+    private static final long serialVersionUID = 1L;
     private JLabel timerLabel;
     private JLabel taskLabel;
     private Timer timer;
     private int timeRemaining;
     private String lastTask = "";
     private String lastAmountOfMinutesForTask = "";
-    private TimerFrame frame;
+    private transient TimerFrame frame;
     private CirclePanel circlePanel;
     private static final int CHUNK_SIZE = 5 * 60;
 
+    @SuppressWarnings("this-escape")
     public TimerPanel(TimerFrame frame) {
         this.frame = frame;
         setLayout(new BorderLayout());

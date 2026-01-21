@@ -2,8 +2,10 @@ import java.awt.event.ActionEvent;
 
 import javax.swing.AbstractAction;
 
+@SuppressWarnings("serial")
 public class RefreshTasksAction extends AbstractAction {
-    private Runnable updateTasks;
+    private static final long serialVersionUID = 1L;
+    private transient Runnable updateTasks;
 
     public RefreshTasksAction(Runnable updateTasks) {
         super("REFRESH_TASKS");

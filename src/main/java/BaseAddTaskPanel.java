@@ -29,12 +29,15 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
+@SuppressWarnings("serial")
 public abstract class BaseAddTaskPanel extends JPanel {
-    protected final TaskManager taskManager;
-    protected final Runnable updateTasks;
+    private static final long serialVersionUID = 1L;
+    protected transient final TaskManager taskManager;
+    protected transient final Runnable updateTasks;
     protected JTextArea taskField;
     protected JButton addButton;
 
+    @SuppressWarnings("this-escape")
     public BaseAddTaskPanel(TaskManager taskManager, Runnable updateTasks) {
         this.taskManager = taskManager;
         this.updateTasks = updateTasks;

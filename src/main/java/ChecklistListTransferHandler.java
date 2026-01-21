@@ -23,10 +23,12 @@ import javax.swing.DefaultListModel;
 import javax.swing.JList;
 import javax.swing.TransferHandler;
 
+@SuppressWarnings("serial")
 public class ChecklistListTransferHandler extends TransferHandler {
-    private final DefaultListModel<String> listModel;
-    private final TaskManager taskManager;
-    private final Runnable updateTasks;
+    private static final long serialVersionUID = 1L;
+    private transient final DefaultListModel<String> listModel;
+    private transient final TaskManager taskManager;
+    private transient final Runnable updateTasks;
 
     public ChecklistListTransferHandler(DefaultListModel<String> listModel, TaskManager taskManager, Runnable updateTasks) {
         this.listModel = listModel;

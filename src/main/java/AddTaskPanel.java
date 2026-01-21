@@ -36,9 +36,11 @@ import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
+@SuppressWarnings("serial")
 public class AddTaskPanel extends JPanel {
-    private final TaskManager taskManager;
-    private final Consumer<Task[]> onTasksAdded;
+    private static final long serialVersionUID = 1L;
+    private transient final TaskManager taskManager;
+    private transient final Consumer<Task[]> onTasksAdded;
     private JComboBox<String> weekdayComboBox;
     private String checklistName;
     private JRadioButton addMorningRadioButton;
@@ -53,6 +55,7 @@ public class AddTaskPanel extends JPanel {
         this(taskManager, tasks -> updateTasks.run(), checklistName);
     }
 
+    @SuppressWarnings("this-escape")
     public AddTaskPanel(TaskManager taskManager, Consumer<Task[]> onTasksAdded, String checklistName) {
         this.taskManager = taskManager;
         this.onTasksAdded = onTasksAdded;

@@ -29,12 +29,15 @@ import javax.swing.SwingConstants;
 /**
  * A dialog for displaying reminders with HTML formatting and user-friendly design.
  */
+@SuppressWarnings("serial")
 public class ReminderDialog extends JDialog {
-    private final Runnable onOpen;
-    private final Runnable onDone;
-    private final Runnable onRemindLater;
-    private final Runnable onRemindTomorrow;
+    private static final long serialVersionUID = 1L;
+    private transient final Runnable onOpen;
+    private transient final Runnable onDone;
+    private transient final Runnable onRemindLater;
+    private transient final Runnable onRemindTomorrow;
 
+    @SuppressWarnings("this-escape")
     public ReminderDialog(JFrame parent, Reminder reminder, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow) {
         super(parent, "Reminder", true);
         this.onOpen = onOpen;

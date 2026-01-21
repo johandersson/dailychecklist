@@ -78,6 +78,7 @@ public class DailyChecklist {
         this.taskUpdater = new TaskUpdater();
         this.checklistManager = new TaskManager(repository);
         this.checklistPanel = new ChecklistPanel(checklistManager, taskUpdater);
+        this.checklistPanel.updateTasks();
 
         if (!GraphicsEnvironment.isHeadless()) {
             frame = new JFrame();
@@ -163,9 +164,6 @@ public class DailyChecklist {
         }).start();
     }
 
-    /**
-     * Shows the next reminder from the queue if no dialog is currently showing
-     */
     /**
      * Shows a reminder dialog using the ReminderDialog class.
      */

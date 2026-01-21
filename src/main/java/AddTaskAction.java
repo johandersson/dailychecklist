@@ -4,7 +4,9 @@ import java.awt.event.ActionEvent;
 import javax.swing.AbstractAction;
 import javax.swing.JOptionPane;
 
+@SuppressWarnings("serial")
 public class AddTaskAction extends AbstractAction {
+    private static final long serialVersionUID = 1L;
     private java.awt.Component parent;
     private TaskManager taskManager;
     private Runnable updateTasks;

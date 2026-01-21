@@ -14,10 +14,17 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */import javax.swing.*;
-import java.awt.*;
+ */import java.awt.BorderLayout;
+import java.awt.Color;
 
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+
+@SuppressWarnings("serial")
 public class TaskInputPanel extends JPanel {
+    private static final long serialVersionUID = 1L;
     private JTextField taskField;
     private JComboBox<String> timeComboBox;
 

@@ -34,7 +34,7 @@ public class Task {
         this.weekday = weekday;
         this.done = done;
         this.doneDate = doneDate;
-        this.checklistName = checklistName;
+        this.checklistName = checklistName != null ? checklistName.trim() : null;
     }
 
     // Constructor when creating a new task (ID generated)
@@ -45,7 +45,7 @@ public class Task {
         this.weekday = weekday;
         this.done = false;
         this.doneDate = null;
-        this.checklistName = checklistName;
+        this.checklistName = checklistName != null ? checklistName.trim() : null;
     }
 
     // Constructor for backwards compatibility (checklistName = null)
