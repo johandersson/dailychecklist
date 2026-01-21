@@ -138,24 +138,7 @@ public class DailyChecklist {
             while (true) {
                 try {
                     Thread.sleep(10000); // Check every 10 seconds
-                    // Use optimized method to get only due reminders
-                    List<Reminder> dueReminders = checklistManager.getDueReminders(5, openedChecklists);
-                    LocalDateTime now = LocalDateTime.now();
-                    
-                    for (Reminder r : dueReminders) {
-                        // Only add reminders that haven't been shown in this session
-                        if (!shownReminders.contains(r)) {
-                            reminderQueue.addReminder(r);
-                            shownReminders.add(r);
-                        }
-                        
-                        // Also check for old reminders to clean up (less frequent check)
-                        LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-                        if (now.minusHours(1).isAfter(reminderTime)) {
-                            checklistManager.removeReminder(r);
-                            shownReminders.remove(r); // Clean up from shown reminders too
-                        }
-                    }
+                    checkReminders();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -164,6 +147,37 @@ public class DailyChecklist {
                 }
             }
         }).start();
+
+        // Initial check for due reminders at startup
+        checkReminders();
+    }
+
+    /**
+     * Checks for due reminders and adds them to the queue if not already shown.
+     */
+    private void checkReminders() {
+        // Use optimized method to get only due reminders
+        List<Reminder> dueReminders = checklistManager.getDueReminders(5, openedChecklists);
+        LocalDateTime now = LocalDateTime.now();
+        
+        for (Reminder r : dueReminders) {
+            // Only add reminders that haven't been shown in this session
+            if (!shownReminders.contains(r)) {
+                reminderQueue.addReminder(r);
+                shownReminders.add(r);
+            }
+            
+            // Also check for old reminders to clean up (less frequent check)
+            LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+            if (now.minusHours(1).isAfter(reminderTime)) {
+                checklistManager.removeReminder(r);
+                shownReminders.remove(r); // Clean up from shown reminders too
+            }
+        }
+    }
+
+    /**
+     * Shows a reminder dialog using the ReminderDialog class.
     }
 
     /**

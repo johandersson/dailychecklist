@@ -216,12 +216,6 @@ public class ReminderManager {
         LocalDateTime now = LocalDateTime.now();
 
         for (Reminder r : allReminders) {
-            // Skip reminders for checklists that have been opened in this session
-            String checklistName = r.getChecklistName();
-            if (checklistName != null && openedChecklists != null && openedChecklists.contains(checklistName)) {
-                continue;
-            }
-
             LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
             // Show reminders that are:
             // 1. Due within the next minutesAhead minutes, OR
@@ -230,7 +224,11 @@ public class ReminderManager {
             boolean isRecentlyOverdue = !reminderTime.isAfter(now) && reminderTime.isAfter(now.minusHours(1));
 
             if (isUpcoming || isRecentlyOverdue) {
-                dueReminders.add(r);
+                // Skip reminders for checklists that have been opened in this session, but not for recently overdue
+                String checklistName = r.getChecklistName();
+                if (isRecentlyOverdue || (checklistName == null || openedChecklists == null || !openedChecklists.contains(checklistName))) {
+                    dueReminders.add(r);
+                }
             }
         }
         return dueReminders;
