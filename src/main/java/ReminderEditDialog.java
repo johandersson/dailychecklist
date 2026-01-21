@@ -288,6 +288,10 @@ public class ReminderEditDialog extends JDialog {
                 handleEditReminder(year, month, day, hour, minute);
             }
             // Run onSave and close the dialog; UI will reflect the updated reminder
+            // Close the dialog first so windowing focus events settle, then run onSave
+            java.awt.Component beforeDispose = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+            System.out.println("[DEBUG] Focus owner before dispose: " + (beforeDispose == null ? "null" : beforeDispose.getClass().getName()));
+            dispose();
             if (onSave != null) {
                 java.awt.Component before = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
                 System.out.println("[DEBUG] Focus owner before onSave: " + (before == null ? "null" : before.getClass().getName()));
@@ -295,9 +299,6 @@ public class ReminderEditDialog extends JDialog {
                 java.awt.Component after = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
                 System.out.println("[DEBUG] Focus owner after onSave: " + (after == null ? "null" : after.getClass().getName()));
             }
-            java.awt.Component beforeDispose = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-            System.out.println("[DEBUG] Focus owner before dispose: " + (beforeDispose == null ? "null" : beforeDispose.getClass().getName()));
-            dispose();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Invalid date/time. Please check your input.", "Error", JOptionPane.ERROR_MESSAGE);
         }
