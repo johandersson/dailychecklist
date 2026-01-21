@@ -93,7 +93,7 @@ public class BackupRestoreDialog {
     }
 
     private static File findLatestBackup() {
-        File backupDir = new File("backups");
+        File backupDir = new File(ApplicationConfiguration.BACKUP_DIRECTORY);
         if (!backupDir.exists() || !backupDir.isDirectory()) {
             return null;
         }
