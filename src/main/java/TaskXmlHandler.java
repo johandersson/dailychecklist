@@ -112,8 +112,18 @@ public class TaskXmlHandler {
         for (int i = 0; i < nodeList.getLength(); i++) {
             Node node = nodeList.item(i);
             if (node.getNodeType() == Node.ELEMENT_NODE) {
-                Task task = parseTaskFromElement((Element) node);
-                tasks.add(task);
+                try {
+                    Task task = parseTaskFromElement((Element) node);
+                    if (validateTask(task)) {
+                        tasks.add(task);
+                    } else {
+                        // Log invalid task but continue
+                        System.err.println("Skipping invalid task in XML: " + task);
+                    }
+                } catch (Exception e) {
+                    // Log parsing error but continue with other tasks
+                    System.err.println("Error parsing task element: " + e.getMessage());
+                }
             }
         }
 
@@ -124,6 +134,32 @@ public class TaskXmlHandler {
      * Parses a single task from an XML element.
      */
     private Task parseTaskFromElement(Element element) {
+        // Get required attributes and elements with null checks
+        String id = element.getAttribute("id");
+        if (id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("Task ID is missing or empty");
+        }
+
+        NodeList nameNodes = element.getElementsByTagName("name");
+        if (nameNodes.getLength() == 0) {
+            throw new IllegalArgumentException("Task name is missing");
+        }
+        String name = nameNodes.item(0).getTextContent();
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Task name is empty");
+        }
+
+        NodeList typeNodes = element.getElementsByTagName("type");
+        if (typeNodes.getLength() == 0) {
+            throw new IllegalArgumentException("Task type is missing");
+        }
+        TaskType type;
+        try {
+            type = TaskType.valueOf(typeNodes.item(0).getTextContent());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid task type: " + typeNodes.item(0).getTextContent());
+        }
+
         String checklistName = null;
         NodeList checklistNameNodes = element.getElementsByTagName("checklistName");
         if (checklistNameNodes.getLength() > 0) {
@@ -142,15 +178,13 @@ public class TaskXmlHandler {
             }
         }
 
-        return new Task(
-                element.getAttribute("id"),
-                element.getElementsByTagName("name").item(0).getTextContent(),
-                TaskType.valueOf(element.getElementsByTagName("type").item(0).getTextContent()),
-                weekday,
-                Boolean.parseBoolean(element.getElementsByTagName("done").item(0).getTextContent()),
-                element.getElementsByTagName("doneDate").item(0).getTextContent(),
-                checklistName
-        );
+        NodeList doneNodes = element.getElementsByTagName("done");
+        boolean done = doneNodes.getLength() > 0 && Boolean.parseBoolean(doneNodes.item(0).getTextContent());
+
+        NodeList doneDateNodes = element.getElementsByTagName("doneDate");
+        String doneDate = doneDateNodes.getLength() > 0 ? doneDateNodes.item(0).getTextContent() : null;
+
+        return new Task(id, name, type, weekday, done, doneDate, checklistName);
     }
 
     /**
@@ -311,6 +345,13 @@ public class TaskXmlHandler {
      * Replaces all tasks in the XML document.
      */
     public void setAllTasks(List<Task> tasks) throws ParserConfigurationException, SAXException, IOException, TransformerException {
+        // Validate all tasks before saving
+        for (Task task : tasks) {
+            if (!validateTask(task)) {
+                throw new IllegalArgumentException("Invalid task: " + task);
+            }
+        }
+
         Document document = readDocument();
         Element root = document.getDocumentElement();
 
@@ -341,5 +382,20 @@ public class TaskXmlHandler {
                 task.setDoneDate(null);
             }
         }
+    }
+
+    /**
+     * Validates a task before saving.
+     */
+    public static boolean validateTask(Task task) {
+        if (task == null) return false;
+        if (task.getId() == null || task.getId().trim().isEmpty()) return false;
+        if (task.getName() == null || task.getName().trim().isEmpty()) return false;
+        if (task.getType() == null) return false;
+        // Checklist name can be null for daily tasks
+        if (task.getChecklistName() != null && task.getChecklistName().trim().isEmpty()) {
+            task.setChecklistName(null); // Normalize empty to null
+        }
+        return true;
     }
 }
