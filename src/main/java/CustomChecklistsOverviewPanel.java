@@ -381,8 +381,12 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                         if (comp instanceof CustomChecklistPanel) {
                             // Prefer focusing the inner task list for reliability
                             try {
+                                // Clear any lingering focus owner (e.g., the button from the dialog)
+                                try {
+                                    java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner();
+                                } catch (Exception ignore) {}
                                 ((CustomChecklistPanel) comp).requestSelectionFocus();
-                                System.out.println("[DEBUG] onSave callback: requested requestSelectionFocus() on CustomChecklistPanel");
+                                System.out.println("[DEBUG] onSave callback: cleared global focus owner and requested requestSelectionFocus() on CustomChecklistPanel");
                             } catch (Exception ex) {
                                 FocusUtils.restoreFocusLater(((CustomChecklistPanel) comp).getParent() instanceof javax.swing.JComponent ? (javax.swing.JComponent) ((CustomChecklistPanel) comp) : null);
                             }
