@@ -185,38 +185,41 @@ public class CustomChecklistPanel extends JPanel {
                     ? ReminderClockIcon.State.OVERDUE
                     : (diff <= 60L * 60L * 1000L ? ReminderClockIcon.State.DUE_SOON : ReminderClockIcon.State.FUTURE);
 
-            // Create icon without its own time text; we'll show date then time in the label
+            // Create icon without its own time text; we'll show date then time in a tight subpanel
             ReminderClockIcon icon = new ReminderClockIcon(reminder.getHour(), reminder.getMinute(), state, false);
             String dateText = String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
             String timeText = String.format("%02d:%02d", reminder.getHour(), reminder.getMinute());
-            JLabel reminderLabel = new JLabel(dateText + " " + timeText, icon, JLabel.LEADING);
-            reminderLabel.setIconTextGap(4);
 
-            reminderLabel.setFont(reminderLabel.getFont().deriveFont(11.0f));
+            javax.swing.JPanel small = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 4, 0));
+            small.setOpaque(false);
+            javax.swing.JLabel iconLabel = new javax.swing.JLabel(icon);
+            javax.swing.JLabel textLabel = new javax.swing.JLabel(dateText + " " + timeText);
+            textLabel.setFont(textLabel.getFont().deriveFont(11.0f));
+
+            // Choose a darker orange for readability
+            java.awt.Color dueSoonColor = new java.awt.Color(204, 102, 0);
             switch (state) {
-                case OVERDUE -> reminderLabel.setForeground(java.awt.Color.RED);
-                case DUE_SOON -> reminderLabel.setForeground(java.awt.Color.ORANGE);
-                default -> reminderLabel.setForeground(java.awt.Color.BLUE);
+                case OVERDUE -> textLabel.setForeground(java.awt.Color.RED);
+                case DUE_SOON -> textLabel.setForeground(dueSoonColor);
+                default -> textLabel.setForeground(java.awt.Color.BLUE);
             }
 
-            // Add right-click menu to remove the reminder
-            reminderLabel.addMouseListener(new MouseAdapter() {
+            // Add right-click menu to remove the reminder on the whole small panel
+            MouseAdapter ma = new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
-                    if (SwingUtilities.isRightMouseButton(e)) {
-                        showReminderPopup(e, reminder);
-                    }
+                    if (SwingUtilities.isRightMouseButton(e)) showReminderPopup(e, reminder);
                 }
-
                 @Override
                 public void mouseReleased(MouseEvent e) {
-                    if (SwingUtilities.isRightMouseButton(e)) {
-                        showReminderPopup(e, reminder);
-                    }
+                    if (SwingUtilities.isRightMouseButton(e)) showReminderPopup(e, reminder);
                 }
-            });
-
-            panel.add(reminderLabel, BorderLayout.WEST);
+            };
+            iconLabel.addMouseListener(ma);
+            textLabel.addMouseListener(ma);
+            small.add(iconLabel);
+            small.add(textLabel);
+            panel.add(small, BorderLayout.WEST);
         } else {
             JLabel noReminderLabel = new JLabel("No reminder set");
             noReminderLabel.setFont(noReminderLabel.getFont().deriveFont(10.0f));
