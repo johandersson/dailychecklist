@@ -23,15 +23,12 @@ import java.awt.Image;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
-import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
@@ -254,9 +251,6 @@ public class DailyChecklist {
         Image appIcon = createAppIcon();
         frame.setIconImage(appIcon);
         
-        // Save icon as PNG for potential use in shortcuts
-        saveIconAsPNG(appIcon);
-
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
@@ -374,40 +368,6 @@ public class DailyChecklist {
 
         g2.dispose();
         return image;
-    }
-
-    /**
-     * Saves the application icon as a PNG file for use in Windows shortcuts.
-     */
-    private void saveIconAsPNG(Image icon) {
-        try {
-            // Create icons directory if it doesn't exist
-            File iconsDir = new File("icons");
-            if (!iconsDir.exists()) {
-                iconsDir.mkdirs();
-            }
-            
-            // Save as PNG (Windows can use PNG files for shortcuts too)
-            File iconFile = new File(iconsDir, "daily-checklist-icon.png");
-            BufferedImage bufferedImage = new BufferedImage(
-                icon.getWidth(null), 
-                icon.getHeight(null), 
-                BufferedImage.TYPE_INT_ARGB
-            );
-            
-            // Draw the icon onto the buffered image
-            java.awt.Graphics2D g2 = bufferedImage.createGraphics();
-            g2.drawImage(icon, 0, 0, null);
-            g2.dispose();
-            
-            // Save the image
-            ImageIO.write(bufferedImage, "PNG", iconFile);
-            
-        } catch (IOException e) {
-            // Silently fail if we can't save the icon file
-            // This is not critical for the application to function
-            System.err.println("Could not save application icon: " + e.getMessage());
-        }
     }
 
     public void shutdown() {
