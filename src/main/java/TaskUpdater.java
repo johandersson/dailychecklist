@@ -32,7 +32,7 @@ public class TaskUpdater {
         eveningListModel.clear();
         for (Task task : allTasks) {
             boolean show = task.getWeekday() == null || (showWeekday && task.getWeekday().equals(currentWeekday));
-            if (show && task.getChecklistName() == null && task.getType() != TaskType.CUSTOM) {
+            if (show && task.getType() != TaskType.CUSTOM) {
                 if (task.getType() == TaskType.MORNING) {
                     morningListModel.addElement(task);
                 } else if (task.getType() == TaskType.EVENING) {

@@ -34,6 +34,19 @@ public class TaskManager {
         return repository.getAllTasks();
     }
 
+    public Task getTaskById(String id) {
+        if (repository instanceof XMLTaskRepository) {
+            return ((XMLTaskRepository) repository).getTaskById(id);
+        }
+        // Fallback: linear search
+        for (Task task : getAllTasks()) {
+            if (task.getId().equals(id)) {
+                return task;
+            }
+        }
+        return null;
+    }
+
     public void addTask(Task task) {
         repository.addTask(task);
     }
@@ -68,7 +81,7 @@ public class TaskManager {
         List<Task> filtered = new ArrayList<>();
         for (Task task : allTasks) {
             if (task.getType() == type) {
-            if (type != TaskType.CUSTOM || checklistName == null || Objects.equals(checklistName, task.getChecklistName())) {
+                if (type != TaskType.CUSTOM || checklistName == null || Objects.equals(checklistName, task.getChecklistName())) {
                     filtered.add(task);
                 }
             }
@@ -119,6 +132,14 @@ public class TaskManager {
 
     public void removeChecklistName(String name) {
         repository.removeChecklistName(name);
+    }
+
+    /**
+     * Moves a task to a different custom checklist.
+     */
+    public void moveTaskToChecklist(Task task, String newChecklistName) {
+        task.setChecklistName(newChecklistName);
+        updateTask(task);
     }
 
     /**

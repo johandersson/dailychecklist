@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.List;
 
 import javax.swing.DefaultListModel;
+import javax.swing.DropMode;
 import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -36,11 +37,17 @@ public class CustomChecklistPanel extends JPanel {
     private TaskUpdater taskUpdater;
     private TaskManager taskManager;
     private String checklistName;
+    private Runnable updateAllPanels;
 
     public CustomChecklistPanel(TaskManager taskManager, TaskUpdater taskUpdater, String checklistName) {
+        this(taskManager, taskUpdater, checklistName, null);
+    }
+
+    public CustomChecklistPanel(TaskManager taskManager, TaskUpdater taskUpdater, String checklistName, Runnable updateAllPanels) {
         this.taskManager = taskManager;
         this.taskUpdater = taskUpdater;
         this.checklistName = checklistName;
+        this.updateAllPanels = updateAllPanels;
         initialize();
     }
 
@@ -55,6 +62,11 @@ public class CustomChecklistPanel extends JPanel {
     private JList<Task> createTaskList(DefaultListModel<Task> listModel) {
         JList<Task> taskList = new JList<>(listModel);
         taskList.setCellRenderer(new CheckboxListCellRenderer());
+        if (!java.awt.GraphicsEnvironment.isHeadless()) {
+            taskList.setDragEnabled(true);
+            taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklistName, updateAllPanels, null, null));
+            taskList.setDropMode(DropMode.INSERT);
+        }
         taskList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -104,9 +116,17 @@ public class CustomChecklistPanel extends JPanel {
             }
         });
         JMenuItem removeItem = new JMenuItem("Remove task");
+        //Start FocusTimer window item
+        JMenuItem startFocusTimerItem = new JMenuItem("Start Focus Timer on task");
+
         removeItem.addActionListener(event -> removeTask(list, index));
+        startFocusTimerItem.addActionListener(event -> {
+            Task task = list.getModel().getElementAt(index);
+            FocusTimer.getInstance().startFocusTimer(task.getName(), "5 minutes");
+        });
         contextMenu.add(editItem);
         contextMenu.add(removeItem);
+        contextMenu.add(startFocusTimerItem);
         contextMenu.show(list, e.getX(), e.getY());
     }
 

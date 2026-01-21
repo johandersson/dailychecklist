@@ -42,6 +42,8 @@ public class XMLTaskRepository implements TaskRepository {
     // Task caching
     private List<Task> cachedTasks = null;
     private Map<String, Task> taskMap = null;
+    private Map<TaskType, List<Task>> tasksByType = null;
+    private Map<String, List<Task>> tasksByChecklist = null;
     private boolean tasksCacheDirty = true;
 
     // Parent component for error dialogs
@@ -138,8 +140,16 @@ public class XMLTaskRepository implements TaskRepository {
                 }
                 // Populate task map for fast lookups
                 taskMap = new HashMap<>();
+                tasksByType = new HashMap<>();
+                tasksByChecklist = new HashMap<>();
                 for (Task task : cachedTasks) {
                     taskMap.put(task.getId(), task);
+                    // Group by type
+                    tasksByType.computeIfAbsent(task.getType(), k -> new ArrayList<>()).add(task);
+                    // Group by checklist (for custom tasks)
+                    if (task.getType() == TaskType.CUSTOM && task.getChecklistName() != null) {
+                        tasksByChecklist.computeIfAbsent(task.getChecklistName(), k -> new ArrayList<>()).add(task);
+                    }
                 }
                 tasksCacheDirty = false;
             } catch (Exception e) {
@@ -148,6 +158,8 @@ public class XMLTaskRepository implements TaskRepository {
                 }
                 cachedTasks = new ArrayList<>();
                 taskMap = new HashMap<>();
+                tasksByType = new HashMap<>();
+                tasksByChecklist = new HashMap<>();
             }
         }
         return new ArrayList<>(cachedTasks);
@@ -178,6 +190,22 @@ public class XMLTaskRepository implements TaskRepository {
     public Task getTaskById(String id) {
         getCachedTasks(); // Ensure cache is loaded
         return taskMap.get(id);
+    }
+
+    /**
+     * Gets tasks by type using the pre-grouped map.
+     */
+    public List<Task> getTasksByType(TaskType type) {
+        getCachedTasks(); // Ensure cache is loaded
+        return new ArrayList<>(tasksByType.getOrDefault(type, new ArrayList<>()));
+    }
+
+    /**
+     * Gets tasks by checklist name using the pre-grouped map.
+     */
+    public List<Task> getTasksByChecklist(String checklistName) {
+        getCachedTasks(); // Ensure cache is loaded
+        return new ArrayList<>(tasksByChecklist.getOrDefault(checklistName, new ArrayList<>()));
     }
 
     @Override

@@ -20,6 +20,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Date;
 import java.util.List;
+
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -53,8 +54,8 @@ public class ChecklistPanel extends JPanel {
     private void initialize() {
         morningListModel = new DefaultListModel<>();
         eveningListModel = new DefaultListModel<>();
-        morningTaskList = createTaskList(morningListModel);
-        eveningTaskList = createTaskList(eveningListModel);
+        morningTaskList = createTaskList(morningListModel, "MORNING");
+        eveningTaskList = createTaskList(eveningListModel, "EVENING");
         morningPanel = createPanel("Morning", morningTaskList);
         eveningPanel = createPanel("Evening", eveningTaskList);
         setLayout(new BorderLayout());
@@ -70,12 +71,15 @@ public class ChecklistPanel extends JPanel {
         add(southPanel, BorderLayout.SOUTH);
     }
 
-    private JList<Task> createTaskList(DefaultListModel<Task> listModel) {
+    private JList<Task> createTaskList(DefaultListModel<Task> listModel, String checklistName) {
         JList<Task> taskList = new JList<>(listModel);
         taskList.setCellRenderer(new CheckboxListCellRenderer());
         if (!java.awt.GraphicsEnvironment.isHeadless()) {
             taskList.setDragEnabled(true);
-            taskList.setTransferHandler(new ListItemTransferHandler(taskList, morningListModel, eveningListModel, taskManager));
+            taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklistName, () -> {
+                List<Task> allTasks = taskManager.getAllTasks();
+                taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected());
+            }, morningListModel, eveningListModel));
             taskList.setDropMode(DropMode.INSERT);
         }
         taskList.addMouseListener(new MouseAdapter() {

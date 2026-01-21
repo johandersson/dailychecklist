@@ -89,6 +89,7 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 <ul>
 <li>Right-click a task in a custom checklist.</li>
 <li>Choose "Rename" or "Remove" as needed.</li>
+<li>Choose "Start Focus Timer" to begin a timed session.</li>
 <li>Drag and drop tasks to reorder them.</li>
 </ul>
 
