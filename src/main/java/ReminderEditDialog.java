@@ -293,25 +293,47 @@ public class ReminderEditDialog extends JDialog {
             java.awt.Component beforeDispose = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
             System.out.println("[DEBUG] saveButton id: " + (saveButton == null ? "null" : System.identityHashCode(saveButton)));
             System.out.println("[DEBUG] Focus owner before dispose: " + (beforeDispose == null ? "null" : beforeDispose.getClass().getName() + "@" + System.identityHashCode(beforeDispose)));
-            // Make save button temporarily non-focusable so it can't retain focus after dialog close
-            boolean previousFocusableLocal = true;
-            if (saveButton != null) {
-                previousFocusableLocal = saveButton.isFocusable();
-                saveButton.setFocusable(false);
-            }
-            final boolean previousFocusable = previousFocusableLocal;
-            dispose();
-            if (onSave != null) {
-                java.awt.Component before = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                System.out.println("[DEBUG] Focus owner before onSave: " + (before == null ? "null" : before.getClass().getName() + "@" + System.identityHashCode(before)));
-                onSave.run();
-                java.awt.Component after = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                System.out.println("[DEBUG] Focus owner after onSave: " + (after == null ? "null" : after.getClass().getName() + "@" + System.identityHashCode(after)));
-                // Restore save button focusability shortly after
-                if (saveButton != null) {
-                    javax.swing.SwingUtilities.invokeLater(() -> saveButton.setFocusable(previousFocusable));
-                }
-            }
+            // Try to move focus to a temporary, invisible focus sink before closing so the Save button doesn't retain focus
+            final javax.swing.JButton focusSink = new javax.swing.JButton();
+            focusSink.setFocusable(true);
+            focusSink.setVisible(false);
+            // Add sink to dialog
+            try {
+                this.getContentPane().add(focusSink, java.awt.BorderLayout.SOUTH);
+                this.getContentPane().revalidate();
+                this.getContentPane().repaint();
+            } catch (Exception ignore) {}
+
+            final boolean previousFocusableLocal = (saveButton != null) ? saveButton.isFocusable() : true;
+
+            // Request focus on sink, then after a short delay dispose and run onSave
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                boolean moved = focusSink.requestFocusInWindow();
+                System.out.println("[DEBUG] focusSink.requestFocusInWindow returned: " + moved + ", owner: " + (java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null ? "null" : java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner().getClass().getName() + "@" + System.identityHashCode(java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner())));
+                // Small timer to let focus settle
+                javax.swing.Timer t = new javax.swing.Timer(50, ev -> {
+                    ((javax.swing.Timer) ev.getSource()).stop();
+                    // Now dispose and run onSave
+                    try {
+                        if (saveButton != null) saveButton.setFocusable(false);
+                    } catch (Exception ignore) {}
+                    dispose();
+                    if (onSave != null) {
+                        java.awt.Component before = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                        System.out.println("[DEBUG] Focus owner before onSave: " + (before == null ? "null" : before.getClass().getName() + "@" + System.identityHashCode(before)));
+                        onSave.run();
+                        java.awt.Component after = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                        System.out.println("[DEBUG] Focus owner after onSave: " + (after == null ? "null" : after.getClass().getName() + "@" + System.identityHashCode(after)));
+                    }
+                    // Restore save button focusability and remove sink
+                    try {
+                        if (saveButton != null) javax.swing.SwingUtilities.invokeLater(() -> saveButton.setFocusable(previousFocusableLocal));
+                        try { getContentPane().remove(focusSink); getContentPane().revalidate(); getContentPane().repaint(); } catch (Exception ignore) {}
+                    } catch (Exception ignore) {}
+                });
+                t.setRepeats(false);
+                t.start();
+            });
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Invalid date/time. Please check your input.", "Error", JOptionPane.ERROR_MESSAGE);
         }
