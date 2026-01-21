@@ -173,7 +173,7 @@ public class CustomChecklistPanel extends JPanel {
                     reminder.getMonth(), reminder.getDay(), reminder.getYear(),
                     reminder.getHour(), reminder.getMinute());
 
-            JLabel reminderLabel = new JLabel("🔔 " + reminderText);
+            JLabel reminderLabel = new JLabel("[R] " + reminderText);
             reminderLabel.setFont(reminderLabel.getFont().deriveFont(11.0f));
             reminderLabel.setForeground(java.awt.Color.BLUE);
             panel.add(reminderLabel, BorderLayout.WEST);
