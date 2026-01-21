@@ -217,7 +217,12 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         JMenuItem deleteItem = new JMenuItem("Delete");
         deleteItem.addActionListener(e -> deleteChecklist());
         menu.add(deleteItem);
-        JMenuItem addReminderItem = new JMenuItem("Set Reminder");
+        // If a reminder exists for this checklist, label should indicate edit
+        boolean hasReminderForSelected = false;
+        if (selectedChecklistName != null) {
+            hasReminderForSelected = taskManager.getReminders().stream().anyMatch(r -> r.getChecklistName().equals(selectedChecklistName));
+        }
+        JMenuItem addReminderItem = new JMenuItem(hasReminderForSelected ? "Edit Reminder" : "Set Reminder");
         addReminderItem.addActionListener(e -> setReminder());
         menu.add(addReminderItem);
         JMenuItem removeReminderItem = new JMenuItem("Remove Reminder");
