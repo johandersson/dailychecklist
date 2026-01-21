@@ -285,7 +285,6 @@ public class DailyChecklist {
                 for (java.awt.Component c : content.getComponents()) {
                     if (c instanceof javax.swing.JButton && !c.isVisible()) {
                         boolean ok = c.requestFocusInWindow();
-                        System.out.println("[DEBUG] DailyChecklist: requested main focus sink, owner: " + (java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null ? "null" : java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner().getClass().getName() + "@" + System.identityHashCode(java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner())) + ", requestFocusInWindow returned: " + ok);
                         return;
                     }
                 }

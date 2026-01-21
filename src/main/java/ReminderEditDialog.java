@@ -176,10 +176,10 @@ public class ReminderEditDialog extends JDialog {
         JPanel presetPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         presetPanel.setBorder(BorderFactory.createTitledBorder("Quick Set"));
 
-        JButton in15MinButton = createPresetButton("In 15 min", () -> setTimeFromNow(15));
-        JButton in1HourButton = createPresetButton("In 1 hour", () -> setTimeFromNow(60));
-        JButton tomorrowButton = createPresetButton("Tomorrow", this::setTimeTomorrow);
-        JButton nextWeekButton = createPresetButton("Next week", this::setTimeNextWeek);
+        JButton in15MinButton = createPresetButton("In 15 min", () -> setTimeFromNow(15), true);
+        JButton in1HourButton = createPresetButton("In 1 hour", () -> setTimeFromNow(60), true);
+        JButton tomorrowButton = createPresetButton("Tomorrow", this::setTimeTomorrow, true);
+        JButton nextWeekButton = createPresetButton("Next week", this::setTimeNextWeek, true);
 
         presetPanel.add(in15MinButton);
         presetPanel.add(in1HourButton);
@@ -189,9 +189,15 @@ public class ReminderEditDialog extends JDialog {
         panel.add(presetPanel, gbc);
     }
 
-    private JButton createPresetButton(String text, Runnable action) {
+    private JButton createPresetButton(String text, Runnable action, boolean autoSave) {
         JButton button = new JButton(text);
-        button.addActionListener(e -> action.run());
+        button.addActionListener(e -> {
+            action.run();
+            if (autoSave) {
+                // Auto-save when using quick set
+                saveReminder();
+            }
+        });
         return button;
     }
 
@@ -291,51 +297,17 @@ public class ReminderEditDialog extends JDialog {
             // Run onSave and close the dialog; UI will reflect the updated reminder
             // Close the dialog first so windowing focus events settle, then run onSave
             java.awt.Component beforeDispose = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-            System.out.println("[DEBUG] saveButton id: " + (saveButton == null ? "null" : System.identityHashCode(saveButton)));
-            System.out.println("[DEBUG] Focus owner before dispose: " + (beforeDispose == null ? "null" : beforeDispose.getClass().getName() + "@" + System.identityHashCode(beforeDispose)));
-            // Try to move focus to a temporary, invisible focus sink before closing so the Save button doesn't retain focus
-            final javax.swing.JButton focusSink = new javax.swing.JButton();
-            focusSink.setFocusable(true);
-            focusSink.setVisible(false);
-            // Add sink to dialog
+            // Close the dialog and run the onSave callback immediately afterwards.
             try {
-                this.getContentPane().add(focusSink, java.awt.BorderLayout.SOUTH);
-                this.getContentPane().revalidate();
-                this.getContentPane().repaint();
+                dispose();
             } catch (Exception ignore) {}
-
-            final boolean previousFocusableLocal = (saveButton != null) ? saveButton.isFocusable() : true;
-
-            // Request focus on sink, then after a short delay dispose and run onSave
-            javax.swing.SwingUtilities.invokeLater(() -> {
-                // First attempt to focus the sink inside the main frame
-                try { DailyChecklist.focusMainSink(); } catch (Exception ignore) {}
-                boolean moved = focusSink.requestFocusInWindow();
-                System.out.println("[DEBUG] focusSink.requestFocusInWindow returned: " + moved + ", owner: " + (java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null ? "null" : java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner().getClass().getName() + "@" + System.identityHashCode(java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner())));
-                // Small timer to let focus settle
-                javax.swing.Timer t = new javax.swing.Timer(50, ev -> {
-                    ((javax.swing.Timer) ev.getSource()).stop();
-                    // Now dispose and run onSave
-                    try {
-                        if (saveButton != null) saveButton.setFocusable(false);
-                    } catch (Exception ignore) {}
-                    dispose();
-                    if (onSave != null) {
-                        java.awt.Component before = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                        System.out.println("[DEBUG] Focus owner before onSave: " + (before == null ? "null" : before.getClass().getName() + "@" + System.identityHashCode(before)));
-                        onSave.run();
-                        java.awt.Component after = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                        System.out.println("[DEBUG] Focus owner after onSave: " + (after == null ? "null" : after.getClass().getName() + "@" + System.identityHashCode(after)));
-                    }
-                    // Restore save button focusability and remove sink
-                    try {
-                        if (saveButton != null) javax.swing.SwingUtilities.invokeLater(() -> saveButton.setFocusable(previousFocusableLocal));
-                        try { getContentPane().remove(focusSink); getContentPane().revalidate(); getContentPane().repaint(); } catch (Exception ignore) {}
-                    } catch (Exception ignore) {}
-                });
-                t.setRepeats(false);
-                t.start();
-            });
+            if (onSave != null) {
+                try {
+                    onSave.run();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Invalid date/time. Please check your input.", "Error", JOptionPane.ERROR_MESSAGE);
         }
