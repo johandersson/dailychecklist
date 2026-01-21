@@ -26,7 +26,6 @@ public class ChecklistCellRenderer extends IconListCellRenderer<String> {
     private static final long serialVersionUID = 1L;
 
     private final transient TaskManager taskManager;
-    private final ReminderClockIcon defaultClockIcon = new ReminderClockIcon(0, 0, ReminderClockIcon.State.FUTURE);
 
     public ChecklistCellRenderer(TaskManager taskManager) {
         this.taskManager = taskManager;
@@ -49,14 +48,7 @@ public class ChecklistCellRenderer extends IconListCellRenderer<String> {
         return checklistName;
     }
 
-    private boolean hasReminders(String checklistName) {
-        if (taskManager == null || checklistName == null) {
-            return false;
-        }
-        List<Reminder> reminders = taskManager.getReminders();
-        return reminders.stream()
-            .anyMatch(reminder -> java.util.Objects.equals(reminder.getChecklistName(), checklistName));
-    }
+    
 
     private Reminder nearestReminderForChecklist(String checklistName) {
         if (taskManager == null) return null;
