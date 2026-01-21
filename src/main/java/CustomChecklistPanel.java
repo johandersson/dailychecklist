@@ -40,6 +40,7 @@ public class CustomChecklistPanel extends JPanel {
     private transient TaskManager taskManager;
     private String checklistName;
     private transient Runnable updateAllPanels;
+    private JPanel reminderStatusPanel;
 
     public CustomChecklistPanel(TaskManager taskManager, String checklistName) {
         this(taskManager, checklistName, null);
@@ -147,8 +148,8 @@ public class CustomChecklistPanel extends JPanel {
         panel.setBorder(javax.swing.BorderFactory.createTitledBorder(title));
 
         // Add reminder status panel at the top
-        JPanel topPanel = createReminderStatusPanel();
-        panel.add(topPanel, BorderLayout.NORTH);
+        reminderStatusPanel = createReminderStatusPanel();
+        panel.add(reminderStatusPanel, BorderLayout.NORTH);
 
         JScrollPane scrollPane = new JScrollPane(taskList);
         panel.add(scrollPane, BorderLayout.CENTER);
@@ -158,6 +159,12 @@ public class CustomChecklistPanel extends JPanel {
     private JPanel createReminderStatusPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 5, 2, 5));
+        populateReminderPanel(panel);
+        return panel;
+    }
+
+    private void populateReminderPanel(JPanel panel) {
+        panel.removeAll();
 
         // Check if there's a reminder for this checklist
         boolean hasReminder = taskManager.getReminders().stream()
@@ -168,10 +175,6 @@ public class CustomChecklistPanel extends JPanel {
                     .filter(r -> r.getChecklistName().equals(checklistName))
                     .findFirst()
                     .orElse(null);
-
-                String reminderText = String.format("Reminder: %04d-%02d-%02d at %02d:%02d",
-                    reminder.getYear(), reminder.getMonth(), reminder.getDay(),
-                    reminder.getHour(), reminder.getMinute());
 
             // Compute reminder state (overdue, due soon within 60 minutes, or future)
             Calendar now = Calendar.getInstance();
@@ -186,17 +189,14 @@ public class CustomChecklistPanel extends JPanel {
             ReminderClockIcon icon = new ReminderClockIcon(reminder.getHour(), reminder.getMinute(), state, false);
             String dateText = String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
             String timeText = String.format("%02d:%02d", reminder.getHour(), reminder.getMinute());
-            JLabel reminderLabel = new JLabel(dateText + "  " , icon, JLabel.LEADING);
+            JLabel reminderLabel = new JLabel(dateText + " " + timeText, icon, JLabel.LEADING);
             reminderLabel.setIconTextGap(6);
-            // Append the time after the icon
-            reminderLabel.setText(dateText + " " + timeText);
+
             reminderLabel.setFont(reminderLabel.getFont().deriveFont(11.0f));
-            if (state == ReminderClockIcon.State.OVERDUE) {
-                reminderLabel.setForeground(java.awt.Color.RED);
-            } else if (state == ReminderClockIcon.State.DUE_SOON) {
-                reminderLabel.setForeground(java.awt.Color.ORANGE);
-            } else {
-                reminderLabel.setForeground(java.awt.Color.BLUE);
+            switch (state) {
+                case OVERDUE -> reminderLabel.setForeground(java.awt.Color.RED);
+                case DUE_SOON -> reminderLabel.setForeground(java.awt.Color.ORANGE);
+                default -> reminderLabel.setForeground(java.awt.Color.BLUE);
             }
 
             // Add right-click menu to remove the reminder
@@ -224,7 +224,8 @@ public class CustomChecklistPanel extends JPanel {
             panel.add(noReminderLabel, BorderLayout.WEST);
         }
 
-        return panel;
+        panel.revalidate();
+        panel.repaint();
     }
 
     private void showReminderPopup(MouseEvent e, Reminder reminder) {
@@ -247,6 +248,9 @@ public class CustomChecklistPanel extends JPanel {
         List<Task> tasks = taskManager.getTasks(TaskType.CUSTOM, checklistName);
         for (Task task : tasks) {
             customListModel.addElement(task);
+        }
+        if (reminderStatusPanel != null) {
+            populateReminderPanel(reminderStatusPanel);
         }
     }
 }
