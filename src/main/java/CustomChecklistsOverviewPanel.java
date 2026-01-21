@@ -379,7 +379,13 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                     if (rightPanel.getComponentCount() > 0) {
                         java.awt.Component comp = rightPanel.getComponent(0);
                         if (comp instanceof CustomChecklistPanel) {
-                            FocusUtils.restoreFocusLater(((CustomChecklistPanel) comp).getParent() instanceof javax.swing.JComponent ? (javax.swing.JComponent) ((CustomChecklistPanel) comp) : null);
+                            // Prefer focusing the inner task list for reliability
+                            try {
+                                ((CustomChecklistPanel) comp).requestSelectionFocus();
+                                System.out.println("[DEBUG] onSave callback: requested requestSelectionFocus() on CustomChecklistPanel");
+                            } catch (Exception ex) {
+                                FocusUtils.restoreFocusLater(((CustomChecklistPanel) comp).getParent() instanceof javax.swing.JComponent ? (javax.swing.JComponent) ((CustomChecklistPanel) comp) : null);
+                            }
                         }
                     }
                 }
