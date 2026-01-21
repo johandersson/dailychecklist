@@ -349,6 +349,20 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             // Refresh this overview (updates right panel) and also notify outer panels
             updateTasks();
             updateTasks.run();
+            // Ensure the edited checklist remains selected and focused
+            if (selectedChecklistName != null) {
+                checklistList.setSelectedValue(selectedChecklistName, true);
+                checklistList.requestFocusInWindow();
+                // Also try to restore focus to the right panel contents
+                if (rightPanel != null) {
+                    rightPanel.revalidate();
+                    rightPanel.repaint();
+                    if (rightPanel.getComponentCount() > 0) {
+                        java.awt.Component comp = rightPanel.getComponent(0);
+                        if (comp != null) comp.requestFocusInWindow();
+                    }
+                }
+            }
         });
         dialog.setVisible(true);
     }
