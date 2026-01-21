@@ -46,6 +46,7 @@ public class ReminderEditDialog extends JDialog {
 
     // UI Components
     private JComboBox<Integer> yearBox, monthBox, dayBox, hourBox, minuteBox;
+    private JButton saveButton;
 
     public ReminderEditDialog(TaskManager taskManager, String checklistName, Reminder existingReminder, Runnable onSave) {
         super();
@@ -196,7 +197,7 @@ public class ReminderEditDialog extends JDialog {
 
     private JPanel createButtonPanel() {
         JPanel panel = new JPanel(new FlowLayout());
-        JButton saveButton = new JButton(existingReminder == null ? "Add Reminder" : "Change Reminder");
+        saveButton = new JButton(existingReminder == null ? "Add Reminder" : "Change Reminder");
         JButton cancelButton = new JButton("Cancel");
 
         saveButton.addActionListener(e -> saveReminder());
@@ -291,6 +292,12 @@ public class ReminderEditDialog extends JDialog {
             // Close the dialog first so windowing focus events settle, then run onSave
             java.awt.Component beforeDispose = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
             System.out.println("[DEBUG] Focus owner before dispose: " + (beforeDispose == null ? "null" : beforeDispose.getClass().getName()));
+            // Make save button temporarily non-focusable so it can't retain focus after dialog close
+            boolean previousFocusable = true;
+            if (saveButton != null) {
+                previousFocusable = saveButton.isFocusable();
+                saveButton.setFocusable(false);
+            }
             dispose();
             if (onSave != null) {
                 java.awt.Component before = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
@@ -298,6 +305,10 @@ public class ReminderEditDialog extends JDialog {
                 onSave.run();
                 java.awt.Component after = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
                 System.out.println("[DEBUG] Focus owner after onSave: " + (after == null ? "null" : after.getClass().getName()));
+                // Restore save button focusability shortly after
+                if (saveButton != null) {
+                    javax.swing.SwingUtilities.invokeLater(() -> saveButton.setFocusable(previousFocusable));
+                }
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Invalid date/time. Please check your input.", "Error", JOptionPane.ERROR_MESSAGE);
