@@ -103,8 +103,13 @@ public class ReminderClockIcon implements Icon {
         int textX = x + ICON_SIZE + 2;
         int textY = y + (ICON_SIZE + th) / 2 - 1;
 
-        // Use white for the time text to ensure high contrast with selection
-        g2.setColor(Color.WHITE);
+        // Use white for the time text when the parent component indicates selection
+        boolean selected = false;
+        if (c != null) {
+            Object sel = c instanceof javax.swing.JComponent ? ((javax.swing.JComponent) c).getClientProperty("selected") : null;
+            if (sel instanceof Boolean) selected = (Boolean) sel;
+        }
+        g2.setColor(selected ? Color.WHITE : colorForState().darker());
         g2.drawString(timeText, textX, textY);
 
         g2.setFont(orig);
