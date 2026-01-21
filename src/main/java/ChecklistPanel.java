@@ -144,12 +144,46 @@ public class ChecklistPanel extends JPanel {
         for (int index : selectedIndices) {
             tasksToDelete.add(list.getModel().getElementAt(index));
         }
-        String taskNames = tasksToDelete.stream().map(Task::getName).reduce((a, b) -> a + ", " + b).orElse("");
-        int response = javax.swing.JOptionPane.showConfirmDialog(this,
-                "Are you sure you want to delete the selected tasks: " + taskNames + "?",
-                "Confirm Deletion",
-                javax.swing.JOptionPane.YES_NO_OPTION);
-        if (response == javax.swing.JOptionPane.YES_OPTION) {
+
+        // Create custom confirmation dialog
+        javax.swing.JDialog dialog = new javax.swing.JDialog((java.awt.Frame) javax.swing.SwingUtilities.getWindowAncestor(this), "Confirm Deletion", true);
+        dialog.setLayout(new java.awt.BorderLayout());
+        dialog.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
+
+        // Label
+        javax.swing.JLabel label = new javax.swing.JLabel("Are you sure you want to delete the following tasks?");
+        label.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 5, 10));
+        dialog.add(label, java.awt.BorderLayout.NORTH);
+
+        // List of tasks
+        javax.swing.JList<Task> taskList = new javax.swing.JList<>(tasksToDelete.toArray(new Task[0]));
+        taskList.setCellRenderer(new CheckboxListCellRenderer());
+        taskList.setEnabled(false); // Read-only
+        javax.swing.JScrollPane scrollPane = new javax.swing.JScrollPane(taskList);
+        scrollPane.setPreferredSize(new java.awt.Dimension(300, 150));
+        dialog.add(scrollPane, java.awt.BorderLayout.CENTER);
+
+        // Buttons
+        javax.swing.JPanel buttonPanel = new javax.swing.JPanel(new java.awt.FlowLayout());
+        javax.swing.JButton yesButton = new javax.swing.JButton("Yes, Delete");
+        javax.swing.JButton noButton = new javax.swing.JButton("No, Cancel");
+        buttonPanel.add(yesButton);
+        buttonPanel.add(noButton);
+        dialog.add(buttonPanel, java.awt.BorderLayout.SOUTH);
+
+        // Action listeners
+        final boolean[] confirmed = {false};
+        yesButton.addActionListener(e -> {
+            confirmed[0] = true;
+            dialog.dispose();
+        });
+        noButton.addActionListener(e -> dialog.dispose());
+
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+
+        if (confirmed[0]) {
             for (Task task : tasksToDelete) {
                 taskManager.removeTask(task);
             }
