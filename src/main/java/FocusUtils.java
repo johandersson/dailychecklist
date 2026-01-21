@@ -19,9 +19,9 @@ public class FocusUtils {
             public void actionPerformed(java.awt.event.ActionEvent e) {
                 attempts++;
                 java.awt.Component current = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                System.out.println("[DEBUG] FocusUtils timer fired (attempt " + attempts + "), current focus owner: " + (current == null ? "null" : current.getClass().getName()));
+                // FocusUtils timer fired; no debug logging
                 if (comp.isShowing() && comp.requestFocusInWindow()) {
-                    System.out.println("[DEBUG] FocusUtils: requestFocusInWindow() returned true on attempt " + attempts);
+                    // FocusUtils: requestFocusInWindow() succeeded
                     ((Timer) e.getSource()).stop();
                     return;
                 }

@@ -267,7 +267,7 @@ public class CustomChecklistPanel extends JPanel {
                 javax.swing.SwingUtilities.invokeLater(() -> javax.swing.SwingUtilities.invokeLater(() -> {
                     boolean ok = customTaskList.requestFocusInWindow();
                     if (!ok) customTaskList.grabFocus();
-                    System.out.println("[DEBUG] requestSelectionFocus: requestFocusInWindow returned " + ok + ", focus owner now: " + (java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null ? "null" : java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner().getClass().getName()));
+                    // requestSelectionFocus: no-op logging removed
                     if (customTaskList.getSelectedIndex() >= 0) {
                         customTaskList.ensureIndexIsVisible(customTaskList.getSelectedIndex());
                     }

@@ -241,11 +241,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 int res = JOptionPane.showConfirmDialog(this, "Remove reminder(s) for '" + selectedChecklistName + "'?", "Confirm", JOptionPane.YES_NO_OPTION);
                 if (res == JOptionPane.YES_OPTION) {
                     java.awt.Component beforeRemoveFocus = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                    System.out.println("[DEBUG] deleteReminder: focus before removing reminders: " + (beforeRemoveFocus == null ? "null" : beforeRemoveFocus.getClass().getName()));
                     toRemove.forEach(taskManager::removeReminder);
                     updateTasks.run();
                     java.awt.Component afterRemoveFocus = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                    System.out.println("[DEBUG] deleteReminder: focus after removing reminders: " + (afterRemoveFocus == null ? "null" : afterRemoveFocus.getClass().getName()));
                 }
             });
             menu.add(removeReminderItem);
@@ -358,111 +356,11 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 .orElse(null);
 
         ReminderEditDialog dialog = new ReminderEditDialog(taskManager, selectedChecklistName, existingReminder, () -> {
-            System.out.println("[DEBUG] onSave callback: focus at start: " + (java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null ? "null" : java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner().getClass().getName()));
-            // Refresh this overview (updates right panel) and also notify outer panels
+            // Minimal onSave: refresh models and keep selection
             updateTasks();
             updateTasks.run();
-            // Ensure the edited checklist remains selected and focused
             if (selectedChecklistName != null) {
                 checklistList.setSelectedValue(selectedChecklistName, true);
-                // Use delayed focus restore to avoid focus being stolen by closing dialogs
-                // Try a double-invokeLater focus request as an aggressive fallback
-                javax.swing.SwingUtilities.invokeLater(() -> javax.swing.SwingUtilities.invokeLater(() -> {
-                    System.out.println("[DEBUG] double-invokeLater: requesting focus on checklistList, current owner: " + (java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == null ? "null" : java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner().getClass().getName()));
-                    checklistList.requestFocusInWindow();
-                }));
-                FocusUtils.restoreFocusLater(checklistList);
-                // Refresh right panel and request focus on its checklist panel later
-                if (rightPanel != null) {
-                    rightPanel.revalidate();
-                    rightPanel.repaint();
-                    if (rightPanel.getComponentCount() > 0) {
-                        java.awt.Component comp = rightPanel.getComponent(0);
-                        if (comp instanceof CustomChecklistPanel) {
-                            // Prefer focusing the inner task list for reliability
-                            try {
-                                // Clear any lingering focus owner (e.g., the button from the dialog)
-                                try {
-                                    java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner();
-                                } catch (Exception ignore) {}
-                                ((CustomChecklistPanel) comp).requestSelectionFocus();
-                                System.out.println("[DEBUG] onSave callback: cleared global focus owner and requested requestSelectionFocus() on CustomChecklistPanel");
-                            } catch (Exception ex) {
-                                FocusUtils.restoreFocusLater(((CustomChecklistPanel) comp).getParent() instanceof javax.swing.JComponent ? (javax.swing.JComponent) ((CustomChecklistPanel) comp) : null);
-                            }
-                        }
-                    }
-                }
-                // Stronger fallback: after a short delay, clear focus, bring window to front and request task-list focus
-                javax.swing.Timer delayed = new javax.swing.Timer(500, ev -> {
-                    try {
-                        System.out.println("[DEBUG] delayed fallback: clearing focus owner and requesting task-list focus");
-                        try { java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner(); } catch (Exception ignore) {}
-                        // Bring window to front
-                        java.awt.Window w = javax.swing.SwingUtilities.getWindowAncestor(CustomChecklistsOverviewPanel.this);
-                        if (w != null) {
-                            try {
-                                w.toFront();
-                                w.requestFocus();
-                            } catch (Exception ignore) {}
-                        }
-                        if (rightPanel != null && rightPanel.getComponentCount() > 0) {
-                            java.awt.Component c = rightPanel.getComponent(0);
-                            if (c instanceof CustomChecklistPanel) {
-                                ((CustomChecklistPanel) c).requestSelectionFocus();
-                            }
-                        }
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                });
-                delayed.setRepeats(false);
-                delayed.start();
-
-                // Persistent retrier: try multiple times to ensure focus lands on the target list instance
-                javax.swing.Timer retrier = new javax.swing.Timer(200, null);
-                retrier.addActionListener(new java.awt.event.ActionListener() {
-                    private int attempt = 0;
-                    private final int maxAttempts = 20;
-                    @Override
-                    public void actionPerformed(java.awt.event.ActionEvent e) {
-                        attempt++;
-                        try {
-                            java.awt.Component before = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                            System.out.println("[DEBUG] focus retrier attempt " + attempt + ", current focus owner: " + (before == null ? "null" : before.getClass().getName() + "@" + System.identityHashCode(before)));
-                            if (rightPanel != null && rightPanel.getComponentCount() > 0) {
-                                java.awt.Component c = rightPanel.getComponent(0);
-                                if (c instanceof CustomChecklistPanel) {
-                                    CustomChecklistPanel panel = (CustomChecklistPanel) c;
-                                    try { java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner(); } catch (Exception ignore) {}
-                                    java.awt.Window w = javax.swing.SwingUtilities.getWindowAncestor(CustomChecklistsOverviewPanel.this);
-                                    if (w != null) {
-                                        try { w.toFront(); w.requestFocus(); } catch (Exception ignore) {}
-                                    }
-                                    // aggressive focus attempts
-                                    panel.requestSelectionFocus();
-                                    try { panel.getTaskList().grabFocus(); } catch (Exception ignore) {}
-                                    try { panel.getTaskList().requestFocusInWindow(); } catch (Exception ignore) {}
-                                    java.awt.Component now = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                                    if (now != null && (now == panel || now == panel.getTaskList() || now.getClass().getName().contains("JList") || now.getClass().getName().contains("CheckboxListCellRenderer"))) {
-                                        System.out.println("[DEBUG] focus retrier: success on attempt " + attempt + ", focus owner: " + now.getClass().getName() + "@" + System.identityHashCode(now));
-                                        ((javax.swing.Timer) e.getSource()).stop();
-                                        return;
-                                    }
-                                }
-                            }
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                        }
-                        if (attempt >= maxAttempts) {
-                            ((javax.swing.Timer) e.getSource()).stop();
-                            System.out.println("[DEBUG] focus retrier: giving up after " + attempt + " attempts");
-                        }
-                    }
-                });
-                retrier.setRepeats(true);
-                retrier.setInitialDelay(100);
-                retrier.start();
             }
         });
         dialog.setVisible(true);
