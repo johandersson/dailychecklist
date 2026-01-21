@@ -103,6 +103,20 @@ public class ChecklistPanel extends JPanel {
                 int index = list.locationToIndex(e.getPoint());
                 if (index >= 0) {
                     if (SwingUtilities.isRightMouseButton(e)) {
+                        // Right-click: ensure the item is selected
+                        if ((e.getModifiersEx() & java.awt.event.InputEvent.CTRL_DOWN_MASK) != 0) {
+                            // Ctrl+right-click: toggle selection
+                            if (list.isSelectedIndex(index)) {
+                                list.removeSelectionInterval(index, index);
+                            } else {
+                                list.addSelectionInterval(index, index);
+                            }
+                        } else {
+                            // Right-click: select this item (clear others)
+                            list.setSelectedIndex(index);
+                        }
+                        list.repaint(list.getCellBounds(index, index));
+                        e.consume();
                         showContextMenu(e, list, index);
                     } else if ((e.getModifiersEx() & java.awt.event.InputEvent.CTRL_DOWN_MASK) != 0) {
                         // Ctrl+click: toggle selection
@@ -196,6 +210,16 @@ public class ChecklistPanel extends JPanel {
 
     private void showContextMenu(MouseEvent e, JList<Task> list, int index) {
         JPopupMenu contextMenu = new JPopupMenu();
+
+        // Check for multiple selection
+        int[] selectedIndices = list.getSelectedIndices();
+        if (selectedIndices.length > 1) {
+            JMenuItem deleteSelectedItem = new JMenuItem("Delete Selected Tasks");
+            deleteSelectedItem.addActionListener(event -> deleteSelectedTasks(list));
+            contextMenu.add(deleteSelectedItem);
+            contextMenu.addSeparator(); // Separator before individual actions
+        }
+
         JMenuItem editItem = new JMenuItem("Rename task");
         //Change task type item, with under menu of morning/evening
         JMenu changeTypeItem = new JMenu("Change task type");
