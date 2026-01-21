@@ -220,6 +220,24 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         JMenuItem addReminderItem = new JMenuItem("Set Reminder");
         addReminderItem.addActionListener(e -> setReminder());
         menu.add(addReminderItem);
+        JMenuItem removeReminderItem = new JMenuItem("Remove Reminder");
+        removeReminderItem.addActionListener(e -> {
+            if (selectedChecklistName == null) return;
+            List<Reminder> allReminders = taskManager.getReminders();
+            List<Reminder> toRemove = allReminders.stream()
+                    .filter(r -> r.getChecklistName().equals(selectedChecklistName))
+                    .toList();
+            if (toRemove.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "No reminders to remove for '" + selectedChecklistName + "'.");
+                return;
+            }
+            int res = JOptionPane.showConfirmDialog(this, "Remove reminder(s) for '" + selectedChecklistName + "'?", "Confirm", JOptionPane.YES_NO_OPTION);
+            if (res == JOptionPane.YES_OPTION) {
+                toRemove.forEach(taskManager::removeReminder);
+                updateTasks.run();
+            }
+        });
+        menu.add(removeReminderItem);
         menu.show(checklistList, x, y);
     }
 
