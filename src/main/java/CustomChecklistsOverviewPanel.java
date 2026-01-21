@@ -26,6 +26,7 @@ import java.util.Set;
 
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
+import javax.swing.DropMode;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JList;
@@ -63,6 +64,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         listModel = new DefaultListModel<>();
         checklistList = new JList<>(listModel);
         checklistList.setCellRenderer(new ChecklistListCellRenderer());
+        checklistList.setTransferHandler(new ChecklistListTransferHandler(listModel, taskManager, this::updateTasks));
+        checklistList.setDropMode(DropMode.ON);
         checklistList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 String selected = checklistList.getSelectedValue();
