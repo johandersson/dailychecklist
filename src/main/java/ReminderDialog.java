@@ -56,7 +56,7 @@ public class ReminderDialog extends JDialog {
 
         // Format the reminder time nicely
         String timeString = String.format("%02d:%02d", reminder.getHour(), reminder.getMinute());
-        String dateString = String.format("%d/%d/%d", reminder.getMonth(), reminder.getDay(), reminder.getYear());
+        String dateString = String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
 
         // Create HTML-formatted message with better styling
         String htmlMessage = "<html><body style='font-family: Arial, sans-serif; font-size: 12px; padding: 10px;'>" +
