@@ -40,7 +40,7 @@ public abstract class IconListCellRenderer<T> extends JPanel implements ListCell
 
     @SuppressWarnings("this-escape")
     public IconListCellRenderer() {
-        setPreferredSize(new Dimension(200, 30));
+        setPreferredSize(new Dimension(200, 36));
         setFont(new Font("Yu Gothic UI", Font.PLAIN, 14));
         setOpaque(true);
     }

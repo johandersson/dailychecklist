@@ -31,7 +31,7 @@ import javax.swing.Icon;
  * colors for overdue, due (now), and future reminders.
  */
 public class ReminderClockIcon implements Icon {
-    private static final int ICON_SIZE = 16;
+    private static final int ICON_SIZE = 20;
 
     public enum State {
         OVERDUE, DUE_SOON, FUTURE
@@ -83,10 +83,10 @@ public class ReminderClockIcon implements Icon {
         g2.setStroke(new BasicStroke(1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 
         // Compute simple hand positions (not accurate angles, but readable)
-        int hourHandX = centerX + (int) (Math.cos(Math.toRadians((hour % 12) * 30 - 90)) * 3);
-        int hourHandY = centerY + (int) (Math.sin(Math.toRadians((hour % 12) * 30 - 90)) * 3);
-        int minuteHandX = centerX + (int) (Math.cos(Math.toRadians(minute * 6 - 90)) * 5);
-        int minuteHandY = centerY + (int) (Math.sin(Math.toRadians(minute * 6 - 90)) * 5);
+        int hourHandX = centerX + (int) (Math.cos(Math.toRadians((hour % 12) * 30 - 90)) * 4);
+        int hourHandY = centerY + (int) (Math.sin(Math.toRadians((hour % 12) * 30 - 90)) * 4);
+        int minuteHandX = centerX + (int) (Math.cos(Math.toRadians(minute * 6 - 90)) * 6);
+        int minuteHandY = centerY + (int) (Math.sin(Math.toRadians(minute * 6 - 90)) * 6);
 
         g2.drawLine(centerX, centerY, hourHandX, hourHandY);
         g2.drawLine(centerX, centerY, minuteHandX, minuteHandY);
@@ -94,13 +94,13 @@ public class ReminderClockIcon implements Icon {
         // Draw time text (e.g., "9:30") if it fits — render small on the right side
         String timeText = String.format("%d:%02d", hour, minute);
         Font orig = g2.getFont();
-        Font f = orig.deriveFont(9f);
+        Font f = orig.deriveFont(11f);
         g2.setFont(f);
         FontMetrics fm = g2.getFontMetrics();
         int tw = fm.stringWidth(timeText);
         int th = fm.getAscent();
         // Draw text outside the clock to the right if space, otherwise skip
-        int textX = x + ICON_SIZE + 2;
+        int textX = x + ICON_SIZE + 4;
         int textY = y + (ICON_SIZE + th) / 2 - 1;
 
         // Use white for the time text when the parent component indicates selection
@@ -119,7 +119,7 @@ public class ReminderClockIcon implements Icon {
     @Override
     public int getIconWidth() {
         // include a few px for the time text
-        return ICON_SIZE + 22;
+        return ICON_SIZE + 28;
     }
 
     @Override
