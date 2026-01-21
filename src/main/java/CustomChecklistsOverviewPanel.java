@@ -423,13 +423,13 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 javax.swing.Timer retrier = new javax.swing.Timer(200, null);
                 retrier.addActionListener(new java.awt.event.ActionListener() {
                     private int attempt = 0;
-                    private final int maxAttempts = 10;
+                    private final int maxAttempts = 20;
                     @Override
                     public void actionPerformed(java.awt.event.ActionEvent e) {
                         attempt++;
                         try {
                             java.awt.Component before = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                            System.out.println("[DEBUG] focus retrier attempt " + attempt + ", current focus owner: " + (before == null ? "null" : before.getClass().getName()));
+                            System.out.println("[DEBUG] focus retrier attempt " + attempt + ", current focus owner: " + (before == null ? "null" : before.getClass().getName() + "@" + System.identityHashCode(before)));
                             if (rightPanel != null && rightPanel.getComponentCount() > 0) {
                                 java.awt.Component c = rightPanel.getComponent(0);
                                 if (c instanceof CustomChecklistPanel) {
@@ -439,12 +439,13 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                                     if (w != null) {
                                         try { w.toFront(); w.requestFocus(); } catch (Exception ignore) {}
                                     }
+                                    // aggressive focus attempts
                                     panel.requestSelectionFocus();
+                                    try { panel.getTaskList().grabFocus(); } catch (Exception ignore) {}
+                                    try { panel.getTaskList().requestFocusInWindow(); } catch (Exception ignore) {}
                                     java.awt.Component now = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                                    if (now == null) {
-                                        // keep trying
-                                    } else if (now == panel || now == panel.getTaskList() || now.getClass().getName().contains("JList")) {
-                                        System.out.println("[DEBUG] focus retrier: success on attempt " + attempt + ", focus owner: " + now.getClass().getName());
+                                    if (now != null && (now == panel || now == panel.getTaskList() || now.getClass().getName().contains("JList") || now.getClass().getName().contains("CheckboxListCellRenderer"))) {
+                                        System.out.println("[DEBUG] focus retrier: success on attempt " + attempt + ", focus owner: " + now.getClass().getName() + "@" + System.identityHashCode(now));
                                         ((javax.swing.Timer) e.getSource()).stop();
                                         return;
                                     }
@@ -460,7 +461,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                     }
                 });
                 retrier.setRepeats(true);
-                retrier.setInitialDelay(600);
+                retrier.setInitialDelay(100);
                 retrier.start();
             }
         });
