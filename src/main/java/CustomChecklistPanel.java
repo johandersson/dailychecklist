@@ -23,6 +23,7 @@ import java.util.List;
 
 import javax.swing.DefaultListModel;
 import javax.swing.DropMode;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -144,8 +145,45 @@ public class CustomChecklistPanel extends JPanel {
     private JPanel createPanel(String title, JList<Task> taskList) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(javax.swing.BorderFactory.createTitledBorder(title));
+
+        // Add reminder status panel at the top
+        JPanel topPanel = createReminderStatusPanel();
+        panel.add(topPanel, BorderLayout.NORTH);
+
         JScrollPane scrollPane = new JScrollPane(taskList);
         panel.add(scrollPane, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel createReminderStatusPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 5, 2, 5));
+
+        // Check if there's a reminder for this checklist
+        boolean hasReminder = taskManager.getReminders().stream()
+                .anyMatch(r -> r.getChecklistName().equals(checklistName));
+
+        if (hasReminder) {
+            Reminder reminder = taskManager.getReminders().stream()
+                    .filter(r -> r.getChecklistName().equals(checklistName))
+                    .findFirst()
+                    .orElse(null);
+
+            String reminderText = String.format("Reminder: %d/%d/%d at %02d:%02d",
+                    reminder.getMonth(), reminder.getDay(), reminder.getYear(),
+                    reminder.getHour(), reminder.getMinute());
+
+            JLabel reminderLabel = new JLabel("🔔 " + reminderText);
+            reminderLabel.setFont(reminderLabel.getFont().deriveFont(11.0f));
+            reminderLabel.setForeground(java.awt.Color.BLUE);
+            panel.add(reminderLabel, BorderLayout.WEST);
+        } else {
+            JLabel noReminderLabel = new JLabel("No reminder set");
+            noReminderLabel.setFont(noReminderLabel.getFont().deriveFont(10.0f));
+            noReminderLabel.setForeground(java.awt.Color.GRAY);
+            panel.add(noReminderLabel, BorderLayout.WEST);
+        }
+
         return panel;
     }
 

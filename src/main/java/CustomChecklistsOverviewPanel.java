@@ -28,7 +28,6 @@ import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.DropMode;
 import javax.swing.JButton;
-import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -219,12 +218,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         JMenuItem deleteItem = new JMenuItem("Delete");
         deleteItem.addActionListener(e -> deleteChecklist());
         menu.add(deleteItem);
-        JMenuItem addReminderItem = new JMenuItem("Add Reminder");
-        addReminderItem.addActionListener(e -> addReminder());
+        JMenuItem addReminderItem = new JMenuItem("Set Reminder");
+        addReminderItem.addActionListener(e -> setReminder());
         menu.add(addReminderItem);
-        JMenuItem editRemindersItem = new JMenuItem("View/Edit Reminders");
-        editRemindersItem.addActionListener(e -> editReminders());
-        menu.add(editRemindersItem);
         menu.show(checklistList, x, y);
     }
 
@@ -264,17 +260,22 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         if (name == null) return;
         Object[] options = {"Delete list", "Move to morning", "Move to evening"};
         int choice = JOptionPane.showOptionDialog(this, "What to do with the tasks in '" + name + "'?", "Delete Checklist", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
-        if (choice == 0) { // Delete list
-            List<Task> allTasks = taskManager.getAllTasks();
-            for (Task task : allTasks) {
-                if (task.getChecklistName() != null && task.getChecklistName().equals(name)) {
-                    taskManager.removeTask(task);
+        switch (choice) {
+            case 0 -> {
+                // Delete list
+                List<Task> allTasks = taskManager.getAllTasks();
+                for (Task task : allTasks) {
+                    if (task.getChecklistName() != null && task.getChecklistName().equals(name)) {
+                        taskManager.removeTask(task);
+                    }
                 }
             }
-        } else if (choice == 1) { // Move to morning
-            moveTasksToType(name, TaskType.MORNING);
-        } else if (choice == 2) { // Move to evening
-            moveTasksToType(name, TaskType.EVENING);
+            case 1 -> // Move to morning
+                moveTasksToType(name, TaskType.MORNING);
+            case 2 -> // Move to evening
+                moveTasksToType(name, TaskType.EVENING);
+            default -> {
+            }
         }
         
         // Remove all reminders for this checklist
@@ -311,96 +312,23 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         }
     }
 
-    private void addReminder() {
+    private void setReminder() {
         if (selectedChecklistName == null) return;
 
-        ReminderEditDialog dialog = new ReminderEditDialog(taskManager, selectedChecklistName, null, () -> {
+        // Check if a reminder already exists for this checklist
+        List<Reminder> allReminders = taskManager.getReminders();
+        Reminder existingReminder = allReminders.stream()
+                .filter(r -> r.getChecklistName().equals(selectedChecklistName))
+                .findFirst()
+                .orElse(null);
+
+        ReminderEditDialog dialog = new ReminderEditDialog(taskManager, selectedChecklistName, existingReminder, () -> {
             updateTasks.run();
         });
         dialog.setVisible(true);
     }
 
-    private void editReminders() {
-        if (selectedChecklistName == null) return;
 
-        List<Reminder> allReminders = taskManager.getReminders();
-        List<Reminder> checklistReminders = allReminders.stream()
-                .filter(r -> r.getChecklistName().equals(selectedChecklistName))
-                .toList();
-
-        if (checklistReminders.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No reminders found for this checklist.", "No Reminders", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        JDialog dialog = new JDialog();
-        dialog.setTitle("Edit Reminders for " + selectedChecklistName);
-        dialog.setModal(true);
-        dialog.setLayout(new BorderLayout());
-
-        DefaultListModel<String> reminderModel = new DefaultListModel<>();
-        for (Reminder r : checklistReminders) {
-            reminderModel.addElement(String.format("%d-%02d-%02d %02d:%02d",
-                    r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute()));
-        }
-
-        JList<String> reminderList = new JList<>(reminderModel);
-        JScrollPane scrollPane = new JScrollPane(reminderList);
-
-        JPanel buttonPanel = new JPanel();
-        JButton editButton = new JButton("Edit");
-        JButton deleteButton = new JButton("Delete");
-        JButton closeButton = new JButton("Close");
-
-        editButton.addActionListener(e -> {
-            int index = reminderList.getSelectedIndex();
-            if (index >= 0) {
-                Reminder reminder = checklistReminders.get(index);
-                editReminderDialog(reminder, () -> {
-                    // Refresh the list after editing
-                    List<Reminder> updatedReminders = taskManager.getReminders().stream()
-                            .filter(r -> r.getChecklistName().equals(selectedChecklistName))
-                            .toList();
-                    reminderModel.clear();
-                    for (Reminder r : updatedReminders) {
-                        reminderModel.addElement(String.format("%d-%02d-%02d %02d:%02d",
-                                r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute()));
-                    }
-                });
-            }
-        });
-
-        deleteButton.addActionListener(e -> {
-            int index = reminderList.getSelectedIndex();
-            if (index >= 0) {
-                Reminder reminder = checklistReminders.get(index);
-                int choice = JOptionPane.showConfirmDialog(dialog, "Delete this reminder?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
-                if (choice == JOptionPane.YES_OPTION) {
-                    taskManager.removeReminder(reminder);
-                    reminderModel.remove(index);
-                    checklistReminders.remove(index);
-                }
-            }
-        });
-
-        closeButton.addActionListener(e -> dialog.dispose());
-
-        buttonPanel.add(editButton);
-        buttonPanel.add(deleteButton);
-        buttonPanel.add(closeButton);
-
-        dialog.add(scrollPane, BorderLayout.CENTER);
-        dialog.add(buttonPanel, BorderLayout.SOUTH);
-
-        dialog.setSize(300, 400);
-        dialog.setLocationRelativeTo(this);
-        dialog.setVisible(true);
-    }
-
-    private void editReminderDialog(Reminder reminder, Runnable onSave) {
-        ReminderEditDialog dialog = new ReminderEditDialog(taskManager, reminder.getChecklistName(), reminder, onSave);
-        dialog.setVisible(true);
-    }
 
     /**
      * Custom cell renderer for checklist list that shows a clock icon for checklists with reminders.
