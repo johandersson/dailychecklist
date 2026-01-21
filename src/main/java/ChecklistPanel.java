@@ -16,10 +16,12 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import java.awt.BorderLayout;
+import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Date;
 import java.util.List;
+import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -42,25 +44,28 @@ public class ChecklistPanel extends JPanel {
     private JList<Task> eveningTaskList;
     private DefaultListModel<Task> morningListModel;
     private DefaultListModel<Task> eveningListModel;
-    private JCheckBox showWeekdayTasksCheckbox;
-    private transient TaskUpdater taskUpdater;
     private transient TaskManager taskManager;
+    private transient TaskUpdater taskUpdater;
+    private transient Consumer<Boolean> onShowWeekdayChange;
+    private JCheckBox showWeekdayTasksCheckbox;
 
     @SuppressWarnings("this-escape")
     public ChecklistPanel(TaskManager taskManager, TaskUpdater taskUpdater) {
         this.taskManager = taskManager;
         this.taskUpdater = taskUpdater;
-        taskManager.addTaskChangeListener(() -> SwingUtilities.invokeLater(() -> {
+        taskManager.addTaskChangeListener(() -> {
             java.awt.Component focused = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
             updateTasks();
             if (focused != null && focused.isShowing() && focused.isFocusable()) {
                 focused.requestFocusInWindow();
             }
-        }));
+        });
         initialize();
     }
 
     private void initialize() {
+        showWeekdayTasksCheckbox = new JCheckBox("Show weekday specific tasks");
+        showWeekdayTasksCheckbox.addActionListener(e -> updateTasks());
         morningListModel = new DefaultListModel<>();
         eveningListModel = new DefaultListModel<>();
         morningTaskList = createTaskList(morningListModel, "MORNING");
@@ -68,16 +73,14 @@ public class ChecklistPanel extends JPanel {
         morningPanel = createPanel("Morning", morningTaskList);
         eveningPanel = createPanel("Evening", eveningTaskList);
         setLayout(new BorderLayout());
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topPanel.add(showWeekdayTasksCheckbox);
+        add(topPanel, BorderLayout.NORTH);
         JPanel listsPanel = new JPanel();
         listsPanel.setLayout(new BoxLayout(listsPanel, BoxLayout.Y_AXIS));
         listsPanel.add(morningPanel);
         listsPanel.add(eveningPanel);
         add(listsPanel, BorderLayout.CENTER);
-        showWeekdayTasksCheckbox = new JCheckBox("Show weekday specific tasks");
-        showWeekdayTasksCheckbox.addActionListener(e -> updateTasks());
-        JPanel southPanel = new JPanel();
-        southPanel.add(showWeekdayTasksCheckbox);
-        add(southPanel, BorderLayout.SOUTH);
     }
 
     private JList<Task> createTaskList(DefaultListModel<Task> listModel, String checklistName) {
@@ -87,7 +90,7 @@ public class ChecklistPanel extends JPanel {
             taskList.setDragEnabled(true);
             taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklistName, () -> {
                 List<Task> allTasks = taskManager.getAllTasks();
-                taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected());
+                taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel);
             }, morningListModel, eveningListModel));
             taskList.setDropMode(DropMode.INSERT);
         }
@@ -209,7 +212,6 @@ public class ChecklistPanel extends JPanel {
             weekdayItem.addActionListener(event -> {
                 Task task = list.getModel().getElementAt(index);
                 task.setWeekday(weekday.toLowerCase());
-                showWeekdayTasksCheckbox.setSelected(true);
                 taskManager.updateTask(task);
                 list.repaint(list.getCellBounds(index, index));
             });
@@ -250,6 +252,15 @@ public class ChecklistPanel extends JPanel {
         morningTaskList.repaint();
         eveningTaskList.revalidate();
         eveningTaskList.repaint();
+    }
+
+    public void setShowWeekdayTasks(boolean show) {
+        showWeekdayTasksCheckbox.setSelected(show);
+        updateTasks();
+    }
+
+    public boolean isShowWeekdayTasks() {
+        return showWeekdayTasksCheckbox.isSelected();
     }
 
     public void scrollToAndHighlightTasks(Task[] tasks) {
@@ -295,11 +306,4 @@ public class ChecklistPanel extends JPanel {
         // The selection already provides visual feedback
     }
 
-    public boolean isShowWeekdayTasks() {
-        return showWeekdayTasksCheckbox.isSelected();
-    }
-
-    public void setShowWeekdayTasks(boolean selected) {
-        showWeekdayTasksCheckbox.setSelected(selected);
-    }
 }

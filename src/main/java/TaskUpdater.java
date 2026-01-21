@@ -19,19 +19,18 @@ import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
-
 import javax.swing.DefaultListModel;
 
 public class TaskUpdater {
-    public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showWeekday) {
-        updateTasks(allTasks, morningListModel, eveningListModel, showWeekday, getCurrentWeekday());
+    public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel) {
+        updateTasks(allTasks, morningListModel, eveningListModel, true);
     }
 
-    public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showWeekday, String currentWeekday) {
+    public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showWeekdayTasks) {
         morningListModel.clear();
         eveningListModel.clear();
         for (Task task : allTasks) {
-            boolean show = task.getWeekday() == null || (showWeekday && task.getWeekday().equals(currentWeekday));
+            boolean show = task.getWeekday() == null || showWeekdayTasks;
             if (show && task.getType() != TaskType.CUSTOM) {
                 if (task.getType() == TaskType.MORNING) {
                     morningListModel.addElement(task);

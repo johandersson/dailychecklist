@@ -211,6 +211,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         for (CustomChecklistPanel panel : panelMap.values()) {
             if (panel != null) panel.updateTasks();
         }
+        checklistList.revalidate();
+        checklistList.repaint();
     }
 
     private void showChecklistPopup(int x, int y) {
@@ -244,10 +246,15 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 }
                 int res = JOptionPane.showConfirmDialog(this, "Remove reminder(s) for '" + selectedChecklistName + "'?", "Confirm", JOptionPane.YES_NO_OPTION);
                 if (res == JOptionPane.YES_OPTION) {
-                    java.awt.Component beforeRemoveFocus = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
                     toRemove.forEach(taskManager::removeReminder);
-                    updateTasks.run();
-                    java.awt.Component afterRemoveFocus = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                    // Restore focus to the task list
+                    if (rightPanel != null && rightPanel.getComponentCount() > 0) {
+                        java.awt.Component c = rightPanel.getComponent(0);
+                        if (c instanceof CustomChecklistPanel) {
+                            CustomChecklistPanel panel = (CustomChecklistPanel) c;
+                            panel.getTaskList().requestFocusInWindow();
+                        }
+                    }
                 }
             });
             menu.add(removeReminderItem);
@@ -374,30 +381,27 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         ReminderEditDialog dialog = new ReminderEditDialog(taskManager, selectedChecklistName, existingReminder, null);
         dialog.setVisible(true);
 
-        // After dialog returns (modal), reapply selection
+        // After dialog returns (modal), reapply selection and focus
         if (checklistToRestore != null) {
             checklistList.setSelectedValue(checklistToRestore, true);
-            // Restore selection on right panel's task list if available
+            // Restore selection and focus on right panel's task list if available
             if (rightPanel != null && rightPanel.getComponentCount() > 0) {
                 java.awt.Component c = rightPanel.getComponent(0);
                 if (c instanceof CustomChecklistPanel) {
                     CustomChecklistPanel panel = (CustomChecklistPanel) c;
-                    javax.swing.SwingUtilities.invokeLater(() -> {
-                        try {
-                            if (selectedTaskId != null) {
-                                // Try to restore selected task by id
-                                JList<Task> list = panel.getTaskList();
-                                for (int i = 0; i < list.getModel().getSize(); i++) {
-                                    Task t = list.getModel().getElementAt(i);
-                                    if (t != null && t.getId() != null && t.getId().equals(selectedTaskId)) {
-                                        list.setSelectedIndex(i);
-                                        list.ensureIndexIsVisible(i);
-                                        break;
-                                    }
-                                }
+                    JList<Task> list = panel.getTaskList();
+                    if (selectedTaskId != null) {
+                        // Try to restore selected task by id
+                        for (int i = 0; i < list.getModel().getSize(); i++) {
+                            Task t = list.getModel().getElementAt(i);
+                            if (t != null && t.getId() != null && t.getId().equals(selectedTaskId)) {
+                                list.setSelectedIndex(i);
+                                list.ensureIndexIsVisible(i);
+                                break;
                             }
-                        } catch (Exception ignore) {}
-                    });
+                        }
+                    }
+                    list.requestFocusInWindow();
                 }
             }
         }

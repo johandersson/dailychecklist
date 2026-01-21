@@ -55,13 +55,11 @@ public class CustomChecklistPanel extends JPanel {
         // Listen for model changes and refresh UI
         try {
             taskManager.addTaskChangeListener(() -> {
-                SwingUtilities.invokeLater(() -> {
-                    java.awt.Component focused = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                    updateTasks();
-                    if (focused != null && focused.isShowing() && focused.isFocusable()) {
-                        focused.requestFocusInWindow();
-                    }
-                });
+                java.awt.Component focused = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                updateTasks();
+                if (focused != null && focused.isShowing() && focused.isFocusable()) {
+                    focused.requestFocusInWindow();
+                }
             });
         } catch (Exception ignore) {}
     }
