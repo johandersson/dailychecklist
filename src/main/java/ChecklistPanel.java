@@ -111,6 +111,8 @@ public class ChecklistPanel extends JPanel {
                         } else {
                             list.addSelectionInterval(index, index);
                         }
+                        list.repaint(list.getCellBounds(index, index));
+                        e.consume(); // Prevent default selection behavior
                     } else {
                         // Normal click: toggle done
                         Task task = list.getModel().getElementAt(index);
