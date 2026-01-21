@@ -352,16 +352,17 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             // Ensure the edited checklist remains selected and focused
             if (selectedChecklistName != null) {
                 checklistList.setSelectedValue(selectedChecklistName, true);
-                checklistList.requestFocusInWindow();
-                // Also try to restore focus to the right panel contents
+                // Use delayed focus restore to avoid focus being stolen by closing dialogs
+                FocusUtils.restoreFocusLater(checklistList);
+                // Refresh right panel and request focus on its checklist panel later
                 if (rightPanel != null) {
                     rightPanel.revalidate();
                     rightPanel.repaint();
                     if (rightPanel.getComponentCount() > 0) {
                         java.awt.Component comp = rightPanel.getComponent(0);
                         if (comp instanceof CustomChecklistPanel) {
-                            ((CustomChecklistPanel) comp).requestSelectionFocus();
-                        } else if (comp != null) comp.requestFocusInWindow();
+                            FocusUtils.restoreFocusLater(((CustomChecklistPanel) comp).getParent() instanceof javax.swing.JComponent ? (javax.swing.JComponent) ((CustomChecklistPanel) comp) : null);
+                        }
                     }
                 }
             }

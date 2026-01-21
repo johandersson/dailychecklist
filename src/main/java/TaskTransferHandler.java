@@ -20,7 +20,6 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
-
 import javax.swing.DefaultListModel;
 import javax.swing.JComponent;
 import javax.swing.JList;
@@ -122,6 +121,7 @@ public class TaskTransferHandler extends TransferHandler {
                     }
                     listModel.remove(currentIndex);
                     listModel.add(dropIndex, task);
+                    FocusUtils.restoreFocusLater(list);
                     return true;
                 }
             } else {
@@ -171,6 +171,7 @@ public class TaskTransferHandler extends TransferHandler {
                 if (updateAllPanels != null) {
                     updateAllPanels.run();
                 }
+                FocusUtils.restoreFocusLater(list);
                 return true;
             }
             return false;

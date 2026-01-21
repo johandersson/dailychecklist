@@ -56,7 +56,7 @@ public class ReminderClockIcon implements Icon {
     private Color colorForState() {
         return switch (state) {
             case OVERDUE -> new Color(192, 57, 43); // red-ish
-            case DUE_SOON -> new Color(241, 196, 15); // yellow-ish
+            case DUE_SOON -> new Color(204, 102, 0); // darker orange (readable)
             case FUTURE -> new Color(46, 134, 171); // blue-ish
         };
     }
@@ -122,8 +122,8 @@ public class ReminderClockIcon implements Icon {
 
     @Override
     public int getIconWidth() {
-        // include a few px for the time text
-        return ICON_SIZE + 28;
+        // include a few px for the time text when enabled, otherwise stay compact
+        return showTimeText ? ICON_SIZE + 28 : ICON_SIZE + 6;
     }
 
     @Override
