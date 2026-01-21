@@ -168,8 +168,8 @@ public class CustomChecklistPanel extends JPanel {
                     .findFirst()
                     .orElse(null);
 
-            String reminderText = String.format("Reminder: %d/%d/%d at %02d:%02d",
-                    reminder.getMonth(), reminder.getDay(), reminder.getYear(),
+                String reminderText = String.format("Reminder: %04d-%02d-%02d at %02d:%02d",
+                    reminder.getYear(), reminder.getMonth(), reminder.getDay(),
                     reminder.getHour(), reminder.getMinute());
 
             JLabel reminderLabel = new JLabel("[R] " + reminderText);
