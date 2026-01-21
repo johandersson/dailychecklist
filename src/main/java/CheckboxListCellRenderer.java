@@ -26,7 +26,6 @@ import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.ListCellRenderer;
@@ -80,7 +79,13 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
         setFont(new Font("Yu Gothic UI", Font.PLAIN, 14)); // Use consistent font for all task lists
         setOpaque(true); // Ensure background is painted
-        setBackground(Color.WHITE); // Keep background neutral
+        if (isSelected) {
+            setBackground(list.getSelectionBackground());
+            setForeground(list.getSelectionForeground());
+        } else {
+            setBackground(Color.WHITE);
+            setForeground(Color.BLACK);
+        }
 
         return this;
     }
