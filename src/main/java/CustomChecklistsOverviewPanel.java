@@ -418,6 +418,50 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 });
                 delayed.setRepeats(false);
                 delayed.start();
+
+                // Persistent retrier: try multiple times to ensure focus lands on the target list instance
+                javax.swing.Timer retrier = new javax.swing.Timer(200, null);
+                retrier.addActionListener(new java.awt.event.ActionListener() {
+                    private int attempt = 0;
+                    private final int maxAttempts = 10;
+                    @Override
+                    public void actionPerformed(java.awt.event.ActionEvent e) {
+                        attempt++;
+                        try {
+                            java.awt.Component before = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                            System.out.println("[DEBUG] focus retrier attempt " + attempt + ", current focus owner: " + (before == null ? "null" : before.getClass().getName()));
+                            if (rightPanel != null && rightPanel.getComponentCount() > 0) {
+                                java.awt.Component c = rightPanel.getComponent(0);
+                                if (c instanceof CustomChecklistPanel) {
+                                    CustomChecklistPanel panel = (CustomChecklistPanel) c;
+                                    try { java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner(); } catch (Exception ignore) {}
+                                    java.awt.Window w = javax.swing.SwingUtilities.getWindowAncestor(CustomChecklistsOverviewPanel.this);
+                                    if (w != null) {
+                                        try { w.toFront(); w.requestFocus(); } catch (Exception ignore) {}
+                                    }
+                                    panel.requestSelectionFocus();
+                                    java.awt.Component now = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                                    if (now == null) {
+                                        // keep trying
+                                    } else if (now == panel || now == panel.customTaskList || now.getClass().getName().contains("JList")) {
+                                        System.out.println("[DEBUG] focus retrier: success on attempt " + attempt + ", focus owner: " + now.getClass().getName());
+                                        ((javax.swing.Timer) e.getSource()).stop();
+                                        return;
+                                    }
+                                }
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                        if (attempt >= maxAttempts) {
+                            ((javax.swing.Timer) e.getSource()).stop();
+                            System.out.println("[DEBUG] focus retrier: giving up after " + attempt + " attempts");
+                        }
+                    }
+                });
+                retrier.setRepeats(true);
+                retrier.setInitialDelay(600);
+                retrier.start();
             }
         });
         dialog.setVisible(true);
