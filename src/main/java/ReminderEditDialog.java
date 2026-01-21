@@ -42,6 +42,8 @@ public class ReminderEditDialog extends JDialog {
     private final Reminder existingReminder;
     private transient final Runnable onSave;
 
+    
+
     // UI Components
     private JComboBox<Integer> yearBox, monthBox, dayBox, hourBox, minuteBox;
 
@@ -194,7 +196,7 @@ public class ReminderEditDialog extends JDialog {
 
     private JPanel createButtonPanel() {
         JPanel panel = new JPanel(new FlowLayout());
-        JButton saveButton = new JButton(existingReminder == null ? "Add Reminder" : "Save Reminder");
+        JButton saveButton = new JButton(existingReminder == null ? "Add Reminder" : "Change Reminder");
         JButton cancelButton = new JButton("Cancel");
 
         saveButton.addActionListener(e -> saveReminder());
@@ -285,11 +287,11 @@ public class ReminderEditDialog extends JDialog {
             } else {
                 handleEditReminder(year, month, day, hour, minute);
             }
-
-            dispose();
+            // Run onSave and close the dialog; UI will reflect the updated reminder
             if (onSave != null) {
                 onSave.run();
             }
+            dispose();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Invalid date/time. Please check your input.", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -316,23 +318,14 @@ public class ReminderEditDialog extends JDialog {
 
         Reminder newReminder = new Reminder(checklistName, year, month, day, hour, minute);
         taskManager.addReminder(newReminder);
-
-        showSuccessMessage("Reminder set successfully!", year, month, day, hour, minute);
+        // Reminder added; panels will show the update directly
     }
 
     private void handleEditReminder(int year, int month, int day, int hour, int minute) {
         taskManager.removeReminder(existingReminder);
         Reminder newReminder = new Reminder(checklistName, year, month, day, hour, minute);
         taskManager.addReminder(newReminder);
-
-        showSuccessMessage("Reminder updated successfully!", year, month, day, hour, minute);
+        // Reminder changed; panels will show the update directly
     }
-
-    private void showSuccessMessage(String title, int year, int month, int day, int hour, int minute) {
-        String timeString = String.format("%02d:%02d", hour, minute);
-        String dateString = String.format("%d/%d/%d", month, day, year);
-        String message = String.format("%s\n\nChecklist: %s\nDate: %s\nTime: %s\n\nYou'll be reminded at the specified time.",
-            title, checklistName, dateString, timeString);
-        JOptionPane.showMessageDialog(this, message, title.contains("set") ? "Reminder Set" : "Reminder Updated", JOptionPane.INFORMATION_MESSAGE);
-    }
+    
 }
