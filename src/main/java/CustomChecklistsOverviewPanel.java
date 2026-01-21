@@ -18,7 +18,9 @@
 import java.awt.BorderLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -48,6 +50,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private String selectedChecklistName;
     private AddTaskPanel currentAddPanel;
     private Set<String> allChecklistNames;
+    private Map<String, CustomChecklistPanel> panelMap = new HashMap<>();
 
     public CustomChecklistsOverviewPanel(TaskManager taskManager, Runnable updateTasks) {
         this.taskManager = taskManager;
@@ -158,7 +161,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             rightPanel.remove(currentAddPanel);
         }
         if (checklistName != null) {
-            currentChecklistPanel = new CustomChecklistPanel(taskManager, new TaskUpdater(), checklistName);
+            currentChecklistPanel = new CustomChecklistPanel(taskManager, new TaskUpdater(), checklistName, this::updateTasks);
+            panelMap.put(checklistName, currentChecklistPanel);
             currentChecklistPanel.updateTasks();
             rightPanel.add(currentChecklistPanel);
             currentAddPanel = new AddTaskPanel(taskManager, tasks -> {
@@ -194,6 +198,10 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         }
         if (currentChecklistPanel != null) {
             currentChecklistPanel.updateTasks();
+        }
+        // Update all panels to reflect any changes
+        for (CustomChecklistPanel panel : panelMap.values()) {
+            if (panel != null) panel.updateTasks();
         }
     }
 
