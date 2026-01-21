@@ -21,7 +21,6 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-
 import javax.swing.Icon;
 import javax.swing.JList;
 import javax.swing.JPanel;
@@ -55,9 +54,12 @@ public abstract class IconListCellRenderer<T> extends JPanel implements ListCell
         if (isSelected) {
             setBackground(list.getSelectionBackground());
             setForeground(list.getSelectionForeground());
+            // expose selection state for icons rendered within this component
+            putClientProperty("selected", Boolean.TRUE);
         } else {
             setBackground(list.getBackground());
             setForeground(list.getForeground());
+            putClientProperty("selected", Boolean.FALSE);
         }
 
         // Update icon based on the value
