@@ -291,7 +291,8 @@ public class ReminderEditDialog extends JDialog {
             // Run onSave and close the dialog; UI will reflect the updated reminder
             // Close the dialog first so windowing focus events settle, then run onSave
             java.awt.Component beforeDispose = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-            System.out.println("[DEBUG] Focus owner before dispose: " + (beforeDispose == null ? "null" : beforeDispose.getClass().getName()));
+            System.out.println("[DEBUG] saveButton id: " + (saveButton == null ? "null" : System.identityHashCode(saveButton)));
+            System.out.println("[DEBUG] Focus owner before dispose: " + (beforeDispose == null ? "null" : beforeDispose.getClass().getName() + "@" + System.identityHashCode(beforeDispose)));
             // Make save button temporarily non-focusable so it can't retain focus after dialog close
             boolean previousFocusableLocal = true;
             if (saveButton != null) {
@@ -302,10 +303,10 @@ public class ReminderEditDialog extends JDialog {
             dispose();
             if (onSave != null) {
                 java.awt.Component before = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                System.out.println("[DEBUG] Focus owner before onSave: " + (before == null ? "null" : before.getClass().getName()));
+                System.out.println("[DEBUG] Focus owner before onSave: " + (before == null ? "null" : before.getClass().getName() + "@" + System.identityHashCode(before)));
                 onSave.run();
                 java.awt.Component after = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                System.out.println("[DEBUG] Focus owner after onSave: " + (after == null ? "null" : after.getClass().getName()));
+                System.out.println("[DEBUG] Focus owner after onSave: " + (after == null ? "null" : after.getClass().getName() + "@" + System.identityHashCode(after)));
                 // Restore save button focusability shortly after
                 if (saveButton != null) {
                     javax.swing.SwingUtilities.invokeLater(() -> saveButton.setFocusable(previousFocusable));
