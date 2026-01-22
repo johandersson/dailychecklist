@@ -191,6 +191,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     }
 
     public void updateTasks() {
+        // Preserve selection
+        String selectedChecklist = checklistList.getSelectedValue();
+        
         listModel.clear();
         Set<String> names = taskManager.getCustomChecklistNames();
         // Add all checklists that have tasks
@@ -204,8 +207,15 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 listModel.addElement(name);
             }
         }
+        
+        // Restore selection
+        if (selectedChecklist != null && listModel.contains(selectedChecklist)) {
+            checklistList.setSelectedValue(selectedChecklist, true);
+        }
+        
         if (currentChecklistPanel != null) {
             currentChecklistPanel.updateTasks();
+            currentChecklistPanel.requestSelectionFocus();
         }
         // Update all panels to reflect any changes
         for (CustomChecklistPanel panel : panelMap.values()) {
