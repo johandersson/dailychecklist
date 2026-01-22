@@ -201,7 +201,7 @@ public class DailyChecklist {
                     frame.toFront();
                     frame.requestFocus();
                 },
-                // On Done action
+                // On Dismiss action (old Done action)
                 () -> {
                     // Remove all reminders for this checklist
                     List<Reminder> allReminders = checklistManager.getReminders();
@@ -216,6 +216,42 @@ public class DailyChecklist {
                 // On Remind Tomorrow
                 () -> {
                     rescheduleReminderTomorrow(reminder);
+                },
+                // On Mark as Done action
+                () -> {
+                    // Remove all reminders for this checklist
+                    List<Reminder> allReminders = checklistManager.getReminders();
+                    allReminders.stream()
+                        .filter(r -> Objects.equals(r.getChecklistName(), reminder.getChecklistName()))
+                        .forEach(checklistManager::removeReminder);
+                    
+                    // Switch to custom checklists tab
+                    tabbedPane.setSelectedIndex(1);
+                    String name = reminder.getChecklistName();
+                    if (name == null || name.trim().isEmpty()) {
+                        name = "Unknown Checklist";
+                    }
+                    // Mark this checklist as opened for this session
+                    openedChecklists.add(name);
+                    customChecklistsOverviewPanel.selectChecklistByName(name);
+                    
+                    // Mark all tasks in this checklist as done
+                    List<Task> tasks = checklistManager.getTasks(TaskType.CUSTOM, name);
+                    for (Task task : tasks) {
+                        if (!task.isDone()) {
+                            task.setDone(true);
+                            task.setDoneDate(new Date(System.currentTimeMillis()));
+                            checklistManager.updateTask(task);
+                        }
+                    }
+                    
+                    // Refresh the UI
+                    checklistPanel.updateTasks();
+                    customChecklistsOverviewPanel.updateTasks();
+                    
+                    frame.setVisible(true);
+                    frame.toFront();
+                    frame.requestFocus();
                 }
             );
 
