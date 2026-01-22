@@ -211,8 +211,8 @@ public class CustomChecklistPanel extends JPanel {
             remCal.set(reminder.getYear(), reminder.getMonth() - 1, reminder.getDay(), reminder.getHour(), reminder.getMinute(), 0);
             long diff = remCal.getTimeInMillis() - now.getTimeInMillis();
             ReminderClockIcon.State state = diff < 0
-                    ? ReminderClockIcon.State.OVERDUE
-                    : (diff <= 60L * 60L * 1000L ? ReminderClockIcon.State.DUE_SOON : ReminderClockIcon.State.FUTURE);
+                ? (Math.abs(diff) > 60L * 60L * 1000L ? ReminderClockIcon.State.VERY_OVERDUE : ReminderClockIcon.State.OVERDUE)
+                : (diff <= 60L * 60L * 1000L ? ReminderClockIcon.State.DUE_SOON : ReminderClockIcon.State.FUTURE);
 
             // Create icon without its own time text; we'll show date then time in a tight subpanel
             ReminderClockIcon icon = new ReminderClockIcon(reminder.getHour(), reminder.getMinute(), state, false);

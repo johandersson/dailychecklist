@@ -34,7 +34,7 @@ public class ReminderClockIcon implements Icon {
     private static final int ICON_SIZE = 20;
 
     public enum State {
-        OVERDUE, DUE_SOON, FUTURE
+        OVERDUE, DUE_SOON, FUTURE, VERY_OVERDUE
     }
 
     private final int hour;
@@ -58,6 +58,7 @@ public class ReminderClockIcon implements Icon {
             case OVERDUE -> new Color(192, 57, 43); // red-ish
             case DUE_SOON -> new Color(204, 102, 0); // darker orange (readable)
             case FUTURE -> new Color(46, 134, 171); // blue-ish
+            case VERY_OVERDUE -> new Color(139, 0, 0); // dark red
         };
     }
 
@@ -97,6 +98,36 @@ public class ReminderClockIcon implements Icon {
         g2.drawLine(centerX, centerY, hourHandX, hourHandY);
         g2.drawLine(centerX, centerY, minuteHandX, minuteHandY);
 
+        // Draw Zzz for very overdue
+        if (state == State.VERY_OVERDUE) {
+            g2.setColor(Color.BLACK);
+            Font orig = g2.getFont();
+
+            // First Z - largest and skewed
+            Font f1 = orig.deriveFont(10f);
+            g2.setFont(f1);
+            java.awt.geom.AffineTransform origTransform = g2.getTransform();
+            g2.rotate(Math.toRadians(15), x + ICON_SIZE + 5, y + 10);
+            g2.drawString("Z", x + ICON_SIZE + 2, y + 10);
+            g2.setTransform(origTransform);
+
+            // Second Z - medium size
+            Font f2 = orig.deriveFont(8f);
+            g2.setFont(f2);
+            g2.rotate(Math.toRadians(10), x + ICON_SIZE + 12, y + 5);
+            g2.drawString("Z", x + ICON_SIZE + 9, y + 5);
+            g2.setTransform(origTransform);
+
+            // Third Z - small size
+            Font f3 = orig.deriveFont(6f);
+            g2.setFont(f3);
+            g2.rotate(Math.toRadians(5), x + ICON_SIZE + 18, y + 2);
+            g2.drawString("Z", x + ICON_SIZE + 15, y + 2);
+            g2.setTransform(origTransform);
+
+            g2.setFont(orig);
+        }
+
         // Optionally draw time text (e.g., "9:30") to the right of the icon
         if (showTimeText) {
             String timeText = String.format("%d:%02d", hour, minute);
@@ -122,8 +153,13 @@ public class ReminderClockIcon implements Icon {
 
     @Override
     public int getIconWidth() {
-        // include a few px for the time text when enabled, otherwise stay compact
-        return showTimeText ? ICON_SIZE + 28 : ICON_SIZE + 6;
+        if (showTimeText) {
+            return ICON_SIZE + 28;
+        } else if (state == State.VERY_OVERDUE) {
+            return ICON_SIZE + 25; // Extra space for the three Zzz
+        } else {
+            return ICON_SIZE + 6;
+        }
     }
 
     @Override
