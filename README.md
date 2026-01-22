@@ -11,7 +11,7 @@ Stay organized and boost your productivity with the **Daily Checklist** applicat
 - **Reminders**: Set date/time reminders for any checklist with notifications and visual clock icons.
 - **Focus Timer**: Start a customizable timer for any task to maintain focus and track progress with visual indicators.
 - **Split-Pane UI**: Modern interface with daily tasks on the left and custom checklists on the right.
-- **Interactive Features**: Context menus, drag-and-drop reordering, keyboard shortcuts, and visual feedback.
+- **Interactive Features**: Context menus, drag-and-drop reordering with visual feedback, multi-selection (Ctrl+click), keyboard shortcuts, and intuitive clicking (checkbox toggles completion, text selects items).
 - **Data Persistence**: Tasks saved to XML files, reminders in properties files for fast access.
 - **Cross-Platform**: Runs on Windows, macOS, and Linux (requires Java).
 
@@ -77,12 +77,14 @@ To build the JAR manually:
 #### 2. View and Interact with Daily Tasks
 - The left panel shows tasks grouped by Morning/Evening.
 - Check "Show weekday tasks" to include weekday-specific tasks.
+- **Click the checkbox** to mark tasks complete/uncomplete instantly.
+- **Click the task text** to select tasks (supports multi-selection with Ctrl+click and range selection with Shift+click).
+- **Double-click tasks** to toggle completion.
 - Right-click a task for options:
   - **Start Focus Timer**: Begin a timed session.
   - **Rename**: Edit the task name.
   - **Remove**: Delete the task.
-- Check/uncheck tasks to mark them complete.
-- Drag and drop to reorder tasks.
+- Drag and drop to reorder tasks (shows visual preview of dragged items).
 
 ### Managing Custom Checklists
 
@@ -98,12 +100,16 @@ To build the JAR manually:
 - Empty lines are automatically skipped.
 
 #### 3. Manage Checklists and Tasks
+- **Click the checkbox** next to tasks to mark them complete/uncomplete.
+- **Click task text** to select tasks (supports multi-selection with Ctrl+click).
+- **Double-click tasks** to rename them.
 - Right-click a checklist name for options:
   - **Rename**: Change the checklist name.
   - **Delete**: Remove the checklist and its tasks.
   - **Add Reminder**: Set a date/time reminder.
   - **View/Edit Reminders**: Manage existing reminders.
 - Right-click tasks within checklists to rename or remove them.
+- Drag and drop tasks between checklists or within checklists (shows visual preview).
 
 ### Using Reminders
 
@@ -135,6 +141,9 @@ To build the JAR manually:
 ### Keyboard Shortcuts
 - **Add Task**: Ctrl+A
 - **Refresh Tasks**: F5
+- **Multi-select Tasks**: Ctrl+click (hold Ctrl while clicking multiple tasks)
+- **Range-select Tasks**: Shift+click (select range between first and last clicked task)
+- **Delete Selected Tasks**: Delete key (when tasks are selected)
 - **Timer Controls**: Space (pause/resume), Enter (start)
 
 ## Configuration

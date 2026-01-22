@@ -15,10 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import java.time.LocalDate;
-import java.time.format.TextStyle;
 import java.util.List;
-import java.util.Locale;
 import javax.swing.DefaultListModel;
 
 public class TaskUpdater {
@@ -39,9 +36,5 @@ public class TaskUpdater {
                 }
             }
         }
-    }
-
-    private String getCurrentWeekday() {
-        return LocalDate.now().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH).toLowerCase();
     }
 }

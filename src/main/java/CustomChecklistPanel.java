@@ -56,8 +56,11 @@ public class CustomChecklistPanel extends JPanel {
         try {
             taskManager.addTaskChangeListener(() -> {
                 java.awt.Component focused = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                boolean wasListFocused = focused == customTaskList;
                 updateTasks();
-                if (focused != null && focused.isShowing() && focused.isFocusable()) {
+                if (wasListFocused || (focused != null && SwingUtilities.isDescendingFrom(focused, this))) {
+                    requestSelectionFocus();
+                } else if (focused != null && focused.isShowing() && focused.isFocusable()) {
                     focused.requestFocusInWindow();
                 }
             });
@@ -75,6 +78,7 @@ public class CustomChecklistPanel extends JPanel {
     private JList<Task> createTaskList(DefaultListModel<Task> listModel) {
         JList<Task> taskList = new JList<>(listModel);
         taskList.setCellRenderer(new CheckboxListCellRenderer());
+        taskList.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         if (!java.awt.GraphicsEnvironment.isHeadless()) {
             taskList.setDragEnabled(true);
             taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklistName, updateAllPanels, null, null));
@@ -87,19 +91,21 @@ public class CustomChecklistPanel extends JPanel {
                 JList<Task> list = (JList<Task>) e.getSource();
                 int index = list.locationToIndex(e.getPoint());
                 if (index >= 0) {
+                    java.awt.Rectangle cellBounds = list.getCellBounds(index, index);
+                    int checkboxX = cellBounds.x + 10;
+                    int checkboxY = cellBounds.y + cellBounds.height / 2 - 10;
+                    int checkboxSize = 20;
+                    boolean onCheckbox = e.getPoint().x >= checkboxX && e.getPoint().x <= checkboxX + checkboxSize &&
+                                         e.getPoint().y >= checkboxY && e.getPoint().y <= checkboxY + checkboxSize;
+
                     if (SwingUtilities.isRightMouseButton(e)) {
-                        showContextMenu(e, list, index);
-                    } else if (e.getClickCount() == 2) {
-                        // Double-click to edit name
-                        Task task = list.getModel().getElementAt(index);
-                        String rawNewName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for checklist:", task.getName());
-                        String newName = TaskManager.validateInputWithError(rawNewName, "Task name");
-                        if (newName != null) {
-                            task.setName(newName);
-                            taskManager.updateTask(task);
-                            list.repaint(list.getCellBounds(index, index));
+                        // Right-click: ensure the item is selected
+                        if (!list.isSelectedIndex(index)) {
+                            list.setSelectedIndex(index);
                         }
-                    } else {
+                        showContextMenu(e, list, index);
+                    } else if (onCheckbox && e.getClickCount() == 1) {
+                        // Single-click on checkbox: toggle done
                         Task task = list.getModel().getElementAt(index);
                         task.setDone(!task.isDone());
                         if (task.isDone()) {
@@ -108,8 +114,19 @@ public class CustomChecklistPanel extends JPanel {
                             task.setDoneDate(null);
                         }
                         taskManager.updateTask(task);
-                        list.repaint(list.getCellBounds(index, index));
+                        list.repaint(cellBounds);
+                    } else if (e.getClickCount() == 2) {
+                        // Double-click: edit name
+                        Task task = list.getModel().getElementAt(index);
+                        String rawNewName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for task:", task.getName());
+                        String newName = TaskManager.validateInputWithError(rawNewName, "Task name");
+                        if (newName != null) {
+                            task.setName(newName);
+                            taskManager.updateTask(task);
+                            list.repaint(cellBounds);
+                        }
                     }
+                    // Single click elsewhere: let JList handle selection normally
                 }
             }
         });
@@ -257,11 +274,25 @@ public class CustomChecklistPanel extends JPanel {
     }
 
     public void updateTasks() {
+        // Preserve selections before updating
+        java.util.List<Task> selectedTasks = customTaskList.getSelectedValuesList();
+        
         customListModel.clear();
         List<Task> tasks = taskManager.getTasks(TaskType.CUSTOM, checklistName);
         for (Task task : tasks) {
             customListModel.addElement(task);
         }
+        
+        // Restore selections after updating
+        for (Task selectedTask : selectedTasks) {
+            for (int i = 0; i < customListModel.getSize(); i++) {
+                if (customListModel.getElementAt(i).equals(selectedTask)) {
+                    customTaskList.addSelectionInterval(i, i);
+                    break;
+                }
+            }
+        }
+        
         if (reminderStatusPanel != null) {
             populateReminderPanel(reminderStatusPanel);
         }

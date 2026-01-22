@@ -24,6 +24,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
 import javax.swing.JList;
@@ -39,6 +40,9 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private Color weekdayColor;
     private boolean isWeekdayTask;
     private Font circleFont; // Font for the text inside the circle
+    
+    // Cached checkmark image for performance
+    private static BufferedImage checkmarkImage;
 
     // Mapping of weekdays to abbreviations and WCAG-compliant colors
     private static final Map<String, String> WEEKDAY_ABBREVIATIONS = new HashMap<>();
@@ -61,6 +65,16 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         WEEKDAY_COLORS.put("friday", new Color(139, 69, 19));    // Saddle Brown
         WEEKDAY_COLORS.put("saturday", new Color(255, 69, 0));   // Dark Orange
         WEEKDAY_COLORS.put("sunday", new Color(199, 21, 133));   // Dark Pink
+        
+        // Pre-render checkmark image for performance
+        checkmarkImage = new BufferedImage(20, 20, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = checkmarkImage.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(new Color(76, 175, 80)); // Material green checkmark
+        g2.setStroke(new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawLine(5, 10, 10, 15);
+        g2.drawLine(10, 15, 17, 5);
+        g2.dispose();
     }
 
     @SuppressWarnings("this-escape")
@@ -118,10 +132,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
         // Draw checkmark if selected
         if (isChecked) {
-            g2.setColor(new Color(76, 175, 80)); // Material green checkmark
-            g2.setStroke(new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            g2.drawLine(checkboxX + 5, checkboxY + 10, checkboxX + 10, checkboxY + 15);
-            g2.drawLine(checkboxX + 10, checkboxY + 15, checkboxX + 17, checkboxY + 5);
+            g2.drawImage(checkmarkImage, checkboxX, checkboxY, null);
         }
 
         // Draw the weekday circle **only if it's a weekday task**

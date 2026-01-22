@@ -102,33 +102,21 @@ public class ChecklistPanel extends JPanel {
                 JList<Task> list = (JList<Task>) e.getSource();
                 int index = list.locationToIndex(e.getPoint());
                 if (index >= 0) {
+                    java.awt.Rectangle cellBounds = list.getCellBounds(index, index);
+                    int checkboxX = cellBounds.x + 10;
+                    int checkboxY = cellBounds.y + cellBounds.height / 2 - 10;
+                    int checkboxSize = 20;
+                    boolean onCheckbox = e.getPoint().x >= checkboxX && e.getPoint().x <= checkboxX + checkboxSize &&
+                                         e.getPoint().y >= checkboxY && e.getPoint().y <= checkboxY + checkboxSize;
+
                     if (SwingUtilities.isRightMouseButton(e)) {
                         // Right-click: ensure the item is selected
-                        if ((e.getModifiersEx() & java.awt.event.InputEvent.CTRL_DOWN_MASK) != 0) {
-                            // Ctrl+right-click: toggle selection
-                            if (list.isSelectedIndex(index)) {
-                                list.removeSelectionInterval(index, index);
-                            } else {
-                                list.addSelectionInterval(index, index);
-                            }
-                        } else {
-                            // Right-click: select this item (clear others)
+                        if (!list.isSelectedIndex(index)) {
                             list.setSelectedIndex(index);
                         }
-                        list.repaint(list.getCellBounds(index, index));
-                        e.consume();
                         showContextMenu(e, list, index);
-                    } else if ((e.getModifiersEx() & java.awt.event.InputEvent.CTRL_DOWN_MASK) != 0) {
-                        // Ctrl+click: toggle selection
-                        if (list.isSelectedIndex(index)) {
-                            list.removeSelectionInterval(index, index);
-                        } else {
-                            list.addSelectionInterval(index, index);
-                        }
-                        list.repaint(list.getCellBounds(index, index));
-                        e.consume(); // Prevent default selection behavior
-                    } else {
-                        // Normal click: toggle done
+                    } else if (onCheckbox && e.getClickCount() == 1) {
+                        // Single-click on checkbox: toggle done
                         Task task = list.getModel().getElementAt(index);
                         task.setDone(!task.isDone());
                         if (task.isDone()) {
@@ -137,8 +125,20 @@ public class ChecklistPanel extends JPanel {
                             task.setDoneDate(null);
                         }
                         taskManager.updateTask(task);
-                        list.repaint(list.getCellBounds(index, index));
+                        list.repaint(cellBounds);
+                    } else if (e.getClickCount() == 2) {
+                        // Double-click: toggle done
+                        Task task = list.getModel().getElementAt(index);
+                        task.setDone(!task.isDone());
+                        if (task.isDone()) {
+                            task.setDoneDate(new Date(System.currentTimeMillis()));
+                        } else {
+                            task.setDoneDate(null);
+                        }
+                        taskManager.updateTask(task);
+                        list.repaint(cellBounds);
                     }
+                    // Single click elsewhere: let JList handle selection normally
                 }
             }
         });
@@ -344,12 +344,32 @@ public class ChecklistPanel extends JPanel {
     }
 
     public void updateTasks() {
+        // Preserve selections before updating
+        java.util.List<Task> selectedMorningTasks = morningTaskList.getSelectedValuesList();
+        java.util.List<Task> selectedEveningTasks = eveningTaskList.getSelectedValuesList();
+        
         List<Task> allTasks = taskManager.getAllTasks();
         taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected());
+        
+        // Restore selections after updating
+        restoreSelections(morningTaskList, morningListModel, selectedMorningTasks);
+        restoreSelections(eveningTaskList, eveningListModel, selectedEveningTasks);
+        
         morningTaskList.revalidate();
         morningTaskList.repaint();
         eveningTaskList.revalidate();
         eveningTaskList.repaint();
+    }
+
+    private void restoreSelections(JList<Task> taskList, DefaultListModel<Task> listModel, java.util.List<Task> selectedTasks) {
+        for (Task selectedTask : selectedTasks) {
+            for (int i = 0; i < listModel.getSize(); i++) {
+                if (listModel.getElementAt(i).equals(selectedTask)) {
+                    taskList.addSelectionInterval(i, i);
+                    break;
+                }
+            }
+        }
     }
 
     public void setShowWeekdayTasks(boolean show) {

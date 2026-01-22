@@ -52,7 +52,9 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 
 <h3>Completing Tasks</h3>
 <ul>
-<li>Check the checkbox next to a task to mark it complete.</li>
+<li><b>Click the checkbox</b> next to a task to mark it complete/uncomplete instantly.</li>
+<li><b>Click the task text</b> to select tasks (supports multi-selection with Ctrl+click and range selection with Shift+click).</li>
+<li><b>Double-click tasks</b> to toggle completion.</li>
 <li>Completed tasks show a checkmark and are visually distinguished.</li>
 <li>Tasks reset daily - completed status doesn't carry over.</li>
 </ul>
@@ -87,10 +89,13 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 
 <h3>Editing Custom Tasks</h3>
 <ul>
+<li><b>Click the checkbox</b> next to tasks to mark them complete/uncomplete.</li>
+<li><b>Click task text</b> to select tasks (supports multi-selection with Ctrl+click).</li>
+<li><b>Double-click tasks</b> to rename them.</li>
 <li>Right-click a task in a custom checklist.</li>
 <li>Choose "Rename" or "Remove" as needed.</li>
 <li>Choose "Start Focus Timer" to begin a timed session.</li>
-<li>Drag and drop tasks to reorder them.</li>
+<li>Drag and drop tasks to reorder them (shows visual preview of dragged items).</li>
 </ul>
 
 <h2>Using Reminders</h2>
@@ -120,6 +125,8 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 <h3>Reordering Tasks</h3>
 <ul>
 <li>Drag and drop tasks in any list to reorder them.</li>
+<li>Visual feedback shows a preview of the task being dragged.</li>
+<li>Move tasks between different checklists by dragging them.</li>
 </ul>
 
 <h2>Using the Focus Timer</h2>
@@ -183,6 +190,9 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 <ul>
 <li><b>Add Task</b>: Ctrl+A</li>
 <li><b>Refresh Tasks</b>: F5</li>
+<li><b>Multi-select Tasks</b>: Ctrl+click (hold Ctrl while clicking multiple tasks)</li>
+<li><b>Range-select Tasks</b>: Shift+click (select range between first and last clicked task)</li>
+<li><b>Delete Selected Tasks</b>: Delete key (when tasks are selected)</li>
 <li><b>Timer Pause/Resume</b>: Space</li>
 </ul>
 
