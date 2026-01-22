@@ -156,13 +156,13 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         }
 
         // Draw the task text next to the checkbox and circle
-        g2.setColor(Color.BLACK);
+        g2.setColor(getForeground());
         g2.setFont(getFont());
         g2.drawString(taskName, textStartX, getHeight() / 2 + 5);
         
         // Draw timestamp if task is checked
         if (isChecked && doneDate != null && !doneDate.isEmpty()) {
-            g2.setColor(Color.BLACK);
+            g2.setColor(getForeground());
             g2.setFont(getFont().deriveFont(Font.PLAIN, 10));
             g2.drawString("✓ " + doneDate, textStartX, getHeight() / 2 + 20);
         }
