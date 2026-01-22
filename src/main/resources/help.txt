@@ -84,7 +84,7 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 <li>Choose "Delete" to remove the checklist and its tasks.</li>
 <li>Choose "Add Reminder" to set up a reminder for this checklist.</li>
 <li>Choose "View/Edit Reminders" to manage existing reminders.</li>
-<li>Checklists with active reminders display a clock icon (⏰) next to their name.</li>
+<li>Checklists with active reminders display a [BLUE_CLOCK_ICON] next to their name. Very overdue reminders show 'Zzz' after the checklist name.</li>
 </ul>
 
 <h3>Editing Custom Tasks</h3>
@@ -120,6 +120,14 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 <li>When a reminder time arrives, a popup appears.</li>
 <li>Choose "Open" to view the checklist or "Done" to dismiss.</li>
 <li>The app checks for reminders every minute.</li>
+</ul>
+
+<h3>Reminder States</h3>
+<ul>
+<li><b>Future</b>: [BLUE_CLOCK_ICON] for reminders more than 1 hour away.</li>
+<li><b>Due Soon</b>: [YELLOW_CLOCK_ICON] for reminders within 1 hour.</li>
+<li><b>Overdue</b>: [RED_CLOCK_ICON] for reminders that have passed.</li>
+<li><b>Very Overdue</b>: [RED_CLOCK_ICON] with 'Zzz' appended to the checklist name for reminders more than 1 hour overdue.</li>
 </ul>
 
 <h3>Reordering Tasks</h3>

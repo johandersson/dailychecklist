@@ -89,9 +89,10 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     public Component getListCellRendererComponent(JList<? extends Task> list, Task task, int index, boolean isSelected, boolean cellHasFocus) {
         this.isChecked = task.isDone();
         this.taskName = task.getName();
-        this.weekdayAbbreviation = WEEKDAY_ABBREVIATIONS.get(task.getWeekday());
-        this.weekdayColor = WEEKDAY_COLORS.get(task.getWeekday());
-        this.isWeekdayTask = task.getWeekday() != null && WEEKDAY_ABBREVIATIONS.containsKey(task.getWeekday());
+        String weekdayKey = task.getWeekday() != null ? task.getWeekday().toLowerCase() : null;
+        this.weekdayAbbreviation = WEEKDAY_ABBREVIATIONS.get(weekdayKey);
+        this.weekdayColor = WEEKDAY_COLORS.get(weekdayKey);
+        this.isWeekdayTask = task.getWeekday() != null && WEEKDAY_ABBREVIATIONS.containsKey(weekdayKey);
         this.doneDate = task.getDoneDate();
         this.isSelected = isSelected;
 

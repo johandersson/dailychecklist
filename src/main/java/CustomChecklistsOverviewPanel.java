@@ -16,6 +16,8 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import java.awt.BorderLayout;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashMap;
@@ -105,6 +107,14 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         });
 
         newChecklistField = new JTextField(20);
+        newChecklistField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    createNewChecklist();
+                }
+            }
+        });
         createButton = new JButton("Create Checklist");
         createButton.addActionListener(e -> createNewChecklist());
 
@@ -139,6 +149,13 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         if (existing.contains(name)) {
             JOptionPane.showMessageDialog(this, "Checklist name already exists.");
             return;
+        }
+        // Remove any orphaned tasks with this name
+        List<Task> allTasks = taskManager.getAllTasks();
+        for (Task task : allTasks) {
+            if (name.equals(task.getChecklistName())) {
+                taskManager.removeTask(task);
+            }
         }
         newChecklistField.setText("");
         allChecklistNames.add(name);  // Track the new checklist

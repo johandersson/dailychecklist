@@ -17,7 +17,6 @@
  */import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Font;
-
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
@@ -34,7 +33,7 @@ public class CirclePanel extends JPanel {
         for (int i = 0; i < circles.length; i++) {
 
             circles[i] = new JLabel("\u25CF"); // Unicode for a filled circle
-            circles[i].setFont(new Font("Yu Gothic UI Light", Font.PLAIN, 24));
+            circles[i].setFont(new Font("Yu Gothic UI Light", Font.PLAIN, 16));
             circles[i].setForeground(Color.LIGHT_GRAY);
             add(circles[i]);
         }

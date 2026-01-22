@@ -15,6 +15,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.BiFunction;
+import javax.swing.Icon;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
@@ -25,112 +29,154 @@ import javax.swing.text.StyledDocument;
  */
 public class HelpTextRenderer {
 
+    private static final Map<String, BiFunction<String, Style, Icon>> ICON_CREATORS = new HashMap<>();
+
+    static {
+        ICON_CREATORS.put("[RED_CLOCK_ICON]", (content, style) -> new ReminderClockIcon(9, 30, ReminderClockIcon.State.OVERDUE, false));
+        ICON_CREATORS.put("[YELLOW_CLOCK_ICON]", (content, style) -> new ReminderClockIcon(9, 30, ReminderClockIcon.State.DUE_SOON, false));
+        ICON_CREATORS.put("[BLUE_CLOCK_ICON]", (content, style) -> new ReminderClockIcon(9, 30, ReminderClockIcon.State.FUTURE, false));
+        ICON_CREATORS.put("[ZZZ_ICON]", (content, style) -> new ZzzIcon());
+    }
+
     /**
      * Inserts styled text with icons into the document.
      */
     public static void insertStyledTextWithIcons(StyledDocument doc, String htmlText, Style defaultStyle, Style boldStyle) {
         try {
-            // Remove the <style> block to avoid displaying CSS as text
-            htmlText = htmlText.replaceAll("(?s)<style[^>]*>.*?</style>", "");
-
-            // Replace HTML tags with markers for parsing
-            htmlText = htmlText.replaceAll("<h1>", "[H1]").replaceAll("</h1>", "[/H1]");
-            htmlText = htmlText.replaceAll("<h2>", "[H2]").replaceAll("</h2>", "[/H2]");
-            htmlText = htmlText.replaceAll("<h3>", "[H3]").replaceAll("</h3>", "[/H3]");
-            htmlText = htmlText.replaceAll("<li>", "[LI]").replaceAll("</li>", "[/LI]");
-            htmlText = htmlText.replaceAll("<p>", "[P]").replaceAll("</p>", "[/P]");
-            htmlText = htmlText.replaceAll("<ul>", "").replaceAll("</ul>", "");
-            htmlText = htmlText.replaceAll("<ol>", "").replaceAll("</ol>", "");
-            htmlText = htmlText.replaceAll("<b>", "[B]").replaceAll("</b>", "[/B]");
-            htmlText = htmlText.replaceAll("<code>", "[CODE]").replaceAll("</code>", "[/CODE]");
-            htmlText = htmlText.replaceAll("<em>", "[I]").replaceAll("</em>", "[/I]");
-
-            // Remove remaining HTML tags
-            String text = htmlText.replaceAll("<[^>]+>", "").trim();
+            String processedText = preprocessHtml(htmlText);
 
             // Split by lines and process each line
-            String[] lines = text.split("\n");
+            String[] lines = processedText.split("\n");
+            boolean lastWasEmpty = false;
 
             for (String line : lines) {
                 line = line.trim();
                 if (line.isEmpty()) {
-                    doc.insertString(doc.getLength(), "\n", defaultStyle);
+                    if (!lastWasEmpty) {
+                        doc.insertString(doc.getLength(), "\n", defaultStyle);
+                    }
+                    lastWasEmpty = true;
                     continue;
                 }
 
-                // Handle markers
-                if (line.contains("[H1]") && line.contains("[/H1]")) {
-                    String content = line.replace("[H1]", "").replace("[/H1]", "").trim();
-                    Style h1Style = doc.addStyle("h1", null);
-                    StyleConstants.setFontFamily(h1Style, "Arial");
-                    StyleConstants.setFontSize(h1Style, 24);
-                    StyleConstants.setBold(h1Style, true);
-                    doc.insertString(doc.getLength(), content + "\n\n", h1Style);
-                } else if (line.contains("[H2]") && line.contains("[/H2]")) {
-                    String content = line.replace("[H2]", "").replace("[/H2]", "").trim();
-                    Style h2Style = doc.addStyle("h2", null);
-                    StyleConstants.setFontFamily(h2Style, "Arial");
-                    StyleConstants.setFontSize(h2Style, 18);
-                    StyleConstants.setBold(h2Style, true);
-                    doc.insertString(doc.getLength(), content + "\n\n", h2Style);
-                } else if (line.contains("[H3]") && line.contains("[/H3]")) {
-                    String content = line.replace("[H3]", "").replace("[/H3]", "").trim();
-                    Style h3Style = doc.addStyle("h3", null);
-                    StyleConstants.setFontFamily(h3Style, "Arial");
-                    StyleConstants.setFontSize(h3Style, 14);
-                    StyleConstants.setBold(h3Style, true);
-                    doc.insertString(doc.getLength(), content + "\n", h3Style);
-                } else if (line.contains("[LI]") && line.contains("[/LI]")) {
-                    String content = line.replace("[LI]", "").replace("[/LI]", "").trim();
-                    // Handle bold text in list items
-                    content = content.replace("[B]", "").replace("[/B]", "");
-                    // Handle icons
-                    if (content.startsWith("[RED_CLOCK_ICON]")) {
-                        String after = content.substring("[RED_CLOCK_ICON]".length());
-                        doc.insertString(doc.getLength(), "• ", defaultStyle);
-                        insertIconAndText(doc, after, new ReminderClockIcon(9, 30, ReminderClockIcon.State.OVERDUE, false), defaultStyle);
-                    } else if (content.startsWith("[YELLOW_CLOCK_ICON]")) {
-                        String after = content.substring("[YELLOW_CLOCK_ICON]".length());
-                        doc.insertString(doc.getLength(), "• ", defaultStyle);
-                        insertIconAndText(doc, after, new ReminderClockIcon(9, 30, ReminderClockIcon.State.DUE_SOON, false), defaultStyle);
-                    } else if (content.startsWith("[BLUE_CLOCK_ICON]")) {
-                        String after = content.substring("[BLUE_CLOCK_ICON]".length());
-                        doc.insertString(doc.getLength(), "• ", defaultStyle);
-                        insertIconAndText(doc, after, new ReminderClockIcon(9, 30, ReminderClockIcon.State.FUTURE, false), defaultStyle);
-                    } else {
-                        doc.insertString(doc.getLength(), "• " + content, defaultStyle);
-                    }
-                    doc.insertString(doc.getLength(), "\n", defaultStyle);
-                } else if (line.contains("[P]") && line.contains("[/P]")) {
-                    String content = line.replace("[P]", "").replace("[/P]", "").trim();
-                    // Handle bold text in paragraphs
-                    content = content.replace("[B]", "").replace("[/B]", "");
-                    doc.insertString(doc.getLength(), content, defaultStyle);
-                    doc.insertString(doc.getLength(), "\n", defaultStyle);
-                } else if (line.contains("[RED_CLOCK_ICON]") || line.contains("[YELLOW_CLOCK_ICON]") || line.contains("[BLUE_CLOCK_ICON]")) {
-                    // Handle icon lines (fallback)
-                    String processedLine = line;
-                    if (line.contains("[RED_CLOCK_ICON]")) {
-                        insertIconAndText(doc, processedLine.replace("[RED_CLOCK_ICON]", ""), new ReminderClockIcon(9, 30, ReminderClockIcon.State.OVERDUE, false), boldStyle);
-                    } else if (line.contains("[YELLOW_CLOCK_ICON]")) {
-                        insertIconAndText(doc, processedLine.replace("[YELLOW_CLOCK_ICON]", ""), new ReminderClockIcon(9, 30, ReminderClockIcon.State.DUE_SOON, false), boldStyle);
-                    } else if (line.contains("[BLUE_CLOCK_ICON]")) {
-                        insertIconAndText(doc, processedLine.replace("[BLUE_CLOCK_ICON]", ""), new ReminderClockIcon(9, 30, ReminderClockIcon.State.FUTURE, false), boldStyle);
-                    }
-                    doc.insertString(doc.getLength(), "\n", defaultStyle);
-                } else {
-                    // Regular paragraphs or other content
-                    line = line.replace("[B]", "").replace("[/B]", "");
-                    doc.insertString(doc.getLength(), line, defaultStyle);
-                    doc.insertString(doc.getLength(), "\n", defaultStyle);
-                }
+                lastWasEmpty = false;
+                processLine(doc, line, defaultStyle, boldStyle);
             }
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
     }
 
-    private static void insertIconAndText(StyledDocument doc, String text, ReminderClockIcon icon, Style style) throws BadLocationException {
+    private static String preprocessHtml(String htmlText) {
+        // Remove the <style> block to avoid displaying CSS as text
+        htmlText = htmlText.replaceAll("(?s)<style[^>]*>.*?</style>", "");
+
+        // Replace HTML tags with markers for parsing
+        htmlText = htmlText.replaceAll("<h1>", "[H1]").replaceAll("</h1>", "[/H1]");
+        htmlText = htmlText.replaceAll("<h2>", "[H2]").replaceAll("</h2>", "[/H2]");
+        htmlText = htmlText.replaceAll("<h3>", "[H3]").replaceAll("</h3>", "[/H3]");
+        htmlText = htmlText.replaceAll("<li>", "[LI]").replaceAll("</li>", "[/LI]");
+        htmlText = htmlText.replaceAll("<p>", "[P]").replaceAll("</p>", "[/P]");
+        htmlText = htmlText.replaceAll("<ul>", "").replaceAll("</ul>", "");
+        htmlText = htmlText.replaceAll("<ol>", "").replaceAll("</ol>", "");
+        htmlText = htmlText.replaceAll("<b>", "[B]").replaceAll("</b>", "[/B]");
+        htmlText = htmlText.replaceAll("<em>", "[I]").replaceAll("</em>", "[/I]");
+
+        // Remove remaining HTML tags
+        htmlText = htmlText.replaceAll("<[^>]+>", "").trim();
+
+        // Collapse multiple blank lines to at most two
+        htmlText = htmlText.replaceAll("\n\n\n+", "\n\n");
+
+        return htmlText;
+    }
+
+    private static void processLine(StyledDocument doc, String line, Style defaultStyle, Style boldStyle) throws BadLocationException {
+        if (line.contains("[H1]") && line.contains("[/H1]")) {
+            insertHeader(doc, line, "[H1]", "[/H1]", 24);
+        } else if (line.contains("[H2]") && line.contains("[/H2]")) {
+            insertHeader(doc, line, "[H2]", "[/H2]", 18);
+        } else if (line.contains("[H3]") && line.contains("[/H3]")) {
+            insertHeader(doc, line, "[H3]", "[/H3]", 14);
+        } else if (line.contains("[LI]") && line.contains("[/LI]")) {
+            processListItem(doc, line, defaultStyle, boldStyle);
+        } else if (line.contains("[P]") && line.contains("[/P]")) {
+            insertParagraph(doc, line, defaultStyle, boldStyle);
+        } else if (line.contains("[RED_CLOCK_ICON]") || line.contains("[YELLOW_CLOCK_ICON]") || 
+                    line.contains("[BLUE_CLOCK_ICON]") || line.contains("[ZZZ_ICON]")) {
+            processIconLine(doc, line, boldStyle);
+        } else {
+            insertRegularText(doc, line, defaultStyle);
+        }
+    }
+
+    private static void insertHeader(StyledDocument doc, String line, String startMarker, String endMarker, int fontSize) throws BadLocationException {
+        String content = line.replace(startMarker, "").replace(endMarker, "").trim();
+        Style headerStyle = createHeaderStyle(doc, fontSize);
+        String suffix = fontSize == 14 ? "\n" : "\n\n";
+        doc.insertString(doc.getLength(), content + suffix, headerStyle);
+    }
+
+    private static Style createHeaderStyle(StyledDocument doc, int fontSize) {
+        Style style = doc.addStyle("h" + fontSize, null);
+        StyleConstants.setFontFamily(style, "Arial");
+        StyleConstants.setFontSize(style, fontSize);
+        StyleConstants.setBold(style, true);
+        return style;
+    }
+
+    private static void processListItem(StyledDocument doc, String line, Style defaultStyle, Style boldStyle) throws BadLocationException {
+        String content = line.replace("[LI]", "").replace("[/LI]", "").trim();
+        
+        boolean hasNested = content.contains("[LI]");
+        if (hasNested) {
+            content = content.replace("[LI]", "• ").replace("[/LI]", "");
+        }
+        
+        content = content.replace("[B]", "").replace("[/B]", "");
+
+        // Check for icon markers
+        for (Map.Entry<String, BiFunction<String, Style, Icon>> entry : ICON_CREATORS.entrySet()) {
+            if (content.startsWith(entry.getKey())) {
+                String after = content.substring(entry.getKey().length());
+                doc.insertString(doc.getLength(), "• ", defaultStyle);
+                insertIconAndText(doc, after, entry.getValue().apply(content, defaultStyle), defaultStyle);
+                doc.insertString(doc.getLength(), "\n", defaultStyle);
+                return;
+            }
+        }
+
+        // Regular list item
+        doc.insertString(doc.getLength(), (hasNested ? "" : "• ") + content, defaultStyle);
+        doc.insertString(doc.getLength(), "\n", defaultStyle);
+    }
+
+    private static void insertParagraph(StyledDocument doc, String line, Style defaultStyle, Style boldStyle) throws BadLocationException {
+        String content = line.replace("[P]", "").replace("[/P]", "").trim();
+        
+        content = content.replace("[B]", "").replace("[/B]", "");
+        doc.insertString(doc.getLength(), content, defaultStyle);
+        doc.insertString(doc.getLength(), "\n", defaultStyle);
+    }
+
+    private static void processIconLine(StyledDocument doc, String line, Style boldStyle) throws BadLocationException {
+        for (Map.Entry<String, BiFunction<String, Style, Icon>> entry : ICON_CREATORS.entrySet()) {
+            if (line.contains(entry.getKey())) {
+                String processedLine = line.replace(entry.getKey(), "");
+                insertIconAndText(doc, processedLine, entry.getValue().apply(line, boldStyle), boldStyle);
+                doc.insertString(doc.getLength(), "\n", boldStyle);
+                return;
+            }
+        }
+    }
+
+    private static void insertRegularText(StyledDocument doc, String line, Style defaultStyle) throws BadLocationException {
+        line = line.replace("[B]", "").replace("[/B]", "");
+        doc.insertString(doc.getLength(), line, defaultStyle);
+        doc.insertString(doc.getLength(), "\n", defaultStyle);
+    }
+
+    private static void insertIconAndText(StyledDocument doc, String text, Icon icon, Style style) throws BadLocationException {
         // Insert the icon
         Style iconStyle = doc.addStyle("icon", null);
         StyleConstants.setIcon(iconStyle, icon);

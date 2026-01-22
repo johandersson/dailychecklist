@@ -98,35 +98,7 @@ public class ReminderClockIcon implements Icon {
         g2.drawLine(centerX, centerY, hourHandX, hourHandY);
         g2.drawLine(centerX, centerY, minuteHandX, minuteHandY);
 
-        // Draw Zzz for very overdue
-        if (state == State.VERY_OVERDUE) {
-            g2.setColor(Color.BLACK);
-            Font orig = g2.getFont();
-
-            // First Z - largest and skewed
-            Font f1 = orig.deriveFont(10f);
-            g2.setFont(f1);
-            java.awt.geom.AffineTransform origTransform = g2.getTransform();
-            g2.rotate(Math.toRadians(15), x + ICON_SIZE + 5, y + 10);
-            g2.drawString("Z", x + ICON_SIZE + 2, y + 10);
-            g2.setTransform(origTransform);
-
-            // Second Z - medium size
-            Font f2 = orig.deriveFont(8f);
-            g2.setFont(f2);
-            g2.rotate(Math.toRadians(10), x + ICON_SIZE + 12, y + 5);
-            g2.drawString("Z", x + ICON_SIZE + 9, y + 5);
-            g2.setTransform(origTransform);
-
-            // Third Z - small size
-            Font f3 = orig.deriveFont(6f);
-            g2.setFont(f3);
-            g2.rotate(Math.toRadians(5), x + ICON_SIZE + 18, y + 2);
-            g2.drawString("Z", x + ICON_SIZE + 15, y + 2);
-            g2.setTransform(origTransform);
-
-            g2.setFont(orig);
-        }
+        // Zzz is now displayed as text after the checklist name
 
         // Optionally draw time text (e.g., "9:30") to the right of the icon
         if (showTimeText) {
@@ -155,8 +127,6 @@ public class ReminderClockIcon implements Icon {
     public int getIconWidth() {
         if (showTimeText) {
             return ICON_SIZE + 28;
-        } else if (state == State.VERY_OVERDUE) {
-            return ICON_SIZE + 25; // Extra space for the three Zzz
         } else {
             return ICON_SIZE + 6;
         }
