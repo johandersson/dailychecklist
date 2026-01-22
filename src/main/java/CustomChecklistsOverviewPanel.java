@@ -69,6 +69,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         listModel = new DefaultListModel<>();
         checklistList = new JList<>(listModel);
         checklistList.setCellRenderer(new ChecklistCellRenderer(taskManager));
+        checklistList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Same as task lists
+        checklistList.setSelectionForeground(java.awt.Color.BLACK);
         checklistList.setTransferHandler(new ChecklistListTransferHandler(listModel, taskManager, this::updateTasks));
         checklistList.setDropMode(DropMode.ON);
         checklistList.addListSelectionListener(e -> {
