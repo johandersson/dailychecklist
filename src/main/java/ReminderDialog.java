@@ -17,7 +17,6 @@
  */
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -36,14 +35,16 @@ public class ReminderDialog extends JDialog {
     private transient final Runnable onDone;
     private transient final Runnable onRemindLater;
     private transient final Runnable onRemindTomorrow;
+    private transient final Runnable onMarkAsDone;
 
     @SuppressWarnings("this-escape")
-    public ReminderDialog(JFrame parent, Reminder reminder, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow) {
+    public ReminderDialog(JFrame parent, Reminder reminder, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow, Runnable onMarkAsDone) {
         super(parent, "Reminder", true);
         this.onOpen = onOpen;
         this.onDone = onDone;
         this.onRemindLater = onRemindLater;
         this.onRemindTomorrow = onRemindTomorrow;
+        this.onMarkAsDone = onMarkAsDone;
 
         setAlwaysOnTop(true);
         setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
@@ -76,8 +77,10 @@ public class ReminderDialog extends JDialog {
 
         JButton openButton = new JButton("Open Checklist");
         openButton.setToolTipText("Open the checklist in the application");
-        JButton doneButton = new JButton("Done");
-        doneButton.setToolTipText("Mark this reminder as completed");
+        JButton dismissButton = new JButton("Dismiss");
+        dismissButton.setToolTipText("Dismiss this reminder");
+        JButton markAsDoneButton = new JButton("Mark as Done");
+        markAsDoneButton.setToolTipText("Mark all tasks as done and open the checklist");
         JButton remindLaterButton = new JButton("Remind me in 15 minutes");
         remindLaterButton.setToolTipText("Remind me again in 15 minutes");
         JButton remindTomorrowButton = new JButton("Remind me tomorrow");
@@ -88,8 +91,13 @@ public class ReminderDialog extends JDialog {
             dispose();
         });
 
-        doneButton.addActionListener(e -> {
+        dismissButton.addActionListener(e -> {
             onDone.run();
+            dispose();
+        });
+
+        markAsDoneButton.addActionListener(e -> {
+            onMarkAsDone.run();
             dispose();
         });
 
@@ -105,9 +113,10 @@ public class ReminderDialog extends JDialog {
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         buttonPanel.add(openButton);
+        buttonPanel.add(markAsDoneButton);
         buttonPanel.add(remindLaterButton);
         buttonPanel.add(remindTomorrowButton);
-        buttonPanel.add(doneButton);
+        buttonPanel.add(dismissButton);
 
         setLayout(new BorderLayout());
         add(messageLabel, BorderLayout.CENTER);
