@@ -113,7 +113,7 @@ public class ReminderClockIcon implements Icon {
                 Object sel = c instanceof javax.swing.JComponent ? ((javax.swing.JComponent) c).getClientProperty("selected") : null;
                 if (sel instanceof Boolean) selected = (Boolean) sel;
             }
-            g2.setColor(selected ? Color.WHITE : colorForState().darker());
+            g2.setColor(selected ? Color.BLACK : colorForState().darker());
             g2.drawString(timeText, textX, textY);
             g2.setFont(orig);
         }
