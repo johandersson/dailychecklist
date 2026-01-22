@@ -67,10 +67,14 @@ public class TaskTransferHandler extends TransferHandler {
 
     @Override
     protected Transferable createTransferable(JComponent c) {
-        int index = list.getSelectedIndex();
-        if (index >= 0) {
-            Task task = listModel.get(index);
-            return new StringSelection(checklistName + ";" + task.getId());
+        int[] selectedIndices = list.getSelectedIndices();
+        if (selectedIndices.length > 0) {
+            StringBuilder data = new StringBuilder(checklistName);
+            for (int index : selectedIndices) {
+                Task task = listModel.get(index);
+                data.append(";").append(task.getId());
+            }
+            return new StringSelection(data.toString());
         }
         return null;
     }
@@ -89,10 +93,15 @@ public class TaskTransferHandler extends TransferHandler {
 
     @Override
     public Image getDragImage() {
-        int index = list.getSelectedIndex();
-        if (index >= 0) {
-            Task task = listModel.get(index);
-            return createDragImage(task);
+        int[] selectedIndices = list.getSelectedIndices();
+        if (selectedIndices.length > 0) {
+            if (selectedIndices.length == 1) {
+                Task task = listModel.get(selectedIndices[0]);
+                return createDragImage(task);
+            } else {
+                // Multiple tasks selected
+                return createMultiDragImage(selectedIndices.length);
+            }
         }
         return null;
     }
@@ -133,96 +142,239 @@ public class TaskTransferHandler extends TransferHandler {
         return image;
     }
 
+    private Image createMultiDragImage(int count) {
+        String text = count + " tasks";
+        if (text.length() > 15) {
+            text = count + " items";
+        }
+
+        // Create a simple text image for multiple tasks
+        BufferedImage image = new BufferedImage(180, 25, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = image.createGraphics();
+
+        // Set rendering hints for better quality
+        g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+        // Draw background
+        g2d.setColor(new java.awt.Color(100, 150, 200, 220)); // Semi-transparent blue for multi-select
+        g2d.fillRoundRect(0, 0, 180, 25, 5, 5);
+
+        // Draw border
+        g2d.setColor(java.awt.Color.BLUE);
+        g2d.drawRoundRect(0, 0, 179, 24, 5, 5);
+
+        // Draw text
+        g2d.setColor(java.awt.Color.WHITE);
+        g2d.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12));
+        g2d.drawString(text, 5, 17);
+
+        g2d.dispose();
+        return image;
+    }
+
     @Override
     public boolean importData(TransferHandler.TransferSupport support) {
         if (!canImport(support) || !support.isDrop()) {
             return false;
         }
 
-        int dropIndex = getDropIndex(support);
-
         try {
-            String data = (String) support.getTransferable().getTransferData(DataFlavor.stringFlavor);
-            String[] parts = data.split(";", 2);
-            if (parts.length != 2) {
-                return false;
-            }
-            String sourceChecklistName = parts[0];
-            String taskId = parts[1];
-
-            // Find the task by ID
-            Task task = findTaskById(taskId);
-            if (task == null) {
+            TransferData transferData = extractTransferData(support);
+            if (transferData == null) {
                 return false;
             }
 
-            // Determine source model
-            DefaultListModel<Task> sourceModel = null;
-            if ("MORNING".equals(sourceChecklistName)) {
-                sourceModel = morningListModel;
-            } else if ("EVENING".equals(sourceChecklistName)) {
-                sourceModel = eveningListModel;
-            }
-
-            if (sourceChecklistName.equals(checklistName)) {
-                // Reordering within the same checklist
-                // Find the current index of the task
-                int currentIndex = -1;
-                for (int i = 0; i < listModel.getSize(); i++) {
-                    if (listModel.get(i).getId().equals(taskId)) {
-                        currentIndex = i;
-                        break;
-                    }
-                }
-                if (currentIndex >= 0) {
-                    if (currentIndex < dropIndex) {
-                        dropIndex--;
-                    }
-                    listModel.remove(currentIndex);
-                    listModel.add(dropIndex, task);
-                    
-                    // Persist the new order in the underlying data
-                    persistTaskOrder(listModel, checklistName);
-                    
-                    return true;
-                }
+            if (transferData.sourceChecklistName.equals(checklistName)) {
+                return handleSameChecklistReorder(support, transferData, getDropIndex(support));
             } else {
-                // Moving from a different checklist
-                boolean isSourceDaily = "MORNING".equals(sourceChecklistName) || "EVENING".equals(sourceChecklistName);
-                boolean isTargetDaily = "MORNING".equals(checklistName) || "EVENING".equals(checklistName);
-                if (isSourceDaily != isTargetDaily) {
-                    return false; // Disallow moving between daily and custom checklists
-                }
-
-                // Update the task's properties
-                if (("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) && !("MORNING".equals(sourceChecklistName) || "EVENING".equals(sourceChecklistName))) {
-                    // Moving to daily from custom
-                    task.setChecklistName(null);
-                    task.setType("MORNING".equals(checklistName) ? TaskType.MORNING : TaskType.EVENING);
-                } else if (!("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) && ("MORNING".equals(sourceChecklistName) || "EVENING".equals(sourceChecklistName))) {
-                    // Moving to custom from daily
-                    task.setChecklistName(checklistName);
-                    task.setType(TaskType.CUSTOM);
-                } else if (("MORNING".equals(sourceChecklistName) || "EVENING".equals(sourceChecklistName)) && ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) && !sourceChecklistName.equals(checklistName)) {
-                    // Moving between morning and evening
-                    task.setChecklistName(null);
-                    task.setType("MORNING".equals(checklistName) ? TaskType.MORNING : TaskType.EVENING);
-                } else if (!("MORNING".equals(sourceChecklistName) || "EVENING".equals(sourceChecklistName)) && !("MORNING".equals(checklistName) || "EVENING".equals(checklistName))) {
-                    // Moving between custom checklists
-                    task.setChecklistName(checklistName);
-                }
-
-                taskManager.updateTask(task);
-                // Restore focus to the target list for custom checklists
-                if (!("MORNING".equals(checklistName) || "EVENING".equals(checklistName))) {
-                    list.requestFocusInWindow();
-                }
-                return true;
+                return handleCrossChecklistMove(support, transferData, getDropIndex(support));
             }
         } catch (UnsupportedFlavorException | IOException e) {
             return false;
         }
-        return false;
+    }
+
+    private static class TransferData {
+        final String sourceChecklistName;
+        final List<Task> tasks;
+
+        TransferData(String sourceChecklistName, List<Task> tasks) {
+            this.sourceChecklistName = sourceChecklistName;
+            this.tasks = tasks;
+        }
+    }
+
+    private TransferData extractTransferData(TransferHandler.TransferSupport support)
+            throws UnsupportedFlavorException, IOException {
+        String data = (String) support.getTransferable().getTransferData(DataFlavor.stringFlavor);
+        String[] parts = data.split(";", -1);
+        if (parts.length < 2) {
+            return null;
+        }
+
+        String sourceChecklistName = parts[0];
+
+        // Extract all task IDs
+        List<String> taskIds = new ArrayList<>();
+        for (int i = 1; i < parts.length; i++) {
+            if (!parts[i].isEmpty()) {
+                taskIds.add(parts[i]);
+            }
+        }
+
+        if (taskIds.isEmpty()) {
+            return null;
+        }
+
+        // Find all tasks by IDs
+        List<Task> tasks = new ArrayList<>();
+        for (String taskId : taskIds) {
+            Task task = findTaskById(taskId);
+            if (task == null) {
+                return null;
+            }
+            tasks.add(task);
+        }
+
+        return new TransferData(sourceChecklistName, tasks);
+    }
+
+    private boolean handleSameChecklistReorder(TransferHandler.TransferSupport support, TransferData transferData, int dropIndex) {
+        List<Task> tasks = transferData.tasks;
+
+        // Ensure drop index is within valid bounds
+        JList<?> list = (JList<?>) support.getComponent();
+        int originalSize = list.getModel().getSize();
+        if (dropIndex > originalSize) {
+            dropIndex = originalSize;
+        }
+        if (dropIndex < 0) {
+            dropIndex = 0;
+        }
+
+        // Sort tasks by their current position in the list for proper insertion order
+        tasks.sort((t1, t2) -> {
+            int idx1 = -1, idx2 = -1;
+            for (int i = 0; i < listModel.getSize(); i++) {
+                if (listModel.get(i).getId().equals(t1.getId())) idx1 = i;
+                if (listModel.get(i).getId().equals(t2.getId())) idx2 = i;
+            }
+            return Integer.compare(idx1, idx2);
+        });
+
+        // Calculate how many items will be removed before the drop position
+        int itemsRemovedBeforeDrop = 0;
+        for (Task task : tasks) {
+            for (int i = 0; i < listModel.getSize(); i++) {
+                if (listModel.get(i).getId().equals(task.getId())) {
+                    if (i < dropIndex) {
+                        itemsRemovedBeforeDrop++;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Adjust drop index for removals that occur before it
+        dropIndex -= itemsRemovedBeforeDrop;
+
+        // Defer the list model changes to avoid NPE during cleanup
+        final int finalDropIndex = dropIndex;
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            // Remove all tasks from their current positions
+            for (Task task : tasks) {
+                for (int i = 0; i < listModel.getSize(); i++) {
+                    if (listModel.get(i).getId().equals(task.getId())) {
+                        listModel.remove(i);
+                        break;
+                    }
+                }
+            }
+
+            // Ensure drop index is still valid after all removals
+            int adjustedDropIndex = finalDropIndex;
+            if (adjustedDropIndex < 0) {
+                adjustedDropIndex = 0;
+            }
+            if (adjustedDropIndex > listModel.getSize()) {
+                adjustedDropIndex = listModel.getSize();
+            }
+
+            // Insert all tasks at the drop position
+            for (int i = 0; i < tasks.size(); i++) {
+                listModel.add(adjustedDropIndex + i, tasks.get(i));
+            }
+
+            // Persist the new order in the underlying data
+            persistTaskOrder(listModel, checklistName);
+        });
+
+        return true;
+    }
+
+    private boolean handleCrossChecklistMove(TransferHandler.TransferSupport support, TransferData transferData, int dropIndex) {
+        String sourceChecklistName = transferData.sourceChecklistName;
+        List<Task> tasks = transferData.tasks;
+
+        // Check if move is allowed
+        boolean isSourceDaily = "MORNING".equals(sourceChecklistName) || "EVENING".equals(sourceChecklistName);
+        boolean isTargetDaily = "MORNING".equals(checklistName) || "EVENING".equals(checklistName);
+        if (isSourceDaily != isTargetDaily) {
+            return false; // Disallow moving between daily and custom checklists
+        }
+
+        // Ensure drop index is within valid bounds
+        JList<?> list = (JList<?>) support.getComponent();
+        int maxIndex = list.getModel().getSize();
+        if (dropIndex > maxIndex) {
+            dropIndex = maxIndex;
+        }
+        if (dropIndex < 0) {
+            dropIndex = 0;
+        }
+
+        // Defer the list model changes to avoid NPE during cleanup
+        final int finalDropIndex = dropIndex;
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            // Update the properties for all tasks and add them to the target list
+            for (int i = 0; i < tasks.size(); i++) {
+                Task task = tasks.get(i);
+                updateTaskPropertiesForMove(task, sourceChecklistName, checklistName);
+                taskManager.updateTask(task);
+                // Add to the target list model at the drop position
+                listModel.add(finalDropIndex + i, task);
+            }
+
+            // Restore focus to the target list for custom checklists
+            if (!("MORNING".equals(checklistName) || "EVENING".equals(checklistName))) {
+                list.requestFocusInWindow();
+            }
+        });
+
+        return true;
+    }
+
+    private void updateTaskPropertiesForMove(Task task, String sourceChecklistName, String targetChecklistName) {
+        boolean sourceIsDaily = "MORNING".equals(sourceChecklistName) || "EVENING".equals(sourceChecklistName);
+        boolean targetIsDaily = "MORNING".equals(targetChecklistName) || "EVENING".equals(targetChecklistName);
+
+        if (targetIsDaily && !sourceIsDaily) {
+            // Moving to daily from custom
+            task.setChecklistName(null);
+            task.setType("MORNING".equals(targetChecklistName) ? TaskType.MORNING : TaskType.EVENING);
+        } else if (!targetIsDaily && sourceIsDaily) {
+            // Moving to custom from daily
+            task.setChecklistName(targetChecklistName);
+            task.setType(TaskType.CUSTOM);
+        } else if (sourceIsDaily && targetIsDaily && !sourceChecklistName.equals(targetChecklistName)) {
+            // Moving between morning and evening
+            task.setChecklistName(null);
+            task.setType("MORNING".equals(targetChecklistName) ? TaskType.MORNING : TaskType.EVENING);
+        } else if (!sourceIsDaily && !targetIsDaily) {
+            // Moving between custom checklists
+            task.setChecklistName(targetChecklistName);
+        }
     }
 
     private void persistTaskOrder(DefaultListModel<Task> listModel, String checklistName) {
@@ -279,6 +431,19 @@ public class TaskTransferHandler extends TransferHandler {
 
     private static int getDropIndex(TransferSupport support) {
         JList.DropLocation dropLocation = (JList.DropLocation) support.getDropLocation();
-        return dropLocation.getIndex();
+        if (dropLocation == null) {
+            return 0;
+        }
+        int index = dropLocation.getIndex();
+        // Ensure index is within valid bounds for the component
+        JList<?> list = (JList<?>) support.getComponent();
+        int maxIndex = list.getModel().getSize();
+        if (index < 0) {
+            return 0;
+        }
+        if (index > maxIndex) {
+            return maxIndex;
+        }
+        return index;
     }
 }

@@ -202,9 +202,9 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 <h2>Reminder Icon Guide</h2>
 <p>Checklists that have reminders display a small clock icon next to their name. The clock icon indicates reminder time and status:</p>
 <ul>
-<li><b>Red clock</b>: Reminder time is <b>overdue</b> (the scheduled time has passed).</li>
-<li><b>Yellow clock</b>: Reminder is <b>due soon</b> (scheduled within the next 60 minutes).</li>
-<li><b>Blue clock</b>: Reminder is scheduled for the <b>future</b> (more than 60 minutes away).</li>
+<li><b>[RED_CLOCK_ICON]</b>: Reminder time is <b>overdue</b> (the scheduled time has passed).</li>
+<li><b>[YELLOW_CLOCK_ICON]</b>: Reminder is <b>due soon</b> (scheduled within the next 60 minutes).</li>
+<li><b>[BLUE_CLOCK_ICON]</b>: Reminder is scheduled for the <b>future</b> (more than 60 minutes away).</li>
 <li>The icon also shows the reminder time (e.g., "9:30") to the right of the clock for quick reference.</li>
 </ul>
 </body></html>

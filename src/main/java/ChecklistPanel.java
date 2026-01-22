@@ -87,6 +87,8 @@ public class ChecklistPanel extends JPanel {
         JList<Task> taskList = new JList<>(listModel);
         taskList.setCellRenderer(new CheckboxListCellRenderer());
         taskList.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        taskList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Consistent selection color
+        taskList.setSelectionForeground(java.awt.Color.BLACK);
         if (!java.awt.GraphicsEnvironment.isHeadless()) {
             taskList.setDragEnabled(true);
             taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklistName, () -> {

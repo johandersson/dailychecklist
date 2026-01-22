@@ -23,7 +23,6 @@ import java.awt.Font;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -35,8 +34,13 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextPane;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
 
 public class MenuBarBuilder {
     public static JMenuBar build(java.awt.Component parent, TaskManager taskManager, Runnable updateTasks) {
@@ -911,10 +915,37 @@ public class MenuBarBuilder {
                 helpText = "Help file not found. Please refer to the README.md file for detailed instructions.";
             }
 
-            JEditorPane contentPane = new JEditorPane("text/html", helpText);
+            JTextPane contentPane = new JTextPane();
             contentPane.setEditable(false);
             contentPane.setBackground(Color.WHITE);
             contentPane.setBorder(BorderFactory.createEmptyBorder());
+
+            // Set up the styled document
+            StyledDocument doc = contentPane.getStyledDocument();
+
+            // Create styles
+            Style defaultStyle = doc.addStyle("default", null);
+            StyleConstants.setFontFamily(defaultStyle, "Arial");
+            StyleConstants.setFontSize(defaultStyle, 12);
+
+            Style header1Style = doc.addStyle("h1", defaultStyle);
+            StyleConstants.setFontSize(header1Style, 24);
+            StyleConstants.setBold(header1Style, true);
+
+            Style header2Style = doc.addStyle("h2", defaultStyle);
+            StyleConstants.setFontSize(header2Style, 18);
+            StyleConstants.setBold(header2Style, true);
+
+            Style header3Style = doc.addStyle("h3", defaultStyle);
+            StyleConstants.setFontSize(header3Style, 14);
+            StyleConstants.setBold(header3Style, true);
+
+            Style boldStyle = doc.addStyle("bold", defaultStyle);
+            StyleConstants.setBold(boldStyle, true);
+
+            // Parse and insert HTML-like content with icons
+            insertStyledTextWithIcons(doc, helpText, defaultStyle, boldStyle);
+
             JScrollPane scrollPane = new JScrollPane(contentPane);
             scrollPane.setBorder(BorderFactory.createEmptyBorder());
             contentPanel.add(scrollPane, BorderLayout.CENTER);
@@ -967,5 +998,99 @@ public class MenuBarBuilder {
             return "GNU General Public License v3\n\nSee https://www.gnu.org/licenses/gpl-3.0.html for the full text.";
         }
         return sb.toString();
+    }
+
+    private static void insertStyledTextWithIcons(StyledDocument doc, String htmlText, Style defaultStyle, Style boldStyle) {
+        try {
+            // Remove HTML tags and process content
+            String text = htmlText.replaceAll("<[^>]+>", "").trim();
+
+            // Split by lines and process each line
+            String[] lines = text.split("\n");
+            boolean inList = false;
+
+            for (String line : lines) {
+                line = line.trim();
+                if (line.isEmpty()) {
+                    doc.insertString(doc.getLength(), "\n", defaultStyle);
+                    continue;
+                }
+
+                if (line.startsWith("Daily Checklist Help")) {
+                    Style h1Style = doc.addStyle("h1", null);
+                    StyleConstants.setFontFamily(h1Style, "Arial");
+                    StyleConstants.setFontSize(h1Style, 24);
+                    StyleConstants.setBold(h1Style, true);
+                    doc.insertString(doc.getLength(), line + "\n\n", h1Style);
+                } else if (line.startsWith("Getting Started") || line.startsWith("Managing Daily Tasks") ||
+                          line.startsWith("Managing Custom Checklists") || line.startsWith("Reminders") ||
+                          line.startsWith("Focus Timer") || line.startsWith("Reminder Icon Guide")) {
+                    Style h2Style = doc.addStyle("h2", null);
+                    StyleConstants.setFontFamily(h2Style, "Arial");
+                    StyleConstants.setFontSize(h2Style, 18);
+                    StyleConstants.setBold(h2Style, true);
+                    doc.insertString(doc.getLength(), line + "\n\n", h2Style);
+                } else if (line.startsWith("Adding a New Daily Task") || line.startsWith("Viewing Daily Tasks") ||
+                          line.startsWith("Editing Daily Tasks") || line.startsWith("Creating Custom Checklists") ||
+                          line.startsWith("Managing Custom Checklists") || line.startsWith("Setting Reminders") ||
+                          line.startsWith("Using the Focus Timer")) {
+                    Style h3Style = doc.addStyle("h3", null);
+                    StyleConstants.setFontFamily(h3Style, "Arial");
+                    StyleConstants.setFontSize(h3Style, 14);
+                    StyleConstants.setBold(h3Style, true);
+                    doc.insertString(doc.getLength(), line + "\n", h3Style);
+                } else if (line.contains("[RED_CLOCK_ICON]") || line.contains("[YELLOW_CLOCK_ICON]") || line.contains("[BLUE_CLOCK_ICON]")) {
+                    // Handle icon lines
+                    String processedLine = line;
+                    if (line.contains("[RED_CLOCK_ICON]")) {
+                        insertIconAndText(doc, processedLine.replace("[RED_CLOCK_ICON]", ""), new ReminderClockIcon(9, 30, ReminderClockIcon.State.OVERDUE), boldStyle);
+                    } else if (line.contains("[YELLOW_CLOCK_ICON]")) {
+                        insertIconAndText(doc, processedLine.replace("[YELLOW_CLOCK_ICON]", ""), new ReminderClockIcon(9, 30, ReminderClockIcon.State.DUE_SOON), boldStyle);
+                    } else if (line.contains("[BLUE_CLOCK_ICON]")) {
+                        insertIconAndText(doc, processedLine.replace("[BLUE_CLOCK_ICON]", ""), new ReminderClockIcon(9, 30, ReminderClockIcon.State.FUTURE), boldStyle);
+                    }
+                    doc.insertString(doc.getLength(), "\n", defaultStyle);
+                } else if (line.startsWith("-") || line.startsWith("•")) {
+                    // List items
+                    String listItem = line.substring(1).trim();
+                    if (listItem.contains("**")) {
+                        // Handle bold text in list items
+                        String[] parts = listItem.split("\\*\\*");
+                        for (int i = 0; i < parts.length; i++) {
+                            Style style = (i % 2 == 1) ? boldStyle : defaultStyle;
+                            doc.insertString(doc.getLength(), parts[i], style);
+                        }
+                    } else {
+                        doc.insertString(doc.getLength(), "• " + listItem, defaultStyle);
+                    }
+                    doc.insertString(doc.getLength(), "\n", defaultStyle);
+                } else {
+                    // Regular paragraphs
+                    if (line.contains("**")) {
+                        // Handle bold text
+                        String[] parts = line.split("\\*\\*");
+                        for (int i = 0; i < parts.length; i++) {
+                            Style style = (i % 2 == 1) ? boldStyle : defaultStyle;
+                            doc.insertString(doc.getLength(), parts[i], style);
+                        }
+                    } else {
+                        doc.insertString(doc.getLength(), line, defaultStyle);
+                    }
+                    doc.insertString(doc.getLength(), "\n\n", defaultStyle);
+                }
+            }
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void insertIconAndText(StyledDocument doc, String text, ReminderClockIcon icon, Style style) throws BadLocationException {
+        // Insert the icon
+        Style iconStyle = doc.addStyle("icon", null);
+        StyleConstants.setIcon(iconStyle, icon);
+        doc.insertString(doc.getLength(), " ", iconStyle);
+
+        // Insert the text
+        doc.insertString(doc.getLength(), text, style);
     }
 }
