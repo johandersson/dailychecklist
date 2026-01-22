@@ -337,13 +337,15 @@ public class TaskTransferHandler extends TransferHandler {
         // Defer the list model changes to avoid NPE during cleanup
         final int finalDropIndex = dropIndex;
         javax.swing.SwingUtilities.invokeLater(() -> {
-            // Update the properties for all tasks and add them to the target list
-            for (int i = 0; i < tasks.size(); i++) {
-                Task task = tasks.get(i);
+            // Update the properties for all tasks
+            for (Task task : tasks) {
                 updateTaskPropertiesForMove(task, sourceChecklistName, checklistName);
                 taskManager.updateTask(task);
-                // Add to the target list model at the drop position
-                listModel.add(finalDropIndex + i, task);
+            }
+
+            // For daily checklists, reorder the tasks to place moved tasks at the correct position
+            if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
+                reorderTasksForDailyList(checklistName, tasks, finalDropIndex);
             }
 
             // Restore focus to the target list for custom checklists
@@ -427,6 +429,63 @@ public class TaskTransferHandler extends TransferHandler {
         allTasks.addAll(insertIndex, reorderedTasks);
         
         // Save the reordered tasks
+        taskManager.setTasks(allTasks);
+    }
+
+    private void reorderTasksForDailyList(String checklistName, List<Task> movedTasks, int dropIndex) {
+        List<Task> allTasks = new ArrayList<>(taskManager.getAllTasks());
+        TaskType targetType = "MORNING".equals(checklistName) ? TaskType.MORNING : TaskType.EVENING;
+        
+        // Get all tasks of the target type in their current order
+        List<Task> targetTasks = new ArrayList<>();
+        for (Task task : allTasks) {
+            if (task.getType() == targetType) {
+                targetTasks.add(task);
+            }
+        }
+        
+        // Find the insertion point
+        int insertIndex = dropIndex;
+        if (insertIndex > targetTasks.size()) {
+            insertIndex = targetTasks.size();
+        }
+        
+        // Remove moved tasks from their current positions and collect them
+        List<Task> tasksToInsert = new ArrayList<>();
+        for (Task movedTask : movedTasks) {
+            allTasks.removeIf(task -> task.getId().equals(movedTask.getId()));
+            tasksToInsert.add(movedTask);
+        }
+        
+        // Find the position in allTasks where target tasks start
+        int targetStartIndex = -1;
+        for (int i = 0; i < allTasks.size(); i++) {
+            if (allTasks.get(i).getType() == targetType) {
+                targetStartIndex = i;
+                break;
+            }
+        }
+        
+        if (targetStartIndex == -1) {
+            // No target tasks yet, add at the end
+            allTasks.addAll(tasksToInsert);
+        } else {
+            // Find the insertion point within the target tasks
+            int currentTargetIndex = 0;
+            int insertionPoint = targetStartIndex;
+            
+            for (int i = targetStartIndex; i < allTasks.size() && currentTargetIndex < insertIndex; i++) {
+                if (allTasks.get(i).getType() == targetType) {
+                    currentTargetIndex++;
+                    insertionPoint = i + 1;
+                }
+            }
+            
+            // Insert the moved tasks at the correct position
+            allTasks.addAll(insertionPoint, tasksToInsert);
+        }
+        
+        // Update the task manager with the new order
         taskManager.setTasks(allTasks);
     }
 

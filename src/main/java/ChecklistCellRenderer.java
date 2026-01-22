@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.util.List;
 import javax.swing.Icon;
 
@@ -45,7 +47,48 @@ public class ChecklistCellRenderer extends IconListCellRenderer<String> {
 
     @Override
     protected String getTextForValue(String checklistName) {
+        if (checklistName != null) {
+            Reminder nearest = nearestReminderForChecklist(checklistName);
+            if (nearest != null) {
+                ReminderClockIcon.State state = computeState(nearest);
+                if (state == ReminderClockIcon.State.VERY_OVERDUE) {
+                    return checklistName;
+                }
+            }
+        }
         return checklistName;
+    }
+
+    protected Icon getExtraIconForValue(String checklistName) {
+        if (checklistName != null) {
+            Reminder nearest = nearestReminderForChecklist(checklistName);
+            if (nearest != null) {
+                ReminderClockIcon.State state = computeState(nearest);
+                if (state == ReminderClockIcon.State.VERY_OVERDUE) {
+                    return new ZzzIcon();
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2 = (Graphics2D) g;
+
+        // Draw extra icon if present
+        Icon extraIcon = getExtraIconForValue(value);
+        if (extraIcon != null) {
+            String text = getTextForValue(value);
+            if (text != null) {
+                java.awt.FontMetrics fm = g2.getFontMetrics(getFont());
+                int textWidth = fm.stringWidth(text);
+                int iconX = 30 + textWidth + 5; // 30 is textX from base, +5 spacing
+                int iconY = getHeight() / 2 - extraIcon.getIconHeight() / 2;
+                extraIcon.paintIcon(this, g2, iconX, iconY);
+            }
+        }
     }
 
     

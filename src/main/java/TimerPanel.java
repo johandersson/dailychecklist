@@ -21,7 +21,7 @@ import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-
+import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -70,11 +70,16 @@ public class TimerPanel extends JPanel {
             removeAll();
 
             circlePanel = new CirclePanel();
-            add(circlePanel, BorderLayout.NORTH);
-
             timerLabel = new JLabel(formatTime(timeRemaining), SwingConstants.CENTER);
             timerLabel.setFont(new Font("Yu Gothic UI Light", Font.PLAIN, 48));
-            add(timerLabel, BorderLayout.CENTER);
+
+            JPanel centerPanel = new JPanel();
+            centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.X_AXIS));
+            centerPanel.setBackground(Color.WHITE);
+            centerPanel.add(circlePanel);
+            centerPanel.add(javax.swing.Box.createHorizontalStrut(10));
+            centerPanel.add(timerLabel);
+            add(centerPanel, BorderLayout.CENTER);
 
             taskLabel = new JLabel(lastTask, SwingConstants.CENTER);
             taskLabel.setFont(new Font("Yu Gothic UI Light", Font.PLAIN, 24));

@@ -18,7 +18,6 @@
 import java.awt.Dimension;
 import java.awt.GraphicsEnvironment;
 import java.awt.Toolkit;
-
 import javax.swing.JFrame;
 
 public class TimerFrame {
@@ -32,7 +31,7 @@ public class TimerFrame {
             frame.setTitle("Focus Timer");
             frame.setIconImage(createAppIcon());
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setSize(400, 300);
+            frame.setSize(500, 300);
             frame.setAlwaysOnTop(true);
             frame.getContentPane().setBackground(Color.WHITE);
 
