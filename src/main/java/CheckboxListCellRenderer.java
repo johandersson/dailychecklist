@@ -40,9 +40,10 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private Color weekdayColor;
     private boolean isWeekdayTask;
     private Font circleFont; // Font for the text inside the circle
+    private String doneDate; // Timestamp when task was completed
     
     // Cached checkmark image for performance
-    private static BufferedImage checkmarkImage;
+    private static final BufferedImage checkmarkImage;
 
     // Mapping of weekdays to abbreviations and WCAG-compliant colors
     private static final Map<String, String> WEEKDAY_ABBREVIATIONS = new HashMap<>();
@@ -79,7 +80,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
     @SuppressWarnings("this-escape")
     public CheckboxListCellRenderer() {
-        setPreferredSize(new Dimension(200, 40)); // Increase size for visibility
+        setPreferredSize(new Dimension(200, 50)); // Increased height for timestamp display
         this.circleFont = getAvailableFont("Yu Gothic UI", Font.BOLD, 12); // Font for circle text
     }
 
@@ -90,6 +91,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.weekdayAbbreviation = WEEKDAY_ABBREVIATIONS.get(task.getWeekday());
         this.weekdayColor = WEEKDAY_COLORS.get(task.getWeekday());
         this.isWeekdayTask = task.getWeekday() != null && WEEKDAY_ABBREVIATIONS.containsKey(task.getWeekday());
+        this.doneDate = task.getDoneDate();
 
         setFont(new Font("Yu Gothic UI", Font.PLAIN, 14)); // Use consistent font for all task lists
         setOpaque(true); // Ensure background is painted
@@ -157,6 +159,13 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         g2.setColor(Color.BLACK);
         g2.setFont(getFont());
         g2.drawString(taskName, textStartX, getHeight() / 2 + 5);
+        
+        // Draw timestamp if task is checked
+        if (isChecked && doneDate != null && !doneDate.isEmpty()) {
+            g2.setColor(Color.BLACK);
+            g2.setFont(getFont().deriveFont(Font.PLAIN, 10));
+            g2.drawString("✓ " + doneDate, textStartX, getHeight() / 2 + 20);
+        }
     }
 
 
