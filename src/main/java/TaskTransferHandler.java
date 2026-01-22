@@ -350,6 +350,11 @@ public class TaskTransferHandler extends TransferHandler {
             if (!("MORNING".equals(checklistName) || "EVENING".equals(checklistName))) {
                 list.requestFocusInWindow();
             }
+
+            // Update all panels to reflect the changes
+            if (updateAllPanels != null) {
+                updateAllPanels.run();
+            }
         });
 
         return true;

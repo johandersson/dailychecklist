@@ -71,7 +71,11 @@ public class ChecklistCellRenderer extends IconListCellRenderer<String> {
     private ReminderClockIcon.State computeState(Reminder r) {
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         java.time.LocalDateTime dt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-        if (dt.isBefore(now)) return ReminderClockIcon.State.OVERDUE;
+        if (dt.isBefore(now)) {
+            long minutesOverdue = java.time.Duration.between(dt, now).toMinutes();
+            if (minutesOverdue > 60) return ReminderClockIcon.State.VERY_OVERDUE;
+            return ReminderClockIcon.State.OVERDUE;
+        }
         long minutes = java.time.Duration.between(now, dt).toMinutes();
         if (minutes <= 60) return ReminderClockIcon.State.DUE_SOON;
         return ReminderClockIcon.State.FUTURE;
