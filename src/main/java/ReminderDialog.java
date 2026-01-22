@@ -77,8 +77,8 @@ public class ReminderDialog extends JDialog {
 
         JButton openButton = new JButton("Open Checklist");
         openButton.setToolTipText("Open the checklist in the application");
-        JButton dismissButton = new JButton("Dismiss");
-        dismissButton.setToolTipText("Dismiss this reminder");
+        JButton dismissButton = new JButton("Remove Reminders");
+        dismissButton.setToolTipText("Remove all reminders for this checklist");
         JButton markAsDoneButton = new JButton("Mark as Done");
         markAsDoneButton.setToolTipText("Mark all tasks as done and open the checklist");
         JButton remindLaterButton = new JButton("Remind me in 15 minutes");
