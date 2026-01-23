@@ -119,7 +119,7 @@ public class HelpTextRenderer {
 
     private static Style createHeaderStyle(StyledDocument doc, int fontSize) {
         Style style = doc.addStyle("h" + fontSize, null);
-        StyleConstants.setFontFamily(style, "Arial");
+        StyleConstants.setFontFamily(style, FontManager.FONT_NAME);
         StyleConstants.setFontSize(style, fontSize);
         StyleConstants.setBold(style, true);
         return style;

@@ -64,7 +64,7 @@ public class ChecklistPanel extends JPanel {
     }
 
     private void initialize() {
-        showWeekdayTasksCheckbox = new JCheckBox("Show weekday specific tasks");
+        showWeekdayTasksCheckbox = new JCheckBox("Show all weekday tasks");
         showWeekdayTasksCheckbox.addActionListener(e -> updateTasks());
         morningListModel = new DefaultListModel<>();
         eveningListModel = new DefaultListModel<>();

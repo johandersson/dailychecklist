@@ -458,6 +458,14 @@ public class DailyChecklist {
         if (checklistId == null || checklistId.trim().isEmpty()) {
             // Daily checklist
             tabbedPane.setSelectedIndex(0);
+            // If this is a weekday-specific task that is not for today, enable "show all" so it is visible
+            if (task.getWeekday() != null) {
+                String taskWeekday = task.getWeekday().toLowerCase();
+                String currentWeekday = java.time.LocalDateTime.now().getDayOfWeek().toString().toLowerCase();
+                if (!taskWeekday.equals(currentWeekday) && !checklistPanel.isShowWeekdayTasks()) {
+                    checklistPanel.setShowWeekdayTasks(true);
+                }
+            }
             checklistPanel.scrollToTask(task);
         } else {
             // Custom checklist - find the checklist by ID

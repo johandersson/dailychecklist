@@ -39,13 +39,16 @@ public class SearchDialog {
         dialog.setLayout(new BorderLayout());
 
         JPanel searchPanel = new JPanel(new FlowLayout());
-        JTextField searchField = new JTextField(20);
+        JTextField searchField = new JTextField(28);
         searchField.setFont(FontManager.getTaskListFont());
         JButton searchButton = new JButton("Search");
         searchButton.setFont(FontManager.getButtonFont());
+        javax.swing.JCheckBox searchAllWeekdayBox = new javax.swing.JCheckBox("Include all weekday tasks");
+        searchAllWeekdayBox.setToolTipText("When checked, weekday-specific tasks for any weekday will be included in results.");
         searchPanel.add(new JLabel("Search:"));
         searchPanel.add(searchField);
         searchPanel.add(searchButton);
+        searchPanel.add(searchAllWeekdayBox);
 
         JList<Task> resultList = new JList<>();
         CheckboxListCellRenderer renderer = new CheckboxListCellRenderer(true); // Show checklist info in search results
@@ -72,9 +75,16 @@ public class SearchDialog {
 
         Runnable performSearch = () -> {
             String query = searchField.getText().toLowerCase();
+            boolean includeAllWeekday = searchAllWeekdayBox.isSelected();
+            String currentWeekday = java.time.LocalDateTime.now().getDayOfWeek().toString().toLowerCase();
             List<Task> allTasks = taskManager.getAllTasks();
             List<Task> results = allTasks.stream()
                 .filter(task -> task.getName().toLowerCase().contains(query))
+                .filter(task -> {
+                    if (task.getWeekday() == null) return true;
+                    if (includeAllWeekday) return true;
+                    return task.getWeekday().toLowerCase().equals(currentWeekday);
+                })
                 .collect(Collectors.toList());
             resultList.setListData(results.toArray(new Task[0]));
         };
@@ -103,12 +113,7 @@ public class SearchDialog {
         searchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String query = searchField.getText().toLowerCase();
-                List<Task> allTasks = taskManager.getAllTasks();
-                List<Task> results = allTasks.stream()
-                    .filter(task -> task.getName().toLowerCase().contains(query))
-                    .collect(Collectors.toList());
-                resultList.setListData(results.toArray(new Task[0]));
+                performSearch.run();
             }
         });
 
@@ -125,7 +130,7 @@ public class SearchDialog {
 
         closeButton.addActionListener(e -> dialog.dispose());
 
-        dialog.setSize(500, 400);
+        dialog.setSize(640, 420);
         dialog.setLocationRelativeTo(parent);
         dialog.setVisible(true);
     }

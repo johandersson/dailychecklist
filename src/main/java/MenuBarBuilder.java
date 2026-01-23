@@ -54,6 +54,17 @@ public class MenuBarBuilder {
         fileMenu.add(refreshItem);
 
         // Restore from Backup
+        JMenuItem backupNowItem = new JMenuItem("Backup Now");
+        backupNowItem.addActionListener(e -> {
+            try {
+                taskManager.createManualBackup();
+                JOptionPane.showMessageDialog(parent, "Manual backup created.", "Backup", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(parent, "Failed to create manual backup: " + ex.getMessage(), "Backup Failed", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        fileMenu.add(backupNowItem);
+
         JMenuItem restoreItem = new JMenuItem("Restore from Backup");
         restoreItem.addActionListener(e -> {
             BackupRestoreDialog.showRestoreDialog(parent, taskManager, updateTasks);
@@ -178,41 +189,28 @@ public class MenuBarBuilder {
                 helpText = "Help file not found. Please refer to the README.md file for detailed instructions.";
             }
 
+            // Render help content into a styled JTextPane so we can embed Swing Icon instances
             JTextPane contentPane = new JTextPane();
             contentPane.setEditable(false);
             contentPane.setBackground(Color.WHITE);
             contentPane.setBorder(BorderFactory.createEmptyBorder());
 
-            // Set up the styled document
+            // Set up the styled document and let HelpTextRenderer populate it (it also inserts icons)
             StyledDocument doc = contentPane.getStyledDocument();
-
-            // Create styles
             Style defaultStyle = doc.addStyle("default", null);
             StyleConstants.setFontFamily(defaultStyle, FontManager.FONT_NAME);
             StyleConstants.setFontSize(defaultStyle, 12);
-
-            Style header1Style = doc.addStyle("h1", defaultStyle);
-            StyleConstants.setFontSize(header1Style, 24);
-            StyleConstants.setBold(header1Style, true);
-
-            Style header2Style = doc.addStyle("h2", defaultStyle);
-            StyleConstants.setFontSize(header2Style, 18);
-            StyleConstants.setBold(header2Style, true);
-
-            Style header3Style = doc.addStyle("h3", defaultStyle);
-            StyleConstants.setFontSize(header3Style, 14);
-            StyleConstants.setBold(header3Style, true);
-
             Style boldStyle = doc.addStyle("bold", defaultStyle);
             StyleConstants.setBold(boldStyle, true);
 
-            // Parse and insert HTML-like content with icons
             HelpTextRenderer.insertStyledTextWithIcons(doc, helpText, defaultStyle, boldStyle);
 
             JScrollPane scrollPane = new JScrollPane(contentPane);
             scrollPane.setBorder(BorderFactory.createEmptyBorder());
             contentPanel.add(scrollPane, BorderLayout.CENTER);
             helpDialog.add(contentPanel, BorderLayout.CENTER);
+
+            
 
             // Button panel
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
