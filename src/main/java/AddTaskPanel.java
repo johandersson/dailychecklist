@@ -207,7 +207,16 @@ public class AddTaskPanel extends JPanel {
                         return;
                     }
                     String selectedWeekday = (weekdayComboBox != null && weekdayComboBox.isEnabled() && type != TaskType.CUSTOM) ? (String) weekdayComboBox.getSelectedItem() : null;
-                    Task newTask = new Task(taskName.trim(), type, selectedWeekday, checklistName);
+                    // If creating a task for a custom checklist, resolve the checklist id from its name
+                    String checklistIdForTask = null;
+                    if (checklistName != null) {
+                        Checklist found = taskManager.getCustomChecklists().stream()
+                                .filter(c -> checklistName.equals(c.getName()))
+                                .findFirst()
+                                .orElse(null);
+                        if (found != null) checklistIdForTask = found.getId();
+                    }
+                    Task newTask = new Task(taskName.trim(), type, selectedWeekday, checklistIdForTask);
                     taskManager.addTask(newTask);
                     addedTasks.add(newTask);
                 }
