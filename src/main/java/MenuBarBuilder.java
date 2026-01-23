@@ -92,7 +92,7 @@ public class MenuBarBuilder {
 
             // Content panel
             JPanel contentPanel = new JPanel(new BorderLayout());
-            contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            contentPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
             contentPanel.setBackground(Color.WHITE);
             String gpl3Text = Gpl3TextProvider.getGpl3Text();
 
@@ -136,14 +136,14 @@ public class MenuBarBuilder {
 
             // Button panel
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-            buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            buttonPanel.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
             buttonPanel.setBackground(Color.WHITE);
             JButton closeButton = new JButton("Close");
             closeButton.setFont(FontManager.getButtonFont());
             closeButton.setBackground(Color.LIGHT_GRAY);
             closeButton.setForeground(Color.BLACK);
             closeButton.setFocusPainted(false);
-            closeButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+            closeButton.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
             closeButton.addActionListener(ae -> aboutDialog.dispose());
             buttonPanel.add(closeButton);
             aboutDialog.add(buttonPanel, BorderLayout.SOUTH);
@@ -172,7 +172,7 @@ public class MenuBarBuilder {
 
             // Content panel
             JPanel contentPanel = new JPanel(new BorderLayout());
-            contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            contentPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
             contentPanel.setBackground(Color.WHITE);
 
             // Read help text from file
@@ -209,14 +209,14 @@ public class MenuBarBuilder {
 
             // Button panel
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-            buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            buttonPanel.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
             buttonPanel.setBackground(Color.WHITE);
             JButton closeButton = new JButton("Close");
             closeButton.setFont(FontManager.getButtonFont());
             closeButton.setBackground(Color.LIGHT_GRAY);
             closeButton.setForeground(Color.BLACK);
             closeButton.setFocusPainted(false);
-            closeButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+            closeButton.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
             closeButton.addActionListener(ae -> helpDialog.dispose());
             buttonPanel.add(closeButton);
             helpDialog.add(buttonPanel, BorderLayout.SOUTH);

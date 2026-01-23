@@ -44,7 +44,7 @@ public class HtmlErrorDialog extends JDialog {
         scroll.setVisible(false);
 
         JPanel content = new JPanel(new BorderLayout());
-        content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        content.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         content.add(html, BorderLayout.NORTH);
         content.add(scroll, BorderLayout.CENTER);
 

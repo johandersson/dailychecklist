@@ -338,7 +338,7 @@ public class ChecklistPanel extends JPanel {
     private JPanel createPanel(String title, JList<Task> taskList) {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
-        panel.setBorder(BorderFactory.createTitledBorder(title));
+        panel.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
         panel.add(new JScrollPane(taskList), BorderLayout.CENTER);
         return panel;
     }

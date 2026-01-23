@@ -486,6 +486,18 @@ public class DailyChecklist {
         }
     }
 
+    /**
+     * Switches to the Custom Checklists tab and selects the checklist with given name.
+     */
+    public void showCustomChecklist(String checklistName) {
+        if (checklistName == null) return;
+        if (!java.awt.GraphicsEnvironment.isHeadless()) {
+            tabbedPane.setSelectedIndex(1);
+            openedChecklists.add(checklistName);
+        }
+        customChecklistsOverviewPanel.selectChecklistByName(checklistName);
+    }
+
     public void shutdown() {
         if (repository != null) {
             repository.shutdown();

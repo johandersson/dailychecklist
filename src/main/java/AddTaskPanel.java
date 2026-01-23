@@ -79,7 +79,7 @@ public class AddTaskPanel extends JPanel {
         taskField.setLineWrap(true);
         taskField.setWrapStyleWord(true);
         JScrollPane taskScrollPane = new JScrollPane(taskField);
-        taskScrollPane.setBorder(BorderFactory.createTitledBorder("Task name(s) one per line"));
+        taskScrollPane.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
         taskScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         taskScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         taskScrollPane.setPreferredSize(new Dimension(300, 200));

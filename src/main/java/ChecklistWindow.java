@@ -45,6 +45,7 @@ public class ChecklistWindow extends JFrame {
 
         checklistPanel = new CustomChecklistPanel(taskManager, checklist);
         JScrollPane checklistScroll = new JScrollPane(checklistPanel);
+        checklistScroll.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
         CustomAddTaskPanel addPanel = new CustomAddTaskPanel(taskManager, () -> {
             checklistPanel.updateTasks();
@@ -54,6 +55,11 @@ public class ChecklistWindow extends JFrame {
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, checklistScroll, addPanel);
         splitPane.setDividerLocation(400); // Adjust as needed
         splitPane.setResizeWeight(0.7); // More space for checklist
+        splitPane.setDividerSize(6);
+        splitPane.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
+
+        // Make add panel flatter as well
+        if (addPanel != null) addPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
         setLayout(new BorderLayout());
         add(splitPane, BorderLayout.CENTER);

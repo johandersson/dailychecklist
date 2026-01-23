@@ -73,7 +73,7 @@ public class ReminderDialog extends JDialog {
 
         JLabel messageLabel = new JLabel(htmlMessage);
         messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        messageLabel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        messageLabel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
 
         JButton openButton = new JButton("Open Checklist");
         openButton.setToolTipText("Open the checklist in the application");
