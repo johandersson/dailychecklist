@@ -120,6 +120,7 @@ public class MenuBarBuilder {
             contentPane.setEditable(false);
             contentPane.setBackground(Color.WHITE);
             contentPane.setBorder(BorderFactory.createEmptyBorder());
+            contentPane.setCaretPosition(0);
             contentPane.addHyperlinkListener(he -> {
                 if (he.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
                     try {
@@ -199,6 +200,7 @@ public class MenuBarBuilder {
             StyleConstants.setBold(boldStyle, true);
 
             HelpTextRenderer.insertStyledTextWithIcons(doc, helpText, defaultStyle, boldStyle);
+            contentPane.setCaretPosition(0);
 
             JScrollPane scrollPane = new JScrollPane(contentPane);
             scrollPane.setBorder(BorderFactory.createEmptyBorder());

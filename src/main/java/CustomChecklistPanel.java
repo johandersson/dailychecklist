@@ -214,8 +214,8 @@ public class CustomChecklistPanel extends JPanel {
                 ? (Math.abs(diff) > 60L * 60L * 1000L ? ReminderClockIcon.State.VERY_OVERDUE : ReminderClockIcon.State.OVERDUE)
                 : (diff <= 60L * 60L * 1000L ? ReminderClockIcon.State.DUE_SOON : ReminderClockIcon.State.FUTURE);
 
-            // Create icon without its own time text; we'll show date then time in a tight subpanel
-            ReminderClockIcon icon = new ReminderClockIcon(reminder.getHour(), reminder.getMinute(), state, false);
+            // Create icon without its own time text; use cached instance
+            javax.swing.Icon icon = IconCache.getReminderClockIcon(reminder.getHour(), reminder.getMinute(), state, false);
             String dateText = String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
             String timeText = String.format("%02d:%02d", reminder.getHour(), reminder.getMinute());
 

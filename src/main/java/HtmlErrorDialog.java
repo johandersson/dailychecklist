@@ -37,6 +37,7 @@ public class HtmlErrorDialog extends JDialog {
             StringWriter sw = new StringWriter();
             t.printStackTrace(new PrintWriter(sw));
             trace.setText(sw.toString());
+            trace.setCaretPosition(0);
         }
 
         JScrollPane scroll = new JScrollPane(trace);

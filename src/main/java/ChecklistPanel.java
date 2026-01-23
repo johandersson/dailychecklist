@@ -168,7 +168,7 @@ public class ChecklistPanel extends JPanel {
 
         // Label
         javax.swing.JLabel label = new javax.swing.JLabel("Are you sure you want to delete the following tasks?");
-        label.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 5, 10));
+        label.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 4, 6));
         dialog.add(label, java.awt.BorderLayout.NORTH);
 
         // List of tasks

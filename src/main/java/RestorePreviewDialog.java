@@ -65,7 +65,7 @@ public class RestorePreviewDialog {
 
         // Button panel
         JPanel buttonPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 20, 10));
-        buttonPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 12, 12, 12));
+        buttonPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 8, 8, 8));
 
         JButton restoreButton = new JButton("Restore from Backup");
         restoreButton.setFont(restoreButton.getFont().deriveFont(java.awt.Font.BOLD, 12.0f));

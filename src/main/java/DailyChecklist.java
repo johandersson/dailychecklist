@@ -354,9 +354,12 @@ public class DailyChecklist {
         tabbedPane = new JTabbedPane();
         JSplitPane dailySplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, checklistPanel, addTaskPanel);
         dailySplit.setResizeWeight(0.7);
+        dailySplit.setDividerSize(4);
+        dailySplit.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
         tabbedPane.add("Checklist", dailySplit);
         tabbedPane.add("Custom checklists", customChecklistsOverviewPanel);
         frame.add(tabbedPane);
+        // (No forced white backgrounds here) keep platform defaults for window backgrounds.
     }
 
     private void setTitleWithDate() {

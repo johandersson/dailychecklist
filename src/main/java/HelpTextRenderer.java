@@ -32,10 +32,10 @@ public class HelpTextRenderer {
     private static final Map<String, BiFunction<String, Style, Icon>> ICON_CREATORS = new HashMap<>();
 
     static {
-        ICON_CREATORS.put("[RED_CLOCK_ICON]", (content, style) -> new ReminderClockIcon(9, 30, ReminderClockIcon.State.OVERDUE, false));
-        ICON_CREATORS.put("[YELLOW_CLOCK_ICON]", (content, style) -> new ReminderClockIcon(9, 30, ReminderClockIcon.State.DUE_SOON, false));
-        ICON_CREATORS.put("[BLUE_CLOCK_ICON]", (content, style) -> new ReminderClockIcon(9, 30, ReminderClockIcon.State.FUTURE, false));
-        ICON_CREATORS.put("[ZZZ_ICON]", (content, style) -> new ZzzIcon());
+        ICON_CREATORS.put("[RED_CLOCK_ICON]", (content, style) -> IconCache.getReminderClockIcon(9, 30, ReminderClockIcon.State.OVERDUE, false));
+        ICON_CREATORS.put("[YELLOW_CLOCK_ICON]", (content, style) -> IconCache.getReminderClockIcon(9, 30, ReminderClockIcon.State.DUE_SOON, false));
+        ICON_CREATORS.put("[BLUE_CLOCK_ICON]", (content, style) -> IconCache.getReminderClockIcon(9, 30, ReminderClockIcon.State.FUTURE, false));
+        ICON_CREATORS.put("[ZZZ_ICON]", (content, style) -> IconCache.getZzzIcon());
     }
 
     /**
