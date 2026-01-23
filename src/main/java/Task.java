@@ -25,27 +25,27 @@ public class Task {
     private TaskType type;
     private String weekday;
     private boolean done;
-    private String checklistName;
+    private String checklistId; // Changed from checklistName to checklistId
     // Constructor when loading from file (ID provided)
-    public Task(String id, String name, TaskType type, String weekday, boolean done, String doneDate, String checklistName) {
+    public Task(String id, String name, TaskType type, String weekday, boolean done, String doneDate, String checklistId) {
         this.id = id;
         this.name = name;
         this.type = type;
         this.weekday = weekday;
         this.done = done;
         this.doneDate = doneDate;
-        this.checklistName = checklistName != null ? checklistName.trim() : null;
+        this.checklistId = checklistId != null ? checklistId.trim() : null;
     }
 
     // Constructor when creating a new task (ID generated)
-    public Task(String name, TaskType type, String weekday, String checklistName) {
+    public Task(String name, TaskType type, String weekday, String checklistId) {
         this.id = UUID.randomUUID().toString();
         this.name = name;
         this.type = type;
         this.weekday = weekday;
         this.done = false;
         this.doneDate = null;
-        this.checklistName = checklistName != null ? checklistName.trim() : null;
+        this.checklistId = checklistId != null ? checklistId.trim() : null;
     }
 
     // Constructor for backwards compatibility (checklistName = null)
@@ -108,14 +108,15 @@ public class Task {
     @Override
     public String toString() {
         return "Task [id=" + id + ", name=" + name + ", type=" + type
-                + ", weekday=" + weekday + ", done=" + done + ", checklistName=" + checklistName + "]";
+                + ", weekday=" + weekday + ", done=" + done + ", checklistId=" + checklistId + "]";
     }
 
-    public String getChecklistName() {
-        return checklistName;
+    public String getChecklistId() {
+        return checklistId;
     }
-    public void setChecklistName(String checklistName) {
-        this.checklistName = checklistName;
+
+    public void setChecklistId(String checklistId) {
+        this.checklistId = checklistId != null ? checklistId.trim() : null;
     }
 
     public String getDoneDate() {

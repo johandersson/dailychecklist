@@ -41,8 +41,8 @@ import javax.swing.JTextField;
 @SuppressWarnings("serial")
 public class CustomChecklistsOverviewPanel extends JPanel {
     private static final long serialVersionUID = 1L;
-    private JList<String> checklistList;
-    private DefaultListModel<String> listModel;
+    private JList<Checklist> checklistList;
+    private DefaultListModel<Checklist> listModel;
     private final transient TaskManager taskManager;
     private transient Runnable updateTasks;
     private JTextField newChecklistField;
@@ -50,16 +50,16 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private JSplitPane splitPane;
     private JPanel rightPanel;
     private CustomChecklistPanel currentChecklistPanel;
-    private String selectedChecklistName;
+    private Checklist selectedChecklist;
     private AddTaskPanel currentAddPanel;
-    private Set<String> allChecklistNames;
+    private Set<Checklist> allChecklists;
     private Map<String, CustomChecklistPanel> panelMap = new HashMap<>();
 
     @SuppressWarnings("this-escape")
     public CustomChecklistsOverviewPanel(TaskManager taskManager, Runnable updateTasks) {
         this.taskManager = taskManager;
         this.updateTasks = updateTasks;
-        this.allChecklistNames = new java.util.HashSet<>();
+        this.allChecklists = new java.util.HashSet<>();
         initialize();
         // Listen for model changes and refresh overview
         try {
@@ -77,7 +77,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         checklistList.setDropMode(DropMode.ON);
         checklistList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
-                String selected = checklistList.getSelectedValue();
+                Checklist selected = checklistList.getSelectedValue();
                 selectChecklist(selected);
             }
         });
@@ -88,7 +88,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                     int index = checklistList.locationToIndex(e.getPoint());
                     if (index >= 0) {
                         checklistList.setSelectedIndex(index);
-                        selectedChecklistName = checklistList.getSelectedValue();
+                        selectedChecklist = checklistList.getSelectedValue();
                         showChecklistPopup(e.getX(), e.getY());
                     }
                 }
@@ -99,7 +99,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                     int index = checklistList.locationToIndex(e.getPoint());
                     if (index >= 0) {
                         checklistList.setSelectedIndex(index);
-                        selectedChecklistName = checklistList.getSelectedValue();
+                        selectedChecklist = checklistList.getSelectedValue();
                         showChecklistPopup(e.getX(), e.getY());
                     }
                 }
@@ -135,8 +135,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         setLayout(new BorderLayout());
         add(splitPane, BorderLayout.CENTER);
         
-        // Initialize with existing checklist names
-        allChecklistNames.addAll(taskManager.getCustomChecklistNames());
+        // Initialize with existing checklists
+        allChecklists.addAll(taskManager.getCustomChecklists());
+        updateChecklistList();
     }
 
     private void createNewChecklist() {
@@ -145,25 +146,32 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         if (name == null) {
             return;
         }
-        Set<String> existing = taskManager.getCustomChecklistNames();
-        if (existing.contains(name)) {
+        Set<Checklist> existing = taskManager.getCustomChecklists();
+        boolean nameExists = existing.stream().anyMatch(c -> name.equals(c.getName()));
+        if (nameExists) {
             JOptionPane.showMessageDialog(this, "Checklist name already exists.");
             return;
         }
         // Remove any orphaned tasks with this name
         List<Task> allTasks = taskManager.getAllTasks();
         for (Task task : allTasks) {
-            if (name.equals(task.getChecklistName())) {
-                taskManager.removeTask(task);
+            if (task.getChecklistId() != null) {
+                Checklist taskChecklist = taskManager.getCustomChecklists().stream()
+                    .filter(c -> task.getChecklistId().equals(c.getId()))
+                    .findFirst().orElse(null);
+                if (taskChecklist != null && name.equals(taskChecklist.getName())) {
+                    taskManager.removeTask(task);
+                }
             }
         }
         newChecklistField.setText("");
-        allChecklistNames.add(name);  // Track the new checklist
-        taskManager.addChecklistName(name);  // Persist the checklist name
-        updateTasks();  // Update the list model first
-        selectChecklist(name);  // Then select it
+        Checklist newChecklist = new Checklist(name);
+        allChecklists.add(newChecklist);  // Track the new checklist
+        taskManager.addChecklist(newChecklist);  // Persist the checklist
+        updateChecklistList();  // Update the list model first
+        selectChecklist(newChecklist);  // Then select it
         updateTasks.run();  // Update other panels
-        checklistList.setSelectedValue(name, true);
+        checklistList.setSelectedValue(newChecklist, true);
         // Ensure UI refreshes
         checklistList.revalidate();
         checklistList.repaint();
@@ -173,26 +181,34 @@ public class CustomChecklistsOverviewPanel extends JPanel {
      * Public method to select a checklist by name (used by reminders)
      */
     public void selectChecklistByName(String checklistName) {
-        selectChecklist(checklistName);
-        if (checklistName != null) {
-            checklistList.setSelectedValue(checklistName, true);
+        // Find checklist by name
+        Checklist checklist = null;
+        for (Checklist c : allChecklists) {
+            if (checklistName.equals(c.getName())) {
+                checklist = c;
+                break;
+            }
+        }
+        selectChecklist(checklist);
+        if (checklist != null) {
+            checklistList.setSelectedValue(checklist, true);
         }
     }
 
-    private void selectChecklist(String checklistName) {
-        selectedChecklistName = checklistName;
+    private void selectChecklist(Checklist checklist) {
+        selectedChecklist = checklist;
         if (currentChecklistPanel != null) {
             rightPanel.remove(currentChecklistPanel);
         }
         if (currentAddPanel != null) {
             rightPanel.remove(currentAddPanel);
         }
-        if (checklistName != null) {
+        if (checklist != null) {
             // Reuse existing panel from panelMap if available, otherwise create new one
-            currentChecklistPanel = panelMap.get(checklistName);
+            currentChecklistPanel = panelMap.get(checklist.getId());
             if (currentChecklistPanel == null) {
-                currentChecklistPanel = new CustomChecklistPanel(taskManager, checklistName, this::updateTasks);
-                panelMap.put(checklistName, currentChecklistPanel);
+                currentChecklistPanel = new CustomChecklistPanel(taskManager, checklist, this::updateTasks);
+                panelMap.put(checklist.getId(), currentChecklistPanel);
             }
             currentChecklistPanel.updateTasks();
             rightPanel.add(currentChecklistPanel);
@@ -203,7 +219,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                     rightPanel.repaint();
                 }
                 updateTasks.run();
-            }, checklistName);
+            }, selectedChecklist != null ? selectedChecklist.getName() : null);
             rightPanel.add(currentAddPanel);
         } else {
             currentChecklistPanel = null;
@@ -215,30 +231,15 @@ public class CustomChecklistsOverviewPanel extends JPanel {
 
     public void updateTasks() {
         // Preserve selection
-        String selectedChecklist = checklistList.getSelectedValue();
-        
-        listModel.clear();
-        Set<String> names = taskManager.getCustomChecklistNames();
-        // Add all checklists that have tasks
-        for (String name : names) {
-            listModel.addElement(name);
-            allChecklistNames.add(name);  // Ensure we track all existing checklists
-        }
-        // Add all known checklists (including empty ones)
-        for (String name : allChecklistNames) {
-            if (!listModel.contains(name)) {
-                listModel.addElement(name);
-            }
-        }
-        
-        // Clean up panelMap - remove panels for checklists that no longer exist
-        panelMap.keySet().removeIf(checklistName -> !allChecklistNames.contains(checklistName));
-        
+        Checklist selectedChecklist = checklistList.getSelectedValue();
+
+        updateChecklistList();
+
         // Restore selection
         if (selectedChecklist != null && listModel.contains(selectedChecklist)) {
             checklistList.setSelectedValue(selectedChecklist, true);
         }
-        
+
         if (currentChecklistPanel != null) {
             currentChecklistPanel.updateTasks();
             currentChecklistPanel.requestSelectionFocus();
@@ -251,6 +252,19 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         checklistList.repaint();
     }
 
+    private void updateChecklistList() {
+        listModel.clear();
+        Set<Checklist> checklists = taskManager.getCustomChecklists();
+        // Add all checklists
+        for (Checklist checklist : checklists) {
+            listModel.addElement(checklist);
+            allChecklists.add(checklist);  // Ensure we track all existing checklists
+        }
+
+        // Clean up panelMap - remove panels for checklists that no longer exist
+        panelMap.keySet().removeIf(checklistId -> allChecklists.stream().noneMatch(c -> checklistId.equals(c.getId())));
+    }
+
     private void showChecklistPopup(int x, int y) {
         JPopupMenu menu = new JPopupMenu();
         JMenuItem renameItem = new JMenuItem("Rename");
@@ -261,26 +275,26 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         menu.add(deleteItem);
         // If a reminder exists for this checklist, label should indicate edit
         boolean hasReminderForSelected = false;
-        if (selectedChecklistName != null) {
-            hasReminderForSelected = taskManager.getReminders().stream().anyMatch(r -> r.getChecklistName().equals(selectedChecklistName));
+        if (selectedChecklist != null) {
+            hasReminderForSelected = taskManager.getReminders().stream().anyMatch(r -> r.getChecklistName().equals(selectedChecklist.getName()));
         }
         JMenuItem addReminderItem = new JMenuItem(hasReminderForSelected ? "Edit Reminder" : "Set Reminder");
         addReminderItem.addActionListener(e -> setReminder());
         menu.add(addReminderItem);
         // Only offer remove when there actually are reminders
-        if (selectedChecklistName != null && taskManager.getReminders().stream().anyMatch(r -> r.getChecklistName().equals(selectedChecklistName))) {
+        if (selectedChecklist != null && taskManager.getReminders().stream().anyMatch(r -> r.getChecklistName().equals(selectedChecklist.getName()))) {
             JMenuItem removeReminderItem = new JMenuItem("Remove Reminder");
             removeReminderItem.addActionListener(e -> {
-                if (selectedChecklistName == null) return;
+                if (selectedChecklist == null) return;
                 List<Reminder> allReminders = taskManager.getReminders();
                 List<Reminder> toRemove = allReminders.stream()
-                        .filter(r -> r.getChecklistName().equals(selectedChecklistName))
+                        .filter(r -> r.getChecklistName().equals(selectedChecklist.getName()))
                         .toList();
                 if (toRemove.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "No reminders to remove for '" + selectedChecklistName + "'.");
+                    JOptionPane.showMessageDialog(this, "No reminders to remove for '" + selectedChecklist.getName() + "'.");
                     return;
                 }
-                int res = JOptionPane.showConfirmDialog(this, "Remove reminder(s) for '" + selectedChecklistName + "'?", "Confirm", JOptionPane.YES_NO_OPTION);
+                int res = JOptionPane.showConfirmDialog(this, "Remove reminder(s) for '" + selectedChecklist.getName() + "'?", "Confirm", JOptionPane.YES_NO_OPTION);
                 if (res == JOptionPane.YES_OPTION) {
                     toRemove.forEach(taskManager::removeReminder);
                     // Restore focus to the task list
@@ -299,18 +313,24 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     }
 
     private void renameChecklist() {
-        String oldName = selectedChecklistName;
-        if (oldName == null) return;
+        if (selectedChecklist == null) return;
+        String oldName = selectedChecklist.getName();
         String rawNewName = JOptionPane.showInputDialog(this, "Enter new name:", oldName);
         String newName = TaskManager.validateInputWithError(rawNewName, "Checklist name");
         if (newName != null && !newName.equals(oldName)) {
-            List<Task> allTasks = taskManager.getAllTasks();
-            for (Task task : allTasks) {
-                if (task.getChecklistName() != null && task.getChecklistName().equals(oldName)) {
-                    task.setChecklistName(newName);
-                    taskManager.updateTask(task);
-                }
+            // Check if name already exists
+            boolean nameExists = allChecklists.stream().anyMatch(c -> newName.equals(c.getName()) && !selectedChecklist.getId().equals(c.getId()));
+            if (nameExists) {
+                JOptionPane.showMessageDialog(this, "Checklist name already exists.");
+                return;
             }
+
+            // Update the checklist name
+            taskManager.getCustomChecklists().stream()
+                .filter(c -> selectedChecklist.getId().equals(c.getId()))
+                .findFirst()
+                .ifPresent(c -> taskManager.updateChecklistName(c, newName));
+
             // Also update reminders
             List<Reminder> reminders = taskManager.getReminders();
             for (Reminder r : reminders) {
@@ -321,22 +341,18 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 }
             }
             updateTasks.run();
-            allChecklistNames.remove(oldName);  // Remove old name
-            allChecklistNames.add(newName);     // Add new name
-            taskManager.removeChecklistName(oldName);  // Remove old name from persistent storage
-            taskManager.addChecklistName(newName);     // Add new name to persistent storage
             // Update panelMap key
-            if (panelMap.containsKey(oldName)) {
-                CustomChecklistPanel panel = panelMap.remove(oldName);
-                panelMap.put(newName, panel);
+            if (panelMap.containsKey(selectedChecklist.getId())) {
+                CustomChecklistPanel panel = panelMap.remove(selectedChecklist.getId());
+                panelMap.put(selectedChecklist.getId(), panel);
             }
-            selectChecklist(newName);
+            selectChecklist(selectedChecklist);
         }
     }
 
     private void deleteChecklist() {
-        String name = selectedChecklistName;
-        if (name == null) return;
+        if (selectedChecklist == null) return;
+        String name = selectedChecklist.getName();
         Object[] options = {"Delete list", "Move to morning", "Move to evening", "Cancel"};
         int choice = JOptionPane.showOptionDialog(this, "What to do with the tasks in '" + name + "'?", "Delete Checklist", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[3]);
         switch (choice) {
@@ -344,15 +360,15 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 // Delete list
                 List<Task> allTasks = taskManager.getAllTasks();
                 for (Task task : allTasks) {
-                    if (task.getChecklistName() != null && task.getChecklistName().equals(name)) {
+                    if (task.getChecklistId() != null && task.getChecklistId().equals(selectedChecklist.getId())) {
                         taskManager.removeTask(task);
                     }
                 }
             }
             case 1 -> // Move to morning
-                moveTasksToType(name, TaskType.MORNING);
+                moveTasksToType(selectedChecklist.getId(), TaskType.MORNING);
             case 2 -> // Move to evening
-                moveTasksToType(name, TaskType.EVENING);
+                moveTasksToType(selectedChecklist.getId(), TaskType.EVENING);
             case 3 -> // Cancel - do nothing
                 {
                     return;
@@ -362,21 +378,21 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                     return;
                 }
         }
-        
+
         // Remove all reminders for this checklist
         List<Reminder> allReminders = taskManager.getReminders();
         allReminders.stream()
             .filter(reminder -> Objects.equals(reminder.getChecklistName(), name))
             .forEach(taskManager::removeReminder);
-            
-        allChecklistNames.remove(name);  // Remove from tracked checklists
-        taskManager.removeChecklistName(name);  // Remove from persistent storage
-        panelMap.remove(name);  // Remove panel from cache
+
+        allChecklists.remove(selectedChecklist);  // Remove from tracked checklists
+        taskManager.removeChecklist(selectedChecklist);  // Remove from persistent storage
+        panelMap.remove(selectedChecklist.getId());  // Remove panel from cache
         updateTasks();  // Refresh the local checklist list
         updateTasks.run();  // Update other panels
         // After deletion, select the first checklist if available
         if (listModel.size() > 0) {
-            String firstChecklist = listModel.get(0);
+            Checklist firstChecklist = listModel.get(0);
             selectChecklist(firstChecklist);
             checklistList.setSelectedValue(firstChecklist, true);
         } else {
@@ -385,12 +401,12 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         }
     }
 
-    private void moveTasksToType(String checklistName, TaskType type) {
+    private void moveTasksToType(String checklistId, TaskType type) {
         List<Task> allTasks = taskManager.getAllTasks();
         for (Task task : allTasks) {
-            if (task.getChecklistName() != null && task.getChecklistName().equals(checklistName)) {
+            if (task.getChecklistId() != null && task.getChecklistId().equals(checklistId)) {
                 task.setType(type);
-                task.setChecklistName(null);
+                task.setChecklistId(null);
                 task.setDone(false);
                 task.setDoneDate(null);
                 taskManager.updateTask(task);
@@ -399,17 +415,17 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     }
 
     private void setReminder() {
-        if (selectedChecklistName == null) return;
+        if (selectedChecklist == null) return;
 
         // Check if a reminder already exists for this checklist
         List<Reminder> allReminders = taskManager.getReminders();
         Reminder existingReminder = allReminders.stream()
-                .filter(r -> r.getChecklistName().equals(selectedChecklistName))
+                .filter(r -> r.getChecklistName().equals(selectedChecklist.getName()))
                 .findFirst()
                 .orElse(null);
 
         // Save logical selection state
-        final String checklistToRestore = selectedChecklistName;
+        final Checklist checklistToRestore = selectedChecklist;
         final String selectedTaskId;
         String _tmpSelectedTaskId = null;
         if (rightPanel != null && rightPanel.getComponentCount() > 0) {
@@ -420,7 +436,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             }
         selectedTaskId = _tmpSelectedTaskId;
 
-        ReminderEditDialog dialog = new ReminderEditDialog(taskManager, selectedChecklistName, existingReminder, null);
+        ReminderEditDialog dialog = new ReminderEditDialog(taskManager, selectedChecklist.getName(), existingReminder, null);
         dialog.setVisible(true);
 
         // After dialog returns (modal), reapply selection and focus

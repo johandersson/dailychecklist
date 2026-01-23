@@ -16,7 +16,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import java.awt.BorderLayout;
-
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -26,31 +25,31 @@ public class ChecklistWindow extends JFrame {
     private static final long serialVersionUID = 1L;
     private CustomChecklistPanel checklistPanel;
     private transient TaskManager taskManager;
-    private String checklistName;
+    private Checklist checklist;
     private transient Runnable updateTasks;
 
     @SuppressWarnings("this-escape")
-    public ChecklistWindow(TaskManager taskManager, Runnable updateTasks, String checklistName) {
+    public ChecklistWindow(TaskManager taskManager, Runnable updateTasks, Checklist checklist) {
         this.taskManager = taskManager;
         this.updateTasks = updateTasks;
-        this.checklistName = checklistName;
+        this.checklist = checklist;
         initialize();
     }
 
     private void initialize() {
-        setTitle("Checklist: " + checklistName);
+        setTitle("Checklist: " + checklist.getName());
         setIconImage(createAppIcon());
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(400, 700); // Increased height for split
         setLocationRelativeTo(null);
 
-        checklistPanel = new CustomChecklistPanel(taskManager, checklistName);
+        checklistPanel = new CustomChecklistPanel(taskManager, checklist);
         JScrollPane checklistScroll = new JScrollPane(checklistPanel);
 
         CustomAddTaskPanel addPanel = new CustomAddTaskPanel(taskManager, () -> {
             checklistPanel.updateTasks();
             updateTasks.run();
-        }, checklistName);
+        }, checklist.getName());
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, checklistScroll, addPanel);
         splitPane.setDividerLocation(400); // Adjust as needed
