@@ -18,11 +18,23 @@
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.stream.Collectors;
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFileChooser;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.ListSelectionModel;
 
 /**
  * Dialog for restoring data from backup with confirmation and diff display.
@@ -34,46 +46,169 @@ public class BackupRestoreDialog {
      * Shows the restore from backup dialog.
      */
     public static void showRestoreDialog(Component parent, TaskManager taskManager, Runnable updateTasks) {
-        // Find the latest backup
-        File latestBackup = findLatestBackup();
-        if (latestBackup == null) {
-            JOptionPane.showMessageDialog(parent,
-                "No backup files found.",
-                "No Backup Available",
-                JOptionPane.INFORMATION_MESSAGE);
+        // Let the user pick a backup ZIP file instead of auto-selecting the latest.
+        JFileChooser chooser = new JFileChooser(ApplicationConfiguration.BACKUP_DIRECTORY);
+        chooser.setDialogTitle("Select backup ZIP to restore from");
+        chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        int res = chooser.showOpenDialog(parent);
+        if (res != JFileChooser.APPROVE_OPTION) {
             return;
         }
+        File chosen = chooser.getSelectedFile();
 
-        // Load backup data
-        List<Task> backupTasks = loadBackupTasks(latestBackup);
+        // Read available checklists from the selected ZIP
+        Map<String,String> checklists = readChecklistsFromZip(chosen);
+
+        // Load all tasks from the ZIP and filter for MORNING and EVENING tasks
+        List<Task> backupTasks = loadBackupTasks(chosen);
         if (backupTasks == null) {
-            JOptionPane.showMessageDialog(parent,
-                "Failed to load backup data.",
-                "Load Error",
-                JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(parent, "Failed to load backup tasks.", "Load Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Load current data
-        List<Task> currentTasks = taskManager.getAllTasks();
+        List<Task> toImport = backupTasks.stream()
+            .filter(t -> t.getType() == TaskType.MORNING || t.getType() == TaskType.EVENING)
+            .collect(Collectors.toList());
 
-        // Show diff dialog with confirmation
-        showDiffDialog(parent, currentTasks, backupTasks, latestBackup, () -> {
-            // Perform restore
+        if (toImport.isEmpty()) {
+            JOptionPane.showMessageDialog(parent, "No morning/evening tasks found in the selected backup.", "Nothing To Import", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Compute how many checklists would be added
+        int newChecklistCount = 0;
+        try {
+            File liveFile = new File(ApplicationConfiguration.CHECKLIST_NAMES_FILE_PATH);
+            java.util.Set<String> liveKeys = new java.util.HashSet<>();
+            if (liveFile.exists()) {
+                Properties p = new Properties();
+                try (InputStreamReader r = new InputStreamReader(new java.io.FileInputStream(liveFile), StandardCharsets.UTF_8)) {
+                    p.load(r);
+                }
+                for (String k : p.stringPropertyNames()) liveKeys.add(k);
+            }
+            for (String k : checklists.keySet()) if (!liveKeys.contains(k)) newChecklistCount++;
+        } catch (Exception ex) {
+            newChecklistCount = checklists.size();
+        }
+
+        // Ask user to confirm import with stats
+        String msg = String.format("This import will add %d custom checklist(s) and import %d morning/evening task(s). Proceed?", newChecklistCount, toImport.size());
+        int conf = JOptionPane.showConfirmDialog(parent, msg, "Confirm Import", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (conf != JOptionPane.YES_OPTION) return;
+
+        // Backup current data file before merging
+        File liveBackup = backupLiveData();
+
+        // Merge checklist names into live properties
+        if (!checklists.isEmpty()) mergeChecklistsToLive(checklists);
+
+        // Merge imported tasks into current tasks (avoid duplicates)
+        List<Task> currentTasks = taskManager.getAllTasks();
+        List<String> existingIds = currentTasks.stream().map(Task::getId).collect(Collectors.toList());
+        for (Task t : toImport) {
+            if (!existingIds.contains(t.getId())) {
+                currentTasks.add(t);
+            }
+        }
+
+        // Show diff and confirm merge
+        showDiffDialog(parent, taskManager.getAllTasks(), currentTasks, chosen, () -> {
             try {
-                taskManager.setTasks(backupTasks);
+                taskManager.setTasks(currentTasks);
                 updateTasks.run();
-                JOptionPane.showMessageDialog(parent,
-                    "Data restored successfully from backup.",
-                    "Restore Complete",
-                    JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(parent, "Imported morning/evening tasks and merged checklists." + (liveBackup!=null?" (backup created)":""), "Import Complete", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(parent,
-                    "Failed to restore data: " + e.getMessage(),
-                    "Restore Failed",
-                    JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(parent, "Failed to import tasks: " + e.getMessage(), "Import Failed", JOptionPane.ERROR_MESSAGE);
             }
         });
+    }
+
+    private static void mergeChecklistsToLive(Map<String,String> checklists) {
+        try {
+            File f = new File(ApplicationConfiguration.CHECKLIST_NAMES_FILE_PATH);
+            Properties live = new Properties();
+            if (f.exists()) {
+                try (InputStreamReader r = new InputStreamReader(new java.io.FileInputStream(f), StandardCharsets.UTF_8)) {
+                    live.load(r);
+                }
+            } else {
+                // ensure directory exists
+                new File(ApplicationConfiguration.APPLICATION_DATA_DIR).mkdirs();
+            }
+            boolean changed = false;
+            for (Map.Entry<String,String> e : checklists.entrySet()) {
+                if (!live.containsKey(e.getKey())) {
+                    live.setProperty(e.getKey(), e.getValue());
+                    changed = true;
+                }
+            }
+            if (changed) {
+                try (java.io.OutputStreamWriter w = new java.io.OutputStreamWriter(new java.io.FileOutputStream(f), StandardCharsets.UTF_8)) {
+                    live.store(w, "Merged from backup on " + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()));
+                }
+            }
+        } catch (Exception ex) {
+            // ignore merge failures
+        }
+    }
+
+    private static Map<String,String> readChecklistsFromZip(File backupFile) {
+        Map<String,String> map = new LinkedHashMap<>();
+        try (java.util.zip.ZipFile zipFile = new java.util.zip.ZipFile(backupFile)) {
+            java.util.zip.ZipEntry entry = zipFile.getEntry("checklist-names.properties");
+            if (entry == null) return map;
+            try (InputStream is = zipFile.getInputStream(entry);
+                 InputStreamReader r = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+                Properties p = new Properties();
+                p.load(r);
+                for (String key : p.stringPropertyNames()) {
+                    map.put(key, p.getProperty(key));
+                }
+            }
+        } catch (Exception e) {
+            // ignore and return empty map
+        }
+        return map;
+    }
+
+    private static List<String> chooseChecklistsDialog(Component parent, Map<String,String> checklists) {
+        List<String> ids = new ArrayList<>();
+        String[] display = new String[checklists.size()];
+        int idx = 0;
+        for (Map.Entry<String,String> e : checklists.entrySet()) {
+            display[idx++] = e.getValue() + " (" + e.getKey() + ")";
+        }
+        JList<String> list = new JList<>(display);
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        JScrollPane scroll = new JScrollPane(list);
+        int res = JOptionPane.showConfirmDialog(parent, scroll, "Select checklists to import", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (res != JOptionPane.OK_OPTION) return ids;
+        int[] sel = list.getSelectedIndices();
+        if (sel == null || sel.length == 0) return ids;
+        String[] keys = checklists.keySet().toArray(new String[0]);
+        for (int i : sel) {
+            if (i >= 0 && i < keys.length) ids.add(keys[i]);
+        }
+        return ids;
+    }
+
+    private static File backupLiveData() {
+        try {
+            File live = new File(ApplicationConfiguration.getDataFilePath());
+            if (!live.exists()) return null;
+            String stamp = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new java.util.Date());
+            File target = new File(ApplicationConfiguration.APPLICATION_DATA_DIR + File.separator + "tasks.xml.pre-restore-" + stamp + ".bak");
+            try (java.io.InputStream is = new java.io.FileInputStream(live);
+                 java.io.OutputStream os = new java.io.FileOutputStream(target)) {
+                byte[] buf = new byte[4096];
+                int r;
+                while ((r = is.read(buf)) > 0) os.write(buf, 0, r);
+            }
+            return target;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private static File findLatestBackup() {

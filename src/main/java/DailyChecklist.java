@@ -108,7 +108,7 @@ public class DailyChecklist {
             frame.setJMenuBar(MenuBarBuilder.build(frame, checklistManager, () -> {
                 checklistPanel.updateTasks();
                 customChecklistsOverviewPanel.updateTasks();
-            }));
+            }, this));
             setTitleWithDate();
         }
         checklistPanel.setShowWeekdayTasks(settingsManager.getShowWeekdayTasks());
