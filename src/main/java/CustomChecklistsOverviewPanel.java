@@ -231,13 +231,13 @@ public class CustomChecklistsOverviewPanel extends JPanel {
 
     public void updateTasks() {
         // Preserve selection
-        Checklist selectedChecklist = checklistList.getSelectedValue();
+        Checklist previousSelection = checklistList.getSelectedValue();
 
         updateChecklistList();
 
         // Restore selection
-        if (selectedChecklist != null && listModel.contains(selectedChecklist)) {
-            checklistList.setSelectedValue(selectedChecklist, true);
+        if (previousSelection != null && listModel.contains(previousSelection)) {
+            checklistList.setSelectedValue(previousSelection, true);
         }
 
         if (currentChecklistPanel != null) {

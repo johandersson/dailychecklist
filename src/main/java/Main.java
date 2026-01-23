@@ -17,6 +17,7 @@
  */
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
 public class Main {
     private static ApplicationLifecycleManager lifecycleManager;
@@ -31,6 +32,20 @@ public class Main {
 
     private static void startApplication() {
         try {
+            // Prefer system LAF then apply a few UI defaults to make the app appear flatter
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception ignore) {
+                // fall back to default LAF
+            }
+            // Make common components use flatter borders/colors
+            UIManager.put("Button.border", new javax.swing.border.EmptyBorder(6, 12, 6, 12));
+            UIManager.put("TitledBorder.border", new javax.swing.border.EmptyBorder(6, 6, 6, 6));
+            UIManager.put("SplitPane.dividerSize", 6);
+            UIManager.put("SplitPane.border", new javax.swing.border.EmptyBorder(0, 0, 0, 0));
+            UIManager.put("Separator.background", UIManager.getColor("Panel.background"));
+            UIManager.put("Separator.foreground", UIManager.getColor("Panel.background"));
+
             // Create lifecycle manager
             lifecycleManager = new ApplicationLifecycleManager(null); // Parent component will be set later
             lifecycleManager.initialize();

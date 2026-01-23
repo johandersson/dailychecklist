@@ -90,7 +90,7 @@ public class ErrorDialog extends JDialog {
     }
 
     public static void showError(java.awt.Component parent, String message, Throwable t) {
-        java.awt.Frame owner = parent instanceof java.awt.Frame ? (java.awt.Frame) parent : null;
+        java.awt.Frame owner = parent instanceof java.awt.Frame frame ? frame : null;
         ErrorDialog d = new ErrorDialog(owner, "Error - Daily Checklist", message, t);
         d.setLocationRelativeTo(parent);
         d.setVisible(true);
