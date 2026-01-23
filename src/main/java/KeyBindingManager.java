@@ -17,17 +17,19 @@
  */
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
-
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 
 public class KeyBindingManager {
-    public static void bindKeys(JComponent rootPane, java.awt.Component parent, TaskManager taskManager, Runnable updateTasks) {
+    public static void bindKeys(JComponent rootPane, java.awt.Component parent, TaskManager taskManager, Runnable updateTasks, DailyChecklist dailyChecklist) {
         KeyStroke keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK);
         rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(keyStroke, "ADD_NEW_TASK");
         rootPane.getActionMap().put("ADD_NEW_TASK", new AddTaskAction(parent, taskManager, updateTasks));
         KeyStroke refreshKeyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK);
         rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(refreshKeyStroke, "REFRESH_TASKS");
         rootPane.getActionMap().put("REFRESH_TASKS", new RefreshTasksAction(updateTasks));
+        KeyStroke searchKeyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK);
+        rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(searchKeyStroke, "SEARCH_TASKS");
+        rootPane.getActionMap().put("SEARCH_TASKS", new SearchAction(parent, taskManager, dailyChecklist));
     }
 }

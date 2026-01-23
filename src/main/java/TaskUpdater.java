@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
+import java.time.LocalDateTime;
 import java.util.List;
 import javax.swing.DefaultListModel;
 
@@ -26,8 +27,9 @@ public class TaskUpdater {
     public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showWeekdayTasks) {
         morningListModel.clear();
         eveningListModel.clear();
+        String currentWeekday = LocalDateTime.now().getDayOfWeek().toString().toLowerCase();
         for (Task task : allTasks) {
-            boolean show = task.getWeekday() == null || showWeekdayTasks;
+            boolean show = task.getWeekday() == null || (showWeekdayTasks && task.getWeekday().equals(currentWeekday));
             if (show && task.getType() != TaskType.CUSTOM) {
                 if (task.getType() == TaskType.MORNING) {
                     morningListModel.addElement(task);
