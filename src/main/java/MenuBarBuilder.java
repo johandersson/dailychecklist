@@ -32,20 +32,19 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
 import javax.swing.event.HyperlinkEvent;
-import javax.swing.event.HyperlinkListener;
 import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
 public class MenuBarBuilder {
-    public static JMenuBar build(java.awt.Component parent, TaskManager taskManager, Runnable updateTasks) {
+    public static JMenuBar build(java.awt.Component parent, TaskManager taskManager, Runnable updateTasks, DailyChecklist dailyChecklist) {
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
 
         // Search Tasks
         JMenuItem searchItem = new JMenuItem("Search Tasks");
-        searchItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, java.awt.event.InputEvent.CTRL_MASK));
-        searchItem.addActionListener(e -> SearchDialog.showSearchDialog(parent, taskManager, null));
+        searchItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        searchItem.addActionListener(e -> SearchDialog.showSearchDialog(parent, taskManager, dailyChecklist));
         fileMenu.add(searchItem);
 
         // Refresh Tasks
@@ -54,6 +53,17 @@ public class MenuBarBuilder {
         fileMenu.add(refreshItem);
 
         // Restore from Backup
+        JMenuItem backupNowItem = new JMenuItem("Backup Now");
+        backupNowItem.addActionListener(e -> {
+            try {
+                taskManager.createManualBackup();
+                JOptionPane.showMessageDialog(parent, "Manual backup created.", "Backup", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                ErrorDialog.showError(parent, "Failed to create manual backup", ex);
+            }
+        });
+        fileMenu.add(backupNowItem);
+
         JMenuItem restoreItem = new JMenuItem("Restore from Backup");
         restoreItem.addActionListener(e -> {
             BackupRestoreDialog.showRestoreDialog(parent, taskManager, updateTasks);
@@ -110,16 +120,12 @@ public class MenuBarBuilder {
             contentPane.setEditable(false);
             contentPane.setBackground(Color.WHITE);
             contentPane.setBorder(BorderFactory.createEmptyBorder());
-            contentPane.addHyperlinkListener(new HyperlinkListener() {
-                @Override
-                public void hyperlinkUpdate(HyperlinkEvent e) {
-                    if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
-                        try {
-                            Desktop.getDesktop().browse(e.getURL().toURI());
-                        } catch (Exception ex) {
-                            // Handle exception, perhaps show a message
-                            JOptionPane.showMessageDialog(aboutDialog, "Unable to open link: " + e.getURL(), "Error", JOptionPane.ERROR_MESSAGE);
-                        }
+            contentPane.addHyperlinkListener(he -> {
+                if (he.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                    try {
+                        Desktop.getDesktop().browse(he.getURL().toURI());
+                    } catch (Exception ex) {
+                        ErrorDialog.showError(aboutDialog, "Unable to open link: " + he.getURL(), ex);
                     }
                 }
             });
@@ -178,41 +184,28 @@ public class MenuBarBuilder {
                 helpText = "Help file not found. Please refer to the README.md file for detailed instructions.";
             }
 
+            // Render help content into a styled JTextPane so we can embed Swing Icon instances
             JTextPane contentPane = new JTextPane();
             contentPane.setEditable(false);
             contentPane.setBackground(Color.WHITE);
             contentPane.setBorder(BorderFactory.createEmptyBorder());
 
-            // Set up the styled document
+            // Set up the styled document and let HelpTextRenderer populate it (it also inserts icons)
             StyledDocument doc = contentPane.getStyledDocument();
-
-            // Create styles
             Style defaultStyle = doc.addStyle("default", null);
             StyleConstants.setFontFamily(defaultStyle, FontManager.FONT_NAME);
             StyleConstants.setFontSize(defaultStyle, 12);
-
-            Style header1Style = doc.addStyle("h1", defaultStyle);
-            StyleConstants.setFontSize(header1Style, 24);
-            StyleConstants.setBold(header1Style, true);
-
-            Style header2Style = doc.addStyle("h2", defaultStyle);
-            StyleConstants.setFontSize(header2Style, 18);
-            StyleConstants.setBold(header2Style, true);
-
-            Style header3Style = doc.addStyle("h3", defaultStyle);
-            StyleConstants.setFontSize(header3Style, 14);
-            StyleConstants.setBold(header3Style, true);
-
             Style boldStyle = doc.addStyle("bold", defaultStyle);
             StyleConstants.setBold(boldStyle, true);
 
-            // Parse and insert HTML-like content with icons
             HelpTextRenderer.insertStyledTextWithIcons(doc, helpText, defaultStyle, boldStyle);
 
             JScrollPane scrollPane = new JScrollPane(contentPane);
             scrollPane.setBorder(BorderFactory.createEmptyBorder());
             contentPanel.add(scrollPane, BorderLayout.CENTER);
             helpDialog.add(contentPanel, BorderLayout.CENTER);
+
+            
 
             // Button panel
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -233,6 +226,10 @@ public class MenuBarBuilder {
         fileMenu.add(helpItem);
 
         fileMenu.addSeparator();
+
+        // Ensure the File menu is added to the menu bar
+        menuBar.add(fileMenu);
+
         return menuBar;
     }
 

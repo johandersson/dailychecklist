@@ -45,8 +45,8 @@ public class TaskManager {
     }
 
     public Task getTaskById(String id) {
-        if (repository instanceof XMLTaskRepository) {
-            return ((XMLTaskRepository) repository).getTaskById(id);
+        if (repository instanceof XMLTaskRepository xmlRepo) {
+            return xmlRepo.getTaskById(id);
         }
         // Fallback: linear search
         for (Task task : getAllTasks()) {
@@ -72,8 +72,8 @@ public class TaskManager {
      * Returns true if successful, false if failed.
      */
     public boolean updateTaskQuiet(Task task) {
-        if (repository instanceof XMLTaskRepository) {
-            return ((XMLTaskRepository) repository).updateTaskQuiet(task);
+        if (repository instanceof XMLTaskRepository xmlRepo) {
+            return xmlRepo.updateTaskQuiet(task);
         }
         // Fallback for other repository types
         try {
@@ -89,13 +89,13 @@ public class TaskManager {
         notifyListeners();
     }
 
-    public List<Task> getTasks(TaskType type, String checklistName) {
+    public List<Task> getTasks(TaskType type, Checklist checklist) {
         List<Task> allTasks = repository.getAllTasks();
         List<Task> filtered = new ArrayList<>();
         for (Task task : allTasks) {
             if (task.getType() == type) {
-                // For CUSTOM tasks, also check checklist name matches
-                if (type != TaskType.CUSTOM || checklistName == null || Objects.equals(checklistName.trim(), task.getChecklistName())) {
+                // For CUSTOM tasks, also check checklist id matches
+                if (type != TaskType.CUSTOM || checklist == null || Objects.equals(checklist.getId(), task.getChecklistId())) {
                     filtered.add(task);
                 }
             }
@@ -103,8 +103,8 @@ public class TaskManager {
         return filtered;
     }
 
-    public java.util.Set<String> getCustomChecklistNames() {
-        return repository.getChecklistNames();
+    public java.util.Set<Checklist> getCustomChecklists() {
+        return repository.getChecklists();
     }
 
     public boolean hasUndoneTasks() {
@@ -143,21 +143,26 @@ public class TaskManager {
         notifyListeners();
     }
 
-    public void addChecklistName(String name) {
-        repository.addChecklistName(name);
+    public void addChecklist(Checklist checklist) {
+        repository.addChecklist(checklist);
         notifyListeners();
     }
 
-    public void removeChecklistName(String name) {
-        repository.removeChecklistName(name);
+    public void removeChecklist(Checklist checklist) {
+        repository.removeChecklist(checklist);
+        notifyListeners();
+    }
+
+    public void updateChecklistName(Checklist checklist, String newName) {
+        repository.updateChecklistName(checklist, newName);
         notifyListeners();
     }
 
     /**
      * Moves a task to a different custom checklist.
      */
-    public void moveTaskToChecklist(Task task, String newChecklistName) {
-        task.setChecklistName(newChecklistName.trim());
+    public void moveTaskToChecklist(Task task, Checklist newChecklist) {
+        task.setChecklistId(newChecklist.getId());
         updateTask(task);
     }
 
@@ -165,8 +170,8 @@ public class TaskManager {
      * Manually creates a backup of all data.
      */
     public void createManualBackup() {
-        if (repository instanceof XMLTaskRepository) {
-            ((XMLTaskRepository) repository).createManualBackup();
+        if (repository instanceof XMLTaskRepository xmlRepo) {
+            xmlRepo.createManualBackup();
         }
     }
 

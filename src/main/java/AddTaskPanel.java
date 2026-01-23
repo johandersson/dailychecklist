@@ -207,32 +207,23 @@ public class AddTaskPanel extends JPanel {
                         return;
                     }
                     String selectedWeekday = (weekdayComboBox != null && weekdayComboBox.isEnabled() && type != TaskType.CUSTOM) ? (String) weekdayComboBox.getSelectedItem() : null;
-                    Task newTask = new Task(taskName.trim(), type, selectedWeekday, checklistName);
+                    // If creating a task for a custom checklist, resolve the checklist id from its name
+                    String checklistIdForTask = null;
+                    if (checklistName != null) {
+                        Checklist found = taskManager.getCustomChecklists().stream()
+                                .filter(c -> checklistName.equals(c.getName()))
+                                .findFirst()
+                                .orElse(null);
+                        if (found != null) checklistIdForTask = found.getId();
+                    }
+                    Task newTask = new Task(taskName.trim(), type, selectedWeekday, checklistIdForTask);
                     taskManager.addTask(newTask);
                     addedTasks.add(newTask);
                 }
             }
             
             if (!addedTasks.isEmpty()) {
-                onTasksAdded.accept(addedTasks.toArray(new Task[0]));
-            }
-            
-            String taskType;
-            if (checklistName != null) {
-                taskType = "Custom checklist";
-            } else if (addMorningRadioButton.isSelected()) {
-                taskType = "Morning";
-            } else if (addEveningRadioButton.isSelected()) {
-                taskType = "Evening";
-            } else {
-                taskType = "Unknown";
-            }
-            String frequencyType;
-            if (weekdayComboBox != null && weekdayComboBox.isEnabled() && taskType != "Custom checklist") {
-                String selectedWeekday = (String) weekdayComboBox.getSelectedItem();
-                frequencyType = "Weekday: " + selectedWeekday;
-            } else {
-                frequencyType = "Daily";
+                onTasksAdded.accept(addedTasks.toArray(Task[]::new));
             }
             // Success message removed - replaced with scrolling and highlighting
             taskField.setText("");

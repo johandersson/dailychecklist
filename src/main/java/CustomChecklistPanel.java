@@ -38,18 +38,18 @@ public class CustomChecklistPanel extends JPanel {
     private JList<Task> customTaskList;
     private DefaultListModel<Task> customListModel;
     private transient TaskManager taskManager;
-    private String checklistName;
+    private Checklist checklist;
     private transient Runnable updateAllPanels;
     private JPanel reminderStatusPanel;
 
-    public CustomChecklistPanel(TaskManager taskManager, String checklistName) {
-        this(taskManager, checklistName, null);
+    public CustomChecklistPanel(TaskManager taskManager, Checklist checklist) {
+        this(taskManager, checklist, null);
     }
 
     @SuppressWarnings("this-escape")
-    public CustomChecklistPanel(TaskManager taskManager, String checklistName, Runnable updateAllPanels) {
+    public CustomChecklistPanel(TaskManager taskManager, Checklist checklist, Runnable updateAllPanels) {
         this.taskManager = taskManager;
-        this.checklistName = checklistName;
+        this.checklist = checklist;
         this.updateAllPanels = updateAllPanels;
         initialize();
         // Listen for model changes and refresh UI
@@ -70,7 +70,7 @@ public class CustomChecklistPanel extends JPanel {
     private void initialize() {
         customListModel = new DefaultListModel<>();
         customTaskList = createTaskList(customListModel);
-        JPanel customPanel = createPanel(checklistName, customTaskList);
+        JPanel customPanel = createPanel(checklist.getName(), customTaskList);
         setLayout(new BorderLayout());
         add(customPanel, BorderLayout.CENTER);
     }
@@ -83,7 +83,7 @@ public class CustomChecklistPanel extends JPanel {
         taskList.setSelectionForeground(java.awt.Color.BLACK);
         if (!java.awt.GraphicsEnvironment.isHeadless()) {
             taskList.setDragEnabled(true);
-            taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklistName, updateAllPanels, null, null));
+            taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklist.getName(), updateAllPanels, null, null));
             taskList.setDropMode(DropMode.INSERT);
         }
         taskList.addMouseListener(new MouseAdapter() {
@@ -165,7 +165,7 @@ public class CustomChecklistPanel extends JPanel {
 
     private void removeTask(JList<Task> list, int index) {
         Task task = list.getModel().getElementAt(index);
-        int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to remove this task?", "Confirm Removal", JOptionPane.YES_NO_OPTION);
+        int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to remove the task '" + task.getName() + "'?", "Confirm Removal", JOptionPane.YES_NO_OPTION);
         if (result == JOptionPane.YES_OPTION) {
             taskManager.removeTask(task);
             updateTasks();
@@ -197,11 +197,11 @@ public class CustomChecklistPanel extends JPanel {
 
         // Check if there's a reminder for this checklist
         boolean hasReminder = taskManager.getReminders().stream()
-                .anyMatch(r -> r.getChecklistName().equals(checklistName));
+                .anyMatch(r -> r.getChecklistName().equals(checklist.getName()));
 
         if (hasReminder) {
             Reminder reminder = taskManager.getReminders().stream()
-                    .filter(r -> r.getChecklistName().equals(checklistName))
+                    .filter(r -> r.getChecklistName().equals(checklist.getName()))
                     .findFirst()
                     .orElse(null);
 
@@ -280,7 +280,7 @@ public class CustomChecklistPanel extends JPanel {
         java.util.List<Task> selectedTasks = customTaskList.getSelectedValuesList();
         
         customListModel.clear();
-        List<Task> tasks = taskManager.getTasks(TaskType.CUSTOM, checklistName);
+        List<Task> tasks = taskManager.getTasks(TaskType.CUSTOM, checklist);
         for (Task task : tasks) {
             customListModel.addElement(task);
         }

@@ -165,12 +165,12 @@ public class TaskXmlHandler {
             throw new IllegalArgumentException("Invalid task type: " + typeNodes.item(0).getTextContent());
         }
 
-        String checklistName = null;
-        NodeList checklistNameNodes = element.getElementsByTagName("checklistName");
-        if (checklistNameNodes.getLength() > 0) {
-            String content = checklistNameNodes.item(0).getTextContent();
+        String checklistId = null;
+        NodeList checklistIdNodes = element.getElementsByTagName("checklistId");
+        if (checklistIdNodes.getLength() > 0) {
+            String content = checklistIdNodes.item(0).getTextContent();
             if (content != null && !content.trim().isEmpty()) {
-                checklistName = content.trim();
+                checklistId = content.trim();
             }
         }
 
@@ -189,7 +189,7 @@ public class TaskXmlHandler {
         NodeList doneDateNodes = element.getElementsByTagName("doneDate");
         String doneDate = doneDateNodes.getLength() > 0 ? doneDateNodes.item(0).getTextContent() : null;
 
-        return new Task(id, name, type, weekday, done, doneDate, checklistName);
+        return new Task(id, name, type, weekday, done, doneDate, checklistId);
     }
 
     /**
@@ -221,10 +221,10 @@ public class TaskXmlHandler {
         doneDateElement.setTextContent(task.getDoneDate());
         taskElement.appendChild(doneDateElement);
 
-        if (task.getChecklistName() != null && !task.getChecklistName().trim().isEmpty()) {
-            Element checklistNameElement = document.createElement("checklistName");
-            checklistNameElement.setTextContent(task.getChecklistName().trim());
-            taskElement.appendChild(checklistNameElement);
+        if (task.getChecklistId() != null && !task.getChecklistId().trim().isEmpty()) {
+            Element checklistIdElement = document.createElement("checklistId");
+            checklistIdElement.setTextContent(task.getChecklistId().trim());
+            taskElement.appendChild(checklistIdElement);
         }
 
         return taskElement;
@@ -295,19 +295,19 @@ public class TaskXmlHandler {
             taskElement.removeChild(weekdayNodes.item(0));
         }
 
-        // Handle checklist name
-        NodeList checklistNameNodes = taskElement.getElementsByTagName("checklistName");
-        if (task.getChecklistName() != null) {
-            Element checklistNameElement;
-            if (checklistNameNodes.getLength() > 0) {
-                checklistNameElement = (Element) checklistNameNodes.item(0);
+        // Handle checklist id
+        NodeList checklistIdNodes = taskElement.getElementsByTagName("checklistId");
+        if (task.getChecklistId() != null) {
+            Element checklistIdElement;
+            if (checklistIdNodes.getLength() > 0) {
+                checklistIdElement = (Element) checklistIdNodes.item(0);
             } else {
-                checklistNameElement = document.createElement("checklistName");
-                taskElement.appendChild(checklistNameElement);
+                checklistIdElement = document.createElement("checklistId");
+                taskElement.appendChild(checklistIdElement);
             }
-            checklistNameElement.setTextContent(task.getChecklistName());
-        } else if (checklistNameNodes.getLength() > 0) {
-            taskElement.removeChild(checklistNameNodes.item(0));
+            checklistIdElement.setTextContent(task.getChecklistId());
+        } else if (checklistIdNodes.getLength() > 0) {
+            taskElement.removeChild(checklistIdNodes.item(0));
         }
     }
 
@@ -397,9 +397,9 @@ public class TaskXmlHandler {
         if (task.getId() == null || task.getId().trim().isEmpty()) return false;
         if (task.getName() == null || task.getName().trim().isEmpty()) return false;
         if (task.getType() == null) return false;
-        // Checklist name can be null for daily tasks
-        if (task.getChecklistName() != null && task.getChecklistName().trim().isEmpty()) {
-            task.setChecklistName(null); // Normalize empty to null
+        // Checklist ID can be null for daily tasks
+        if (task.getChecklistId() != null && task.getChecklistId().trim().isEmpty()) {
+            task.setChecklistId(null); // Normalize empty to null
         }
         return true;
     }

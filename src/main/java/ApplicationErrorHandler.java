@@ -15,26 +15,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Desktop;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import javax.swing.JCheckBox;
-import javax.swing.JDialog;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 
 /**
  * Centralized error handling service that provides user-friendly HTML-formatted
@@ -49,18 +36,16 @@ public class ApplicationErrorHandler {
      * Shows a user-friendly error dialog for file I/O operations with recovery suggestions.
      */
     public static void showFileError(Component parent, String operation, Exception e, String filePath) {
-        String title = "File Access Error";
         String message = buildFileErrorMessage(operation, e, filePath);
-        JOptionPane.showMessageDialog(parent, message, title, JOptionPane.ERROR_MESSAGE);
+        HtmlErrorDialog.showHtmlError(parent, message, e);
     }
 
     /**
      * Shows a user-friendly error dialog for backup operations.
      */
     public static void showBackupError(Component parent, Exception e) {
-        String title = "Backup Error";
         String message = buildBackupErrorMessage(e);
-        JOptionPane.showMessageDialog(parent, message, title, JOptionPane.WARNING_MESSAGE);
+        HtmlErrorDialog.showHtmlError(parent, message, e);
     }
 
     /**
@@ -71,72 +56,24 @@ public class ApplicationErrorHandler {
             return; // Prevent multiple dialogs in the same session
         }
         dataLoadErrorShown = true;
-
-        // Create custom dialog
-        JDialog dialog = new JDialog();
-        dialog.setTitle("Data Loading Error");
-        dialog.setModal(true);
-        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-
-        // Main panel
-        JPanel mainPanel = new JPanel(new BorderLayout());
-
-        // Error message label
         String message = buildDataLoadErrorMessage(dataType, e);
-        JLabel messageLabel = new JLabel("<html>" + message.replace("<html>", "").replace("</html>", "") + "</html>");
-        mainPanel.add(messageLabel, BorderLayout.NORTH);
-
-        // Stack trace panel
-        JPanel stackTracePanel = new JPanel(new BorderLayout());
-        JCheckBox showStackTraceCheckBox = new JCheckBox("Show technical details (stack trace)");
-        JTextArea stackTraceArea = new JTextArea(10, 50);
-        stackTraceArea.setEditable(false);
-        stackTraceArea.setFont(new java.awt.Font(java.awt.Font.MONOSPACED, java.awt.Font.PLAIN, 12));
-
-        // Get stack trace as string
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-        stackTraceArea.setText(sw.toString());
-
-        JScrollPane scrollPane = new JScrollPane(stackTraceArea);
-        scrollPane.setVisible(false); // Initially hidden
-
-        showStackTraceCheckBox.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent ae) {
-                scrollPane.setVisible(showStackTraceCheckBox.isSelected());
-                dialog.pack();
-            }
-        });
-
-        stackTracePanel.add(showStackTraceCheckBox, BorderLayout.NORTH);
-        stackTracePanel.add(scrollPane, BorderLayout.CENTER);
-
-        mainPanel.add(stackTracePanel, BorderLayout.CENTER);
-
-        dialog.add(mainPanel);
-        dialog.pack();
-        dialog.setLocationRelativeTo(parent);
-        dialog.setVisible(true);
+        HtmlErrorDialog.showHtmlError(parent, message, e);
     }
 
     /**
      * Shows a user-friendly error dialog for data saving operations.
      */
     public static void showDataSaveError(Component parent, String dataType, Exception e) {
-        String title = "Data Saving Error";
         String message = buildDataSaveErrorMessage(dataType, e);
-        JOptionPane.showMessageDialog(parent, message, title, JOptionPane.ERROR_MESSAGE);
+        HtmlErrorDialog.showHtmlError(parent, message, e);
     }
 
     /**
      * Shows a user-friendly error dialog for initialization failures.
      */
     public static void showInitializationError(Component parent, Exception e) {
-        String title = "Application Initialization Error";
         String message = buildInitializationErrorMessage(e);
-        JOptionPane.showMessageDialog(parent, message, title, JOptionPane.ERROR_MESSAGE);
+        HtmlErrorDialog.showHtmlError(parent, message, e);
     }
 
     private static String buildFileErrorMessage(String operation, Exception e, String filePath) {

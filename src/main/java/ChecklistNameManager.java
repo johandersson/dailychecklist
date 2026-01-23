@@ -21,89 +21,144 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
 /**
- * Manages custom checklist names persistence.
+ * Manages custom checklist persistence.
  */
 public class ChecklistNameManager {
     private final String checklistNamesFileName;
-    private Set<String> cachedChecklistNames;
-    private boolean checklistNamesDirty = true;
+    private Map<String, Checklist> cachedChecklists;
+    private boolean checklistsDirty = true;
 
     public ChecklistNameManager(String checklistNamesFileName) {
         this.checklistNamesFileName = checklistNamesFileName;
     }
 
     /**
-     * Gets all checklist names, using cache if available.
+     * Gets all checklists, using cache if available.
      */
-    public Set<String> getChecklistNames() {
-        if (cachedChecklistNames != null && !checklistNamesDirty) {
-            return new HashSet<>(cachedChecklistNames);
+    public Set<Checklist> getChecklists() {
+        if (cachedChecklists != null && !checklistsDirty) {
+            return new HashSet<>(cachedChecklists.values());
         }
 
-        Set<String> checklistNames = new HashSet<>();
+        Map<String, Checklist> checklists = new HashMap<>();
         Properties props = new Properties();
 
         try (InputStreamReader reader = new InputStreamReader(new FileInputStream(checklistNamesFileName), StandardCharsets.UTF_8)) {
             props.load(reader);
-            for (String key : props.stringPropertyNames()) {
-                checklistNames.add(key);
+            for (String id : props.stringPropertyNames()) {
+                String name = props.getProperty(id);
+                if (name != null && !name.trim().isEmpty()) {
+                    checklists.put(id, new Checklist(id, name.trim()));
+                }
             }
         } catch (IOException e) {
             // File doesn't exist or can't be read, return empty set
         }
 
-        cachedChecklistNames = new HashSet<>(checklistNames);
-        checklistNamesDirty = false;
-        return checklistNames;
+        cachedChecklists = new HashMap<>(checklists);
+        checklistsDirty = false;
+        return new HashSet<>(checklists.values());
     }
 
     /**
-     * Adds a checklist name.
+     * Gets a checklist by ID.
      */
-    public void addChecklistName(String name) {
-        Set<String> names = getChecklistNames();
-        names.add(name.trim());
-        saveChecklistNamesToProperties(names);
-        cachedChecklistNames = names;
-        checklistNamesDirty = false;
+    public Checklist getChecklistById(String id) {
+        if (id == null) return null;
+        Set<Checklist> checklists = getChecklists();
+        return checklists.stream()
+                .filter(c -> id.equals(c.getId()))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
-     * Removes a checklist name.
+     * Gets a checklist by name.
      */
-    public void removeChecklistName(String name) {
-        Set<String> names = getChecklistNames();
-        names.remove(name);
-        saveChecklistNamesToProperties(names);
-        cachedChecklistNames = names;
-        checklistNamesDirty = false;
+    public Checklist getChecklistByName(String name) {
+        if (name == null) return null;
+        Set<Checklist> checklists = getChecklists();
+        return checklists.stream()
+                .filter(c -> name.trim().equals(c.getName()))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
-     * Saves checklist names to the properties file.
+     * Adds a checklist.
      */
-    private void saveChecklistNamesToProperties(Set<String> checklistNames) {
+    public void addChecklist(Checklist checklist) {
+        if (checklist == null) return;
+        Map<String, Checklist> checklists = getChecklistsMap();
+        checklists.put(checklist.getId(), checklist);
+        saveChecklistsToProperties(checklists);
+        cachedChecklists = checklists;
+        checklistsDirty = false;
+    }
+
+    /**
+     * Removes a checklist.
+     */
+    public void removeChecklist(Checklist checklist) {
+        if (checklist == null) return;
+        Map<String, Checklist> checklists = getChecklistsMap();
+        checklists.remove(checklist.getId());
+        saveChecklistsToProperties(checklists);
+        cachedChecklists = checklists;
+        checklistsDirty = false;
+    }
+
+    /**
+     * Updates a checklist name.
+     */
+    public void updateChecklistName(Checklist checklist, String newName) {
+        if (checklist == null || newName == null) return;
+        checklist.setName(newName.trim());
+        Map<String, Checklist> checklists = getChecklistsMap();
+        checklists.put(checklist.getId(), checklist);
+        saveChecklistsToProperties(checklists);
+        cachedChecklists = checklists;
+        checklistsDirty = false;
+    }
+
+    /**
+     * Gets checklists as a map for internal use.
+     */
+    private Map<String, Checklist> getChecklistsMap() {
+        if (cachedChecklists != null && !checklistsDirty) {
+            return new HashMap<>(cachedChecklists);
+        }
+        getChecklists(); // This will populate cachedChecklists
+        return new HashMap<>(cachedChecklists);
+    }
+
+    /**
+     * Saves checklists to the properties file.
+     */
+    private void saveChecklistsToProperties(Map<String, Checklist> checklists) {
         Properties props = new Properties();
-        for (String name : checklistNames) {
-            props.setProperty(name, "true");
+        for (Checklist checklist : checklists.values()) {
+            props.setProperty(checklist.getId(), checklist.getName());
         }
 
         try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(checklistNamesFileName), StandardCharsets.UTF_8)) {
-            props.store(writer, "Daily Checklist Custom Checklist Names");
+            props.store(writer, "Daily Checklist Custom Checklists");
         } catch (IOException e) {
             // Ignore errors
         }
     }
 
     /**
-     * Marks the checklist names cache as dirty.
+     * Marks the checklists cache as dirty.
      */
     public void markDirty() {
-        checklistNamesDirty = true;
+        checklistsDirty = true;
     }
 }

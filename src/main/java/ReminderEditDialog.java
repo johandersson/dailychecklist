@@ -303,7 +303,7 @@ public class ReminderEditDialog extends JDialog {
                 try {
                     onSave.run();
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    java.util.logging.Logger.getLogger(ReminderEditDialog.class.getName()).log(java.util.logging.Level.SEVERE, "onSave callback failed", ex);
                 }
             }
         } catch (Exception ex) {

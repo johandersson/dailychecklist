@@ -24,12 +24,18 @@ public class TaskUpdater {
         updateTasks(allTasks, morningListModel, eveningListModel, true);
     }
 
-    public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showWeekdayTasks) {
+    public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showAllWeekdaySpecificTasks) {
         morningListModel.clear();
         eveningListModel.clear();
         String currentWeekday = LocalDateTime.now().getDayOfWeek().toString().toLowerCase();
         for (Task task : allTasks) {
-            boolean show = task.getWeekday() == null || (showWeekdayTasks && task.getWeekday() != null && task.getWeekday().toLowerCase().equals(currentWeekday));
+            boolean show;
+            if (task.getWeekday() == null) {
+                show = true; // Non-weekday-specific tasks always show
+            } else {
+                // If "show all" is enabled, show all weekday-specific tasks; otherwise show only today's weekday
+                show = showAllWeekdaySpecificTasks || task.getWeekday().toLowerCase().equals(currentWeekday);
+            }
             if (show && task.getType() != TaskType.CUSTOM) {
                 if (task.getType() == TaskType.MORNING) {
                     morningListModel.addElement(task);

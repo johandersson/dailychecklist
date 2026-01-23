@@ -42,19 +42,24 @@ public interface TaskRepository {
     java.time.LocalDateTime getNextReminderTime(java.util.Set<String> openedChecklists);
 
     /**
-     * Gets all custom checklist names (including empty ones).
+     * Gets all custom checklists.
      */
-    java.util.Set<String> getChecklistNames();
+    java.util.Set<Checklist> getChecklists();
 
     /**
-     * Adds a checklist name to the persistent storage.
+     * Adds a checklist to the persistent storage.
      */
-    void addChecklistName(String name);
+    void addChecklist(Checklist checklist);
 
     /**
-     * Removes a checklist name from the persistent storage.
+     * Removes a checklist from the persistent storage.
      */
-    void removeChecklistName(String name);
+    void removeChecklist(Checklist checklist);
+
+    /**
+     * Updates a checklist name.
+     */
+    void updateChecklistName(Checklist checklist, String newName);
 
     /**
      * Shuts down the repository and cleans up resources.

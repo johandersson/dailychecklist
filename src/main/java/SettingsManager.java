@@ -28,8 +28,8 @@ import java.util.Date;
 import java.util.Properties;
 
 public class SettingsManager {
-    private Properties settings = new Properties();
-    private String settingsPath = ApplicationConfiguration.SETTINGS_FILE_PATH;
+    private final Properties settings = new Properties();
+    private final String settingsPath = ApplicationConfiguration.SETTINGS_FILE_PATH;
     private String lastDate;
     private Component parentComponent;
 
@@ -79,7 +79,8 @@ public class SettingsManager {
     }
 
     public boolean getShowWeekdayTasks() {
-        return Boolean.parseBoolean(settings.getProperty("showWeekdayTasks", "true"));
+        // Default to false so weekday-specific tasks are shown only for today's weekday
+        return Boolean.parseBoolean(settings.getProperty("showWeekdayTasks", "false"));
     }
 
     public void checkDateAndUpdate(TaskManager taskManager, Runnable updateTasks, boolean showWeekdayTasks) {
