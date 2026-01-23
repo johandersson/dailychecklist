@@ -88,10 +88,19 @@ public class BackupRestoreDialog {
             newChecklistCount = checklists.size();
         }
 
-        // Prepare current and backup task lists and show the colored diff dialog as the single confirmation.
+        // Prepare current and backup task lists and compute per-checklist task counts for stats.
         List<Task> currentTasks = taskManager.getAllTasks();
         List<Task> backupTasksCopy = new ArrayList<>(backupTasks);
         Map<String,String> checklistsCopy = new LinkedHashMap<>(checklists);
+
+        // Count custom tasks per checklist id (preserve insertion order from checklists)
+        Map<String,Integer> checklistTaskCounts = new LinkedHashMap<>();
+        for (String id : checklistsCopy.keySet()) checklistTaskCounts.put(id, 0);
+        for (Task t : customTasks) {
+            String id = t.getChecklistId();
+            if (id == null) continue;
+            checklistTaskCounts.put(id, checklistTaskCounts.getOrDefault(id, 0) + 1);
+        }
 
         Runnable onRestore = () -> {
             // Backup current data file before merging
@@ -124,7 +133,7 @@ public class BackupRestoreDialog {
         };
 
         // Show the diff/preview dialog and let the user confirm via that dialog only
-        showDiffDialog(parent, currentTasks, backupTasksCopy, chosen, onRestore);
+        showDiffDialog(parent, currentTasks, backupTasksCopy, chosen, onRestore, checklistsCopy, checklistTaskCounts, newChecklistCount, morningTasks.size(), eveningTasks.size());
     }
 
     private static void mergeChecklistsToLive(Map<String,String> checklists) {
@@ -268,7 +277,7 @@ public class BackupRestoreDialog {
         }
     }
 
-    private static void showDiffDialog(Component parent, List<Task> currentTasks, List<Task> backupTasks, File backupFile, Runnable onRestore) {
+    private static void showDiffDialog(Component parent, List<Task> currentTasks, List<Task> backupTasks, File backupFile, Runnable onRestore, Map<String,String> checklists, Map<String,Integer> checklistTaskCounts, int newChecklistCount, int morningCount, int eveningCount) {
         JDialog dialog = new JDialog((java.awt.Frame) parent, "Restore from Backup", true);
         dialog.setLayout(new BorderLayout());
         dialog.setSize(900, 700);
@@ -279,16 +288,38 @@ public class BackupRestoreDialog {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(new java.awt.Color(255, 220, 180)); // Darker orange background
 
-        String headerHtml = "<html><body style='font-family: Arial, sans-serif; font-size: 14px;'>" +
-            "<div style='text-align: center; margin-bottom: 15px;'>" +
-            "<h2 style='color: #d9534f; margin: 0 0 10px 0; font-size: 18px;'>⚠️ Restore from Backup</h2>" +
-            "<div style='color: #666; font-size: 12px; margin-bottom: 10px;'>Backup file: <b>" + backupFile.getName() + "</b></div>" +
-            "</div>" +
-            "<div style='background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 10px 0;'>" +
-            "<div style='color: #856404; font-weight: bold; margin-bottom: 8px;'>⚠️ Warning: This will overwrite your current data!</div>" +
-            "<div style='color: #856404; font-size: 12px;'>Review the differences below and confirm if you want to proceed with the restoration.</div>" +
-            "</div>" +
-            "</body></html>";
+        // Build header HTML with stats and per-checklist task counts. Use app font and neutral styling.
+        String appFont = FontManager.FONT_NAME != null ? FontManager.FONT_NAME : javax.swing.UIManager.getFont("Label.font").getFamily();
+        StringBuilder sb = new StringBuilder();
+        sb.append("<html><body style='font-family: ").append(escapeHtml(appFont)).append("; font-size: 13px; color:#222;'>");
+        sb.append("<div style='text-align: left; margin-bottom: 10px;'>");
+        sb.append("<h2 style='color: #333; margin: 0 0 6px 0; font-size: 16px;'>Restore from Backup</h2>");
+        sb.append("<div style='color: #666; font-size: 12px; margin-bottom: 6px;'>Backup file: <b>").append(escapeHtml(backupFile.getName())).append("</b></div>");
+        sb.append("</div>");
+
+        // Warning line (neutral)
+        sb.append("<div style='background: transparent; padding: 6px 0 6px 0; margin-bottom:6px; color:#663; font-size:12px;'><b>Warning:</b> This will overwrite your current data. Review the differences below and confirm to proceed.</div>");
+
+        // Stats summary including morning/evening counts
+        int totalCustom = 0;
+        for (Integer c : checklistTaskCounts.values()) totalCustom += c == null ? 0 : c;
+        sb.append("<div style='margin-top:6px; font-size:13px; color:#222;'>");
+        sb.append("This import will add <b>").append(newChecklistCount).append("</b> custom checklist(s), import <b>").append(totalCustom).append("</b> custom task(s), <b>").append(morningCount).append("</b> morning task(s) and <b>").append(eveningCount).append("</b> evening task(s).");
+        sb.append("</div>");
+
+        if (!checklists.isEmpty()) {
+            sb.append("<div style='margin-top:8px; font-size:12px; color:#333;'><b>Checklists in backup:</b><ul style='margin:6px 0 0 18px;'>");
+            for (Map.Entry<String,String> e : checklists.entrySet()) {
+                String id = e.getKey();
+                String name = e.getValue();
+                int cnt = checklistTaskCounts.getOrDefault(id, 0);
+                sb.append("<li>").append(escapeHtml(name)).append(" — ").append(cnt).append(" task(s)</li>");
+            }
+            sb.append("</ul></div>");
+        }
+
+        sb.append("</body></html>");
+        String headerHtml = sb.toString();
 
         javax.swing.JLabel headerLabel = new javax.swing.JLabel(headerHtml);
         headerPanel.add(headerLabel, BorderLayout.CENTER);
@@ -326,5 +357,10 @@ public class BackupRestoreDialog {
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
         dialog.setVisible(true);
+    }
+
+    private static String escapeHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 }
