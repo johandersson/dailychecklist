@@ -312,25 +312,28 @@ public class XMLTaskRepository implements TaskRepository {
             for (Task task : tasks) {
                 if (task.getType() == TaskType.CUSTOM) {
                     String checklistId = task.getChecklistId();
-                    String checklistName = task.getChecklistId(); // For backwards compatibility, checklistId used to be name
 
                     if (checklistId != null && !checklistId.trim().isEmpty()) {
-                        // Task has a checklist ID - find or create the checklist
-                        Checklist checklist = checklistNameManager.getChecklistById(checklistId);
-                        if (checklist == null && checklistName != null && !checklistName.trim().isEmpty()) {
-                            // Create new checklist with the ID and name
-                            checklist = new Checklist(checklistId, checklistName.trim());
-                            checklists.add(checklist);
-                        } else if (checklist != null) {
-                            checklists.add(checklist);
-                        }
-                    } else if (checklistName != null && !checklistName.trim().isEmpty()) {
-                        // Legacy task with name but no ID - find or create checklist
-                        Checklist checklist = checklistNameManager.getChecklistByName(checklistName.trim());
-                        if (checklist == null) {
-                            checklist = new Checklist(checklistName.trim());
-                            checklists.add(checklist);
+                        // Determine whether the saved value is an ID (UUID-like) or an old-style name.
+                        String trimmed = checklistId.trim();
+                        boolean looksLikeUuid = trimmed.matches("[0-9a-fA-F\\-]{36}");
+
+                        if (looksLikeUuid) {
+                            // Prefer any existing registry entry for this id
+                            Checklist checklist = checklistNameManager.getChecklistById(trimmed);
+                            if (checklist == null) {
+                                // No recorded name for this id — create a checklist with a neutral default name
+                                checklist = new Checklist(trimmed, "Untitled Checklist");
+                                checklists.add(checklist);
+                            } else {
+                                checklists.add(checklist);
+                            }
                         } else {
+                            // Older backups stored the checklist name in this field — treat as name
+                            Checklist checklist = checklistNameManager.getChecklistByName(trimmed);
+                            if (checklist == null) {
+                                checklist = new Checklist(trimmed);
+                            }
                             checklists.add(checklist);
                         }
                     }

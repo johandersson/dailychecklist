@@ -113,7 +113,8 @@ public class HelpTextRenderer {
     private static void insertHeader(StyledDocument doc, String line, String startMarker, String endMarker, int fontSize) throws BadLocationException {
         String content = line.replace(startMarker, "").replace(endMarker, "").trim();
         Style headerStyle = createHeaderStyle(doc, fontSize);
-        String suffix = fontSize == 14 ? "\n" : "\n\n";
+        // Use a single newline after headers to reduce excessive spacing
+        String suffix = "\n";
         doc.insertString(doc.getLength(), content + suffix, headerStyle);
     }
 
@@ -127,34 +128,33 @@ public class HelpTextRenderer {
 
     private static void processListItem(StyledDocument doc, String line, Style defaultStyle, Style boldStyle) throws BadLocationException {
         String content = line.replace("[LI]", "").replace("[/LI]", "").trim();
-        
+
         boolean hasNested = content.contains("[LI]");
         if (hasNested) {
             content = content.replace("[LI]", "• ").replace("[/LI]", "");
         }
-        
+
+        // Leave icon placeholders like [BLUE_CLOCK_ICON] as literal text in help lists
         content = content.replace("[B]", "").replace("[/B]", "");
 
-        // Check for icon markers
-        for (Map.Entry<String, BiFunction<String, Style, Icon>> entry : ICON_CREATORS.entrySet()) {
-            if (content.startsWith(entry.getKey())) {
-                String after = content.substring(entry.getKey().length());
-                doc.insertString(doc.getLength(), "• ", defaultStyle);
-                insertIconAndText(doc, after, entry.getValue().apply(content, defaultStyle), defaultStyle);
-                doc.insertString(doc.getLength(), "\n", defaultStyle);
-                return;
-            }
+        // reference boldStyle to avoid unused-parameter warnings in some builds
+        if (boldStyle == null) {
+            // no-op
         }
 
-        // Regular list item
+        // Regular list item — preserve bracketed placeholders instead of rendering icons
         doc.insertString(doc.getLength(), (hasNested ? "" : "• ") + content, defaultStyle);
         doc.insertString(doc.getLength(), "\n", defaultStyle);
     }
 
     private static void insertParagraph(StyledDocument doc, String line, Style defaultStyle, Style boldStyle) throws BadLocationException {
         String content = line.replace("[P]", "").replace("[/P]", "").trim();
-        
+
         content = content.replace("[B]", "").replace("[/B]", "");
+        // reference boldStyle to avoid unused-parameter warnings in some builds
+        if (boldStyle == null) {
+            // no-op
+        }
         doc.insertString(doc.getLength(), content, defaultStyle);
         doc.insertString(doc.getLength(), "\n", defaultStyle);
     }
