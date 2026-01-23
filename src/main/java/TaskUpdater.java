@@ -29,7 +29,7 @@ public class TaskUpdater {
         eveningListModel.clear();
         String currentWeekday = LocalDateTime.now().getDayOfWeek().toString().toLowerCase();
         for (Task task : allTasks) {
-            boolean show = task.getWeekday() == null || (showWeekdayTasks && task.getWeekday().equals(currentWeekday));
+            boolean show = task.getWeekday() == null || (showWeekdayTasks && task.getWeekday() != null && task.getWeekday().toLowerCase().equals(currentWeekday));
             if (show && task.getType() != TaskType.CUSTOM) {
                 if (task.getType() == TaskType.MORNING) {
                     morningListModel.addElement(task);

@@ -42,27 +42,28 @@ public class SearchDialog {
         searchPanel.add(searchField);
         searchPanel.add(searchButton);
 
-        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { search(); }
-            @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { search(); }
-            @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { search(); }
-            private void search() {
-                String query = searchField.getText().toLowerCase();
-                List<Task> allTasks = taskManager.getAllTasks();
-                List<Task> results = allTasks.stream()
-                    .filter(task -> task.getName().toLowerCase().contains(query))
-                    .collect(Collectors.toList());
-                resultList.setListData(results.toArray(new Task[0]));
-            }
-        });
-
         JList<Task> resultList = new JList<>();
         resultList.setCellRenderer(new CheckboxListCellRenderer());
         resultList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane scrollPane = new JScrollPane(resultList);
+
+        Runnable performSearch = () -> {
+            String query = searchField.getText().toLowerCase();
+            List<Task> allTasks = taskManager.getAllTasks();
+            List<Task> results = allTasks.stream()
+                .filter(task -> task.getName().toLowerCase().contains(query))
+                .collect(Collectors.toList());
+            resultList.setListData(results.toArray(new Task[0]));
+        };
+
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { performSearch.run(); }
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { performSearch.run(); }
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { performSearch.run(); }
+        });
 
         JPanel buttonPanel = new JPanel(new FlowLayout());
         JButton goToButton = new JButton("Go to Selected Task");
