@@ -43,6 +43,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private String doneDate; // Timestamp when task was completed
     private boolean isSelected; // Whether this item is currently selected
     private String listName;
+    private boolean showListName = false;
     
     // Cached checkmark image for performance
     private static final BufferedImage checkmarkImage;
@@ -84,6 +85,10 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     public CheckboxListCellRenderer() {
         setPreferredSize(new Dimension(200, 50)); // Increased height for timestamp display
         this.circleFont = getAvailableFont("Yu Gothic UI", Font.BOLD, 12); // Font for circle text
+    }
+
+    public void setShowListName(boolean showListName) {
+        this.showListName = showListName;
     }
 
     @Override
@@ -169,9 +174,11 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         g2.setFont(getFont());
         g2.drawString(taskName, textStartX, getHeight() / 2 + 5);
         
-        // Draw list name in smaller font
-        g2.setFont(getFont().deriveFont(Font.PLAIN, 10));
-        g2.drawString(" (" + listName + ")", textStartX + g2.getFontMetrics().stringWidth(taskName), getHeight() / 2 + 5);
+        if (showListName) {
+            // Draw list name in smaller font
+            g2.setFont(getFont().deriveFont(Font.PLAIN, 10));
+            g2.drawString(" (" + listName + ")", textStartX + g2.getFontMetrics().stringWidth(taskName), getHeight() / 2 + 5);
+        }
         
         // Draw timestamp if task is checked - always in black
         if (isChecked && doneDate != null && !doneDate.isEmpty()) {
