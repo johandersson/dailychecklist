@@ -21,10 +21,10 @@ import javax.swing.AbstractAction;
 @SuppressWarnings("serial")
 public class SearchAction extends AbstractAction {
     private static final long serialVersionUID = 1L;
-    private java.awt.Component parent;
-    private TaskManager taskManager;
+    private final java.awt.Component parent;
+    private final TaskManager taskManager;
 
-    private DailyChecklist dailyChecklist;
+    private final DailyChecklist dailyChecklist;
 
     public SearchAction(java.awt.Component parent, TaskManager taskManager, DailyChecklist dailyChecklist) {
         super("SEARCH_TASKS");

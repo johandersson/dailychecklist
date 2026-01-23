@@ -24,7 +24,7 @@ import javax.swing.Icon;
  * Cell renderer for checklist list items that displays a clock icon for checklists with reminders.
  */
 @SuppressWarnings("serial")
-public class ChecklistCellRenderer extends IconListCellRenderer<String> {
+public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
     private static final long serialVersionUID = 1L;
 
     private final transient TaskManager taskManager;
@@ -34,9 +34,9 @@ public class ChecklistCellRenderer extends IconListCellRenderer<String> {
     }
 
     @Override
-    protected Icon getIconForValue(String checklistName) {
-        if (checklistName != null) {
-            Reminder nearest = nearestReminderForChecklist(checklistName);
+    protected Icon getIconForValue(Checklist checklist) {
+        if (checklist != null) {
+            Reminder nearest = nearestReminderForChecklist(checklist.getName());
             if (nearest != null) {
                 ReminderClockIcon.State state = computeState(nearest);
                 return new ReminderClockIcon(nearest.getHour(), nearest.getMinute(), state);
@@ -46,22 +46,22 @@ public class ChecklistCellRenderer extends IconListCellRenderer<String> {
     }
 
     @Override
-    protected String getTextForValue(String checklistName) {
-        if (checklistName != null) {
-            Reminder nearest = nearestReminderForChecklist(checklistName);
+    protected String getTextForValue(Checklist checklist) {
+        if (checklist != null) {
+            Reminder nearest = nearestReminderForChecklist(checklist.getName());
             if (nearest != null) {
                 ReminderClockIcon.State state = computeState(nearest);
                 if (state == ReminderClockIcon.State.VERY_OVERDUE) {
-                    return checklistName;
+                    return checklist.getName();
                 }
             }
         }
-        return checklistName;
+        return checklist != null ? checklist.getName() : "";
     }
 
-    protected Icon getExtraIconForValue(String checklistName) {
-        if (checklistName != null) {
-            Reminder nearest = nearestReminderForChecklist(checklistName);
+    protected Icon getExtraIconForValue(Checklist checklist) {
+        if (checklist != null) {
+            Reminder nearest = nearestReminderForChecklist(checklist.getName());
             if (nearest != null) {
                 ReminderClockIcon.State state = computeState(nearest);
                 if (state == ReminderClockIcon.State.VERY_OVERDUE) {

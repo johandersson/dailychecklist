@@ -21,7 +21,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Date;
 import java.util.List;
-import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -44,9 +43,8 @@ public class ChecklistPanel extends JPanel {
     private JList<Task> eveningTaskList;
     private DefaultListModel<Task> morningListModel;
     private DefaultListModel<Task> eveningListModel;
-    private transient TaskManager taskManager;
-    private transient TaskUpdater taskUpdater;
-    private transient Consumer<Boolean> onShowWeekdayChange;
+    private final transient TaskManager taskManager;
+    private final transient TaskUpdater taskUpdater;
     private JCheckBox showWeekdayTasksCheckbox;
 
     @SuppressWarnings("this-escape")
@@ -64,7 +62,7 @@ public class ChecklistPanel extends JPanel {
     }
 
     private void initialize() {
-        showWeekdayTasksCheckbox = new JCheckBox("Show weekday specific tasks");
+        showWeekdayTasksCheckbox = new JCheckBox("Show all weekday tasks");
         showWeekdayTasksCheckbox.addActionListener(e -> updateTasks());
         morningListModel = new DefaultListModel<>();
         eveningListModel = new DefaultListModel<>();
@@ -174,7 +172,7 @@ public class ChecklistPanel extends JPanel {
         dialog.add(label, java.awt.BorderLayout.NORTH);
 
         // List of tasks
-        javax.swing.JList<Task> taskList = new javax.swing.JList<>(tasksToDelete.toArray(new Task[0]));
+        javax.swing.JList<Task> taskList = new javax.swing.JList<>(tasksToDelete.toArray(Task[]::new));
         taskList.setCellRenderer(new CheckboxListCellRenderer());
         taskList.setEnabled(false); // Read-only
         javax.swing.JScrollPane scrollPane = new javax.swing.JScrollPane(taskList);
@@ -391,14 +389,16 @@ public class ChecklistPanel extends JPanel {
                 JList<Task> targetList;
                 DefaultListModel<Task> targetModel;
                 
-                if (task.getType() == TaskType.MORNING) {
-                    targetList = morningTaskList;
-                    targetModel = morningListModel;
-                } else if (task.getType() == TaskType.EVENING) {
-                    targetList = eveningTaskList;
-                    targetModel = eveningListModel;
-                } else {
-                    continue; // Skip custom tasks
+                switch (task.getType()) {
+                    case MORNING -> {
+                        targetList = morningTaskList;
+                        targetModel = morningListModel;
+                    }
+                    case EVENING -> {
+                        targetList = eveningTaskList;
+                        targetModel = eveningListModel;
+                    }
+                    default -> { continue; } // Skip custom tasks
                 }
                 
                 // Find the task in the model
@@ -412,7 +412,7 @@ public class ChecklistPanel extends JPanel {
                         list.setSelectedIndex(index);
                         
                         // Highlight with animation effect
-                        highlightTask(list, index);
+                        highlightTask(list);
                         break;
                     }
                 }
@@ -423,24 +423,27 @@ public class ChecklistPanel extends JPanel {
     public void scrollToTask(Task task) {
         JList<Task> list;
         DefaultListModel<Task> model;
-        if (task.getType() == TaskType.MORNING) {
-            list = morningTaskList;
-            model = morningListModel;
-        } else {
-            list = eveningTaskList;
-            model = eveningListModel;
+        switch (task.getType()) {
+            case MORNING -> {
+                list = morningTaskList;
+                model = morningListModel;
+            }
+            default -> {
+                list = eveningTaskList;
+                model = eveningListModel;
+            }
         }
         for (int i = 0; i < model.getSize(); i++) {
-            if (model.getElementAt(i).getId().equals(task.getId())) {
-                list.setSelectedIndex(i);
-                list.ensureIndexIsVisible(i);
-                highlightTask(list, i);
-                break;
-            }
+                if (model.getElementAt(i).getId().equals(task.getId())) {
+                    list.setSelectedIndex(i);
+                    list.ensureIndexIsVisible(i);
+                    highlightTask(list);
+                    break;
+                }
         }
     }
 
-    private void highlightTask(JList<Task> list, int index) {
+    private void highlightTask(JList<Task> list) {
         // Simple highlight effect - could be enhanced with more sophisticated animation
         list.requestFocus();
         // The selection already provides visual feedback

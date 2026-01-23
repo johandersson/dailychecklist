@@ -70,7 +70,7 @@ public class TaskListDiff {
                java.util.Objects.equals(t1.getWeekday(), t2.getWeekday()) &&
                t1.isDone() == t2.isDone() &&
                java.util.Objects.equals(t1.getDoneDate(), t2.getDoneDate()) &&
-               java.util.Objects.equals(t1.getChecklistName(), t2.getChecklistName());
+               java.util.Objects.equals(t1.getChecklistId(), t2.getChecklistId());
     }
 
     public String getSummary() {
@@ -126,8 +126,8 @@ public class TaskListDiff {
         StringBuilder sb = new StringBuilder();
         sb.append("[").append(task.getType()).append("] ");
         sb.append(task.getName());
-        if (task.getChecklistName() != null) {
-            sb.append(" (").append(task.getChecklistName()).append(")");
+        if (task.getChecklistId() != null) {
+            sb.append(" (").append(task.getChecklistId()).append(")");
         }
         if (task.getWeekday() != null) {
             sb.append(" [").append(task.getWeekday()).append("]");

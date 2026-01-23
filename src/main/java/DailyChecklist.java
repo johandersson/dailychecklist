@@ -45,8 +45,8 @@ public class DailyChecklist {
     private CustomChecklistsOverviewPanel customChecklistsOverviewPanel;
     private JTabbedPane tabbedPane;
     private ReminderQueue reminderQueue;
-    private java.util.Set<String> openedChecklists = new java.util.HashSet<>();
-    private java.util.Set<Reminder> shownReminders = new java.util.HashSet<>();
+    private final java.util.Set<String> openedChecklists = new java.util.HashSet<>();
+    private final java.util.Set<Reminder> shownReminders = new java.util.HashSet<>();
     private TaskRepository repository;
 
     public DailyChecklist() {
@@ -89,8 +89,8 @@ public class DailyChecklist {
             this.settingsManager.load();
             
             // Set parent component for repository error dialogs
-            if (repository instanceof XMLTaskRepository) {
-                ((XMLTaskRepository) repository).setParentComponent(frame);
+            if (repository instanceof XMLTaskRepository xmlRepo) {
+                xmlRepo.setParentComponent(frame);
             }
             
             initializeUI();
@@ -108,7 +108,7 @@ public class DailyChecklist {
             frame.setJMenuBar(MenuBarBuilder.build(frame, checklistManager, () -> {
                 checklistPanel.updateTasks();
                 customChecklistsOverviewPanel.updateTasks();
-            }));
+            }, this));
             setTitleWithDate();
         }
         checklistPanel.setShowWeekdayTasks(settingsManager.getShowWeekdayTasks());
@@ -143,7 +143,7 @@ public class DailyChecklist {
                     Thread.currentThread().interrupt();
                     break;
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    java.util.logging.Logger.getLogger(DailyChecklist.class.getName()).log(java.util.logging.Level.SEVERE, "Error in background thread", e);
                 }
             }
         }).start();
@@ -227,21 +227,28 @@ public class DailyChecklist {
                     
                     // Switch to custom checklists tab
                     tabbedPane.setSelectedIndex(1);
-                    String name = reminder.getChecklistName();
-                    if (name == null || name.trim().isEmpty()) {
-                        name = "Unknown Checklist";
+                    final String checklistName = reminder.getChecklistName();
+                    if (checklistName == null || checklistName.trim().isEmpty()) {
+                        // Skip reminders with no checklist name - do nothing
+                        return;
                     }
                     // Mark this checklist as opened for this session
-                    openedChecklists.add(name);
-                    customChecklistsOverviewPanel.selectChecklistByName(name);
-                    
-                    // Mark all tasks in this checklist as done
-                    List<Task> tasks = checklistManager.getTasks(TaskType.CUSTOM, name);
-                    for (Task task : tasks) {
-                        if (!task.isDone()) {
-                            task.setDone(true);
-                            task.setDoneDate(new Date(System.currentTimeMillis()));
-                            checklistManager.updateTask(task);
+                    Checklist checklist = checklistManager.getCustomChecklists().stream()
+                        .filter(c -> checklistName.equals(c.getName()))
+                        .findFirst()
+                        .orElse(null);
+                    if (checklist != null) {
+                        openedChecklists.add(checklist.getName());
+                        customChecklistsOverviewPanel.selectChecklistByName(checklist.getName());
+                        
+                        // Mark all tasks in this checklist as done
+                        List<Task> tasks = checklistManager.getTasks(TaskType.CUSTOM, checklist);
+                        for (Task task : tasks) {
+                            if (!task.isDone()) {
+                                task.setDone(true);
+                                task.setDoneDate(new Date(System.currentTimeMillis()));
+                                checklistManager.updateTask(task);
+                            }
                         }
                     }
                     
@@ -306,7 +313,7 @@ public class DailyChecklist {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
-            e.printStackTrace();
+                    java.util.logging.Logger.getLogger(DailyChecklist.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating reminders", e);
         }
 
         setUIFonts(FontManager.FONT_NAME, FontManager.SIZE_DEFAULT);
@@ -326,14 +333,14 @@ public class DailyChecklist {
         javax.swing.SwingUtilities.invokeLater(() -> {
             try {
                 java.awt.Container content = inst.frame.getContentPane();
-                for (java.awt.Component c : content.getComponents()) {
+                    for (java.awt.Component c : content.getComponents()) {
                     if (c instanceof javax.swing.JButton && !c.isVisible()) {
-                        boolean ok = c.requestFocusInWindow();
+                        c.requestFocusInWindow();
                         return;
                     }
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                java.util.logging.Logger.getLogger(DailyChecklist.class.getName()).log(java.util.logging.Level.SEVERE, "Error during some operation", e);
             }
         });
     }
@@ -447,20 +454,34 @@ public class DailyChecklist {
     }
 
     public void jumpToTask(Task task) {
-        String checklistName = task.getChecklistName();
-        if (checklistName == null || checklistName.trim().isEmpty()) {
+        String checklistId = task.getChecklistId();
+        if (checklistId == null || checklistId.trim().isEmpty()) {
             // Daily checklist
             tabbedPane.setSelectedIndex(0);
+            // If this is a weekday-specific task that is not for today, enable "show all" so it is visible
+            if (task.getWeekday() != null) {
+                String taskWeekday = task.getWeekday().toLowerCase();
+                String currentWeekday = java.time.LocalDateTime.now().getDayOfWeek().toString().toLowerCase();
+                if (!taskWeekday.equals(currentWeekday) && !checklistPanel.isShowWeekdayTasks()) {
+                    checklistPanel.setShowWeekdayTasks(true);
+                }
+            }
             checklistPanel.scrollToTask(task);
         } else {
-            // Custom checklist
-            tabbedPane.setSelectedIndex(1);
-            openedChecklists.add(checklistName);
-            customChecklistsOverviewPanel.selectChecklistByName(checklistName);
-            // Get the panel and scroll
-            CustomChecklistPanel panel = (CustomChecklistPanel) customChecklistsOverviewPanel.getPanelMap().get(checklistName);
-            if (panel != null) {
-                panel.scrollToTask(task);
+            // Custom checklist - find the checklist by ID
+            Checklist checklist = checklistManager.getCustomChecklists().stream()
+                .filter(c -> checklistId.equals(c.getId()))
+                .findFirst()
+                .orElse(null);
+            if (checklist != null) {
+                tabbedPane.setSelectedIndex(1);
+                openedChecklists.add(checklist.getName());
+                customChecklistsOverviewPanel.selectChecklistByName(checklist.getName());
+                // Get the panel and scroll
+                CustomChecklistPanel panel = (CustomChecklistPanel) customChecklistsOverviewPanel.getPanelMap().get(checklist.getId());
+                if (panel != null) {
+                    panel.scrollToTask(task);
+                }
             }
         }
     }

@@ -1,237 +1,114 @@
-<html><head><style>
-h1 { font-size: 24pt; color: #333; }
-h2 { font-size: 18pt; color: #555; }
-h3 { font-size: 14pt; color: #777; }
-body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
-</style></head><body>
-<h1>Daily Checklist Help</h1>
+<html>
+<body style="font-family: Arial, sans-serif; color: #222; line-height:1.4;">
+	<h1>Daily Checklist Help</h1>
 
-<p>Daily Checklist is a specialized app for managing daily checklists, not general todo lists. It 'remembers' if you've completed tasks each day but resets fresh daily, without saving history. Unlike many todo apps that struggle with recurring tasks, this is designed specifically for daily checklists.</p>
+	<p>Daily Checklist is a focused app for managing daily routines (not general todo history). It records whether a task was completed each day but resets status daily. This app is designed for quick, repeatable daily checklists rather than long‑lived task tracking.</p>
 
-<p>Welcome to Daily Checklist! This guide will help you get started with managing your daily tasks, custom checklists, reminders, and using the focus timer.</p>
+	<h2>Getting Started</h2>
+	<ol>
+		<li>Launch the app: run <code>java -jar dailychecklist.jar</code> or double-click the JAR file.</li>
+		<li>Main interface: a split layout shows Daily tasks (left) and Custom checklists (right).</li>
+	</ol>
 
-<h2>Getting Started</h2>
+	<h2>Managing Daily Tasks</h2>
+	<h3>Adding a new daily task</h3>
+	<ul>
+		<li>Click the "Add Task" button or press <b>Ctrl+A</b>.</li>
+		<li>Enter a name (for example, "Morning Exercise").</li>
+		<li>Choose Morning or Evening and frequency (Daily / Weekday / Specific Day).</li>
+		<li>Click "Add Task" — it appears in the left panel under the chosen time.</li>
+	</ul>
 
-<ol>
-<li><b>Launch the App</b>: Run <code>java -jar dailychecklist.jar</code> or double-click the JAR file.</li>
-<li><b>Main Interface</b>: The app opens with a split-pane layout showing daily tasks on the left and custom checklists on the right.</li>
-</ol>
+	<h3>Viewing and editing daily tasks</h3>
+	<ul>
+		<li>The left panel groups tasks by Morning and Evening.</li>
+		<li>Use the "Show all weekday tasks" option to include weekday-only items.</li>
+		<li>Right-click a task to rename or remove it, or start the focus timer.</li>
+	</ul>
 
-<h2>Managing Daily Tasks</h2>
+	<h3>Completing tasks</h3>
+	<ul>
+		<li>Click a task's checkbox to toggle completion.</li>
+		<li>Click or double-click task text to select or toggle.</li>
+		<li>Multi-select with <b>Ctrl+click</b>; range-select with <b>Shift+click</b>.</li>
+		<li>Tasks reset daily; completion does not carry over.</li>
+	</ul>
 
-<h3>Adding a New Daily Task</h3>
-<ul>
-<li>Click the "Add Task" button or use Ctrl+A.</li>
-<li>Fill in the task name (e.g., "Morning Exercise").</li>
-<li>Choose the time: Morning or Evening.</li>
-<li>Select frequency:
-<ul>
-<li><b>Daily</b>: Every day.</li>
-<li><b>Weekday</b>: Monday to Friday.</li>
-<li><b>Specific Day</b>: Pick a day like Monday or Tuesday.</li>
-</ul>
-</li>
-<li>Click "Add Task". The task appears in the left panel under the chosen time.</li>
-</ul>
+	<h2>Custom Checklists</h2>
+	<h3>Create a checklist</h3>
+	<p>In the right panel, enter a name and click "Create Checklist". The name cannot be empty.</p>
 
-<h3>Viewing Daily Tasks</h3>
-<ul>
-<li>The left panel shows tasks grouped by Morning and Evening.</li>
-<li>Check the "Show weekday tasks" box to include weekday-specific tasks.</li>
-<li>Each task shows its name and completion status.</li>
-</ul>
+	<h3>Add tasks to a checklist</h3>
+	<p>Select a checklist, enter tasks (one per line) in the Add Tasks area, and click "Add Tasks". Empty lines are skipped. Tasks appear in the selected checklist.</p>
 
-<h3>Editing Daily Tasks</h3>
-<ul>
-<li>Right-click a task in the left panel.</li>
-<li>Choose "Rename" to change the name.</li>
-<li>Choose "Remove" to delete it.</li>
-<li>Choose "Start Focus Timer" to begin a timed session.</li>
-<li>Confirm changes in the popup.</li>
-</ul>
+	<h3>Manage checklists</h3>
+	<ul>
+		<li>Right-click a checklist to Rename, Delete, Add Reminder or View/Edit Reminders.</li>
+		<li>Checklists with reminders show a clock icon in the UI.</li>
+	</ul>
 
-<h3>Completing Tasks</h3>
-<ul>
-<li><b>Click the checkbox</b> next to a task to mark it complete/uncomplete instantly.</li>
-<li><b>Click the task text</b> to select tasks (supports multi-selection with Ctrl+click and range selection with Shift+click).</li>
-<li><b>Double-click tasks</b> to toggle completion.</li>
-<li>Completed tasks show a checkmark and are visually distinguished.</li>
-<li>Tasks reset daily - completed status doesn't carry over.</li>
-</ul>
+	<h3>Editing custom tasks</h3>
+	<ul>
+		<li>Toggle completion with the checkbox; double-click to rename; right-click for more options.</li>
+		<li>Drag and drop tasks to reorder or move between checklists.</li>
+	</ul>
 
-<h2>Managing Custom Checklists</h2>
+	<h2>Searching Tasks</h2>
+	<p>Press <b>Ctrl+F</b> or use the Search menu to open the search dialog. Type to filter tasks across all checklists in real time (case-insensitive). Select a result and click "Go to Selected Task" to jump to it in the UI.</p>
 
-<h3>Creating a Custom Checklist</h3>
-<ul>
-<li>In the right panel, enter a name in the text field (name cannot be empty).</li>
-<li>Click "Create Checklist".</li>
-<li>The new checklist appears in the list below.</li>
-</ul>
+	<h2>Reminders</h2>
+	<h3>Add and manage</h3>
+	<ul>
+		<li>Right-click a checklist → <i>Add Reminder</i>. Set date and time.</li>
+		<li>Right-click → <i>View/Edit Reminders</i> to modify or delete reminders.</li>
+	</ul>
 
-<h3>Adding Tasks to Custom Checklists</h3>
-<ul>
-<li>Select a checklist from the list in the right panel.</li>
-<li>In the "Add Tasks" area below the task list, enter one task per line.</li>
-<li>Click "Add Tasks" to add all entered tasks at once.</li>
-<li>Empty lines are automatically skipped.</li>
-<li>Tasks appear in the selected checklist.</li>
-</ul>
+	<h3>Notification states</h3>
+	<ul>
+		<li><b>Future</b> [BLUE_CLOCK_ICON]: scheduled more than 60 minutes away.</li>
+		<li><b>Due soon</b> [YELLOW_CLOCK_ICON]: within the next 60 minutes.</li>
+		<li><b>Overdue</b> [RED_CLOCK_ICON]: scheduled time has passed.</li>
+		<li><b>Very overdue</b> [ZZZ_ICON]: UI indicates critical overdue reminders.</li>
+	</ul>
 
-<h3>Managing Checklists</h3>
-<ul>
-<li>Right-click a checklist name in the right panel.</li>
-<li>Choose "Rename" to change the checklist name.</li>
-<li>Choose "Delete" to remove the checklist and its tasks.</li>
-<li>Choose "Add Reminder" to set up a reminder for this checklist.</li>
-<li>Choose "View/Edit Reminders" to manage existing reminders.</li>
-<li>Checklists with active reminders display a [BLUE_CLOCK_ICON] next to their name. Very overdue reminders show 'Zzz' after the checklist name.</li>
-</ul>
+	<h2>Focus Timer</h2>
+	<p>Right-click a task → <i>Start Focus Timer</i>. Enter minutes (e.g., 25) and start. During the timer a countdown window appears; controls: Space = Pause/Resume, Enter = Start (when paused).</p>
 
-<h3>Editing Custom Tasks</h3>
-<ul>
-<li><b>Click the checkbox</b> next to tasks to mark them complete/uncomplete.</li>
-<li><b>Click task text</b> to select tasks (supports multi-selection with Ctrl+click).</li>
-<li><b>Double-click tasks</b> to rename them.</li>
-<li>Right-click a task in a custom checklist.</li>
-<li>Choose "Rename" or "Remove" as needed.</li>
-<li>Choose "Start Focus Timer" to begin a timed session.</li>
-<li>Drag and drop tasks to reorder them (shows visual preview of dragged items).</li>
-</ul>
+	<h2>Settings & Troubleshooting</h2>
+	<ul>
+		<li>Access settings via the menu bar to customize defaults (timer length, etc.).</li>
+		<li>If the app won't start: verify Java with <code>java -version</code>.</li>
+		<li>Data loading issues: see File → Restore from Backup and backups in your user folder.</li>
+		<li>Tasks not saving: check file permissions. Data files are stored under your user directory.</li>
+	</ul>
 
-<h2>Searching Tasks</h2>
+	<h2>Data Backup and Recovery</h2>
+	<ul>
+		<li>Backups are stored in <code>dailychecklist-backups</code> in your user directory.</li>
+		<li>The app makes automatic backups on startup and periodically.</li>
+		<li>To recover, use File → Restore from Backup (the app backs up your live data first).</li>
+	</ul>
 
-<h3>Using Search</h3>
-<ul>
-<li>Press Ctrl+F or click the search button to open the search dialog.</li>
-<li>Type in the search box to find tasks by name (search is case-insensitive and searches across all checklists).</li>
-<li>Results update in real-time as you type.</li>
-<li>Select a task from the results and click "Go to Selected Task" to jump directly to that task.</li>
-<li>Daily tasks will switch to the Daily tab, while custom tasks will open their respective custom checklist.</li>
-</ul>
+	<h2>Keyboard Shortcuts</h2>
+	<ul>
+		<li>Add Task: <b>Ctrl+A</b></li>
+		<li>Search Tasks: <b>Ctrl+F</b></li>
+		<li>Refresh Tasks: <b>F5</b></li>
+		<li>Multi-select: <b>Ctrl+click</b></li>
+		<li>Range-select: <b>Shift+click</b></li>
+		<li>Delete selected tasks: <b>Delete</b></li>
+		<li>Timer pause/resume: <b>Space</b></li>
+	</ul>
 
-<h3>Search Behavior</h3>
-<ul>
-<li>Search finds tasks from all checklists (daily and custom).</li>
-<li>Custom tasks only appear in their designated custom checklists, not in the daily view.</li>
-<li>When jumping to a custom task from search, the app automatically opens that checklist if it's not already open.</li>
-</ul>
+	<h2>Reminder Icon Guide</h2>
+	<ul>
+		<li>[RED_CLOCK_ICON] Overdue — the scheduled time has passed.</li>
+		<li>[YELLOW_CLOCK_ICON] Due soon — scheduled within the next 60 minutes.</li>
+		<li>[BLUE_CLOCK_ICON] Future — scheduled more than 60 minutes away.</li>
+	</ul>
 
-<h2>Using Reminders</h2>
+	<p>For more details see the <a href="https://github.com/yourrepo/dailychecklist">project repository</a> or the README.md.</p>
 
-<h3>Adding Reminders</h3>
-<ul>
-<li>Right-click a checklist and select "Add Reminder".</li>
-<li>Set the date and time for the reminder.</li>
-<li>The app will notify you when the reminder time arrives.</li>
-</ul>
-
-<h3>Managing Reminders</h3>
-<ul>
-<li>Right-click a checklist and select "View/Edit Reminders".</li>
-<li>See all reminders for that checklist.</li>
-<li>Click "Edit" to modify a reminder's date/time.</li>
-<li>Click "Delete" to remove a reminder.</li>
-</ul>
-
-<h3>Reminder Notifications</h3>
-<ul>
-<li>When a reminder time arrives, a popup appears.</li>
-<li>Choose "Open" to view the checklist or "Done" to dismiss.</li>
-<li>The app checks for reminders every minute.</li>
-</ul>
-
-<h3>Reminder States</h3>
-<ul>
-<li><b>Future</b>: [BLUE_CLOCK_ICON] for reminders more than 1 hour away.</li>
-<li><b>Due Soon</b>: [YELLOW_CLOCK_ICON] for reminders within 1 hour.</li>
-<li><b>Overdue</b>: [RED_CLOCK_ICON] for reminders that have passed.</li>
-<li><b>Very Overdue</b>: [RED_CLOCK_ICON] with 'Zzz' appended to the checklist name for reminders more than 1 hour overdue.</li>
-</ul>
-
-<h3>Reordering Tasks</h3>
-<ul>
-<li>Drag and drop tasks in any list to reorder them.</li>
-<li>Visual feedback shows a preview of the task being dragged.</li>
-<li>Move tasks between different checklists by dragging them.</li>
-</ul>
-
-<h2>Using the Focus Timer</h2>
-
-<h3>Starting a Timer</h3>
-<ul>
-<li>Right-click any task and select "Start Focus Timer".</li>
-<li>Enter the duration in minutes (e.g., 25 for Pomodoro).</li>
-<li>Click "OK" to begin.</li>
-</ul>
-
-<h3>During the Timer</h3>
-<ul>
-<li>A new window shows the countdown.</li>
-<li>Circles fill up as time passes (each circle = 5 minutes).</li>
-<li>Use controls:
-<ul>
-<li><b>Space</b>: Pause/Resume.</li>
-<li><b>Enter</b>: Start (if paused).</li>
-</ul>
-</li>
-<li>When time ends, a notification appears.</li>
-</ul>
-
-<h3>Tips for Focus</h3>
-<ul>
-<li>Use the timer for short bursts (e.g., 15-30 minutes).</li>
-<li>Take breaks between sessions.</li>
-<li>Track progress visually with the circles.</li>
-</ul>
-
-<h2>Settings</h2>
-
-<ul>
-<li>Access via the menu bar.</li>
-<li>Customize app behavior (e.g., default timer lengths).</li>
-</ul>
-
-<h2>Troubleshooting</h2>
-
-<ul>
-<li><b>App Won't Start</b>: Ensure Java is installed (<code>java -version</code>). If initialization fails, the app will show an error dialog with recovery suggestions.</li>
-<li><b>Data Loading Issues</b>: If data files are corrupted or missing, the app will display a clear error message with steps to recover from automatic backups or restore defaults.</li>
-<li><b>Tasks Not Saving</b>: Check write permissions; tasks save to <code>dailychecklist-tasks.xml</code> and reminders to <code>dailychecklist-reminders.properties</code>. The app creates automatic backups in the <code>backups</code> folder.</li>
-<li><b>Timer Issues</b>: Restart the app if the timer freezes.</li>
-<li><b>Checklists Not Appearing</b>: Checklists appear in the list once they contain tasks.</li>
-</ul>
-
-<h2>Data Backup and Recovery</h2>
-
-<p>The app automatically creates backups of your data:</p>
-<ul>
-<li>Backups are stored in the <code>dailychecklist-backups</code> folder in your user directory.</li>
-<li>Automatic backups occur when the app starts and periodically during use.</li>
-<li>If data becomes corrupted, you can restore from a backup by extracting the ZIP file and copying the files to your user directory.</li>
-<li>Manual backups can be created via the menu options.</li>
-</ul>
-
-<h2>Keyboard Shortcuts</h2>
-
-<ul>
-<li><b>Add Task</b>: Ctrl+A</li>
-<li><b>Search Tasks</b>: Ctrl+F</li>
-<li><b>Refresh Tasks</b>: F5</li>
-<li><b>Multi-select Tasks</b>: Ctrl+click (hold Ctrl while clicking multiple tasks)</li>
-<li><b>Range-select Tasks</b>: Shift+click (select range between first and last clicked task)</li>
-<li><b>Delete Selected Tasks</b>: Delete key (when tasks are selected)</li>
-<li><b>Timer Pause/Resume</b>: Space</li>
-</ul>
-
-<p>For more details, check the README.md file or visit the project repository.</p>
-
-<p>Enjoy staying productive!</p>
-<h2>Reminder Icon Guide</h2>
-<p>Checklists that have reminders display a small clock icon next to their name. The clock icon indicates reminder time and status:</p>
-<ul>
-<li><b>[RED_CLOCK_ICON]</b>: Reminder time is <b>overdue</b> (the scheduled time has passed).</li>
-<li><b>[YELLOW_CLOCK_ICON]</b>: Reminder is <b>due soon</b> (scheduled within the next 60 minutes).</li>
-<li><b>[BLUE_CLOCK_ICON]</b>: Reminder is scheduled for the <b>future</b> (more than 60 minutes away).</li>
-<li>The icon also shows the reminder time (e.g., "9:30") to the right of the clock for quick reference.</li>
-</ul>
-</body></html>
+	<p>Enjoy staying productive!</p>
+</body>
+</html>

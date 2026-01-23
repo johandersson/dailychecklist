@@ -41,9 +41,9 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private boolean isWeekdayTask;
     private Font circleFont; // Font for the text inside the circle
     private String doneDate; // Timestamp when task was completed
-    private boolean isSelected; // Whether this item is currently selected
+    
     private boolean showChecklistInfo; // Whether to show checklist name in display
-    private String checklistName; // Name of the checklist this task belongs to
+    private ChecklistNameManager checklistNameManager; // Manager to resolve checklist IDs to names
     
     // Cached checkmark image for performance
     private static final BufferedImage checkmarkImage;
@@ -88,17 +88,30 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
     @SuppressWarnings("this-escape")
     public CheckboxListCellRenderer(boolean showChecklistInfo) {
+        this(showChecklistInfo, null);
+    }
+
+    public CheckboxListCellRenderer(boolean showChecklistInfo, ChecklistNameManager checklistNameManager) {
         setPreferredSize(new Dimension(200, 50)); // Increased height for timestamp display
         this.circleFont = getAvailableFont("Yu Gothic UI", Font.BOLD, 12); // Font for circle text
         this.showChecklistInfo = showChecklistInfo;
+        this.checklistNameManager = checklistNameManager;
     }
 
     @Override
     public Component getListCellRendererComponent(JList<? extends Task> list, Task task, int index, boolean isSelected, boolean cellHasFocus) {
         this.isChecked = task.isDone();
         this.taskName = task.getName();
-        this.checklistName = task.getChecklistName();
-        
+
+        // Resolve checklist name from ID if showing checklist info
+        String checklistName = null;
+        if (showChecklistInfo && task.getChecklistId() != null && checklistNameManager != null) {
+            Checklist checklist = checklistNameManager.getChecklistById(task.getChecklistId());
+            if (checklist != null) {
+                checklistName = checklist.getName();
+            }
+        }
+
         // If showing checklist info, append checklist name to task name
         if (showChecklistInfo && checklistName != null && !checklistName.trim().isEmpty()) {
             this.taskName = task.getName() + " (" + checklistName + ")";
@@ -109,7 +122,6 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.weekdayColor = WEEKDAY_COLORS.get(weekdayKey);
         this.isWeekdayTask = task.getWeekday() != null && WEEKDAY_ABBREVIATIONS.containsKey(weekdayKey);
         this.doneDate = task.getDoneDate();
-        this.isSelected = isSelected;
 
         setFont(FontManager.getTaskListFont()); // Use consistent font for all task lists
         setOpaque(true); // Ensure background is painted
