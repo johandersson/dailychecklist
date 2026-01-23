@@ -368,19 +368,31 @@ public class TaskTransferHandler extends TransferHandler {
 
         if (targetIsDaily && !sourceIsDaily) {
             // Moving to daily from custom
-            task.setChecklistName(null);
+            task.setChecklistId(null);
             task.setType("MORNING".equals(targetChecklistName) ? TaskType.MORNING : TaskType.EVENING);
         } else if (!targetIsDaily && sourceIsDaily) {
-            // Moving to custom from daily
-            task.setChecklistName(targetChecklistName);
-            task.setType(TaskType.CUSTOM);
+            // Moving to custom from daily - find the target checklist
+            Checklist targetChecklist = taskManager.getCustomChecklists().stream()
+                .filter(c -> targetChecklistName.equals(c.getName()))
+                .findFirst()
+                .orElse(null);
+            if (targetChecklist != null) {
+                task.setChecklistId(targetChecklist.getId());
+                task.setType(TaskType.CUSTOM);
+            }
         } else if (sourceIsDaily && targetIsDaily && !sourceChecklistName.equals(targetChecklistName)) {
             // Moving between morning and evening
-            task.setChecklistName(null);
+            task.setChecklistId(null);
             task.setType("MORNING".equals(targetChecklistName) ? TaskType.MORNING : TaskType.EVENING);
         } else if (!sourceIsDaily && !targetIsDaily) {
-            // Moving between custom checklists
-            task.setChecklistName(targetChecklistName);
+            // Moving between custom checklists - find the target checklist
+            Checklist targetChecklist = taskManager.getCustomChecklists().stream()
+                .filter(c -> targetChecklistName.equals(c.getName()))
+                .findFirst()
+                .orElse(null);
+            if (targetChecklist != null) {
+                task.setChecklistId(targetChecklist.getId());
+            }
         }
     }
 
@@ -394,7 +406,12 @@ public class TaskTransferHandler extends TransferHandler {
             if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
                 belongsToChecklist = checklistName.equals(t.getType().toString());
             } else {
-                belongsToChecklist = checklistName.equals(t.getChecklistName());
+                // For custom checklists, find the checklist by name and check ID
+                Checklist checklist = taskManager.getCustomChecklists().stream()
+                    .filter(c -> checklistName.equals(c.getName()))
+                    .findFirst()
+                    .orElse(null);
+                belongsToChecklist = checklist != null && checklist.getId().equals(t.getChecklistId());
             }
             if (belongsToChecklist) {
                 checklistTasks.add(t);
@@ -420,7 +437,12 @@ public class TaskTransferHandler extends TransferHandler {
             if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
                 belongsToChecklist = checklistName.equals(t.getType().toString());
             } else {
-                belongsToChecklist = checklistName.equals(t.getChecklistName());
+                // For custom checklists, find the checklist by name and check ID
+                Checklist checklist = taskManager.getCustomChecklists().stream()
+                    .filter(c -> checklistName.equals(c.getName()))
+                    .findFirst()
+                    .orElse(null);
+                belongsToChecklist = checklist != null && checklist.getId().equals(t.getChecklistId());
             }
             if (belongsToChecklist) {
                 insertIndex = allTasks.indexOf(t) + 1;

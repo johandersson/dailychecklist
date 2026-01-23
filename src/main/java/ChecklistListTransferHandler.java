@@ -25,11 +25,11 @@ import javax.swing.TransferHandler;
 @SuppressWarnings("serial")
 public class ChecklistListTransferHandler extends TransferHandler {
     private static final long serialVersionUID = 1L;
-    private transient final DefaultListModel<String> listModel;
+    private transient final DefaultListModel<Checklist> listModel;
     private transient final TaskManager taskManager;
     private transient final Runnable updateTasks;
 
-    public ChecklistListTransferHandler(DefaultListModel<String> listModel, TaskManager taskManager, Runnable updateTasks) {
+    public ChecklistListTransferHandler(DefaultListModel<Checklist> listModel, TaskManager taskManager, Runnable updateTasks) {
         this.listModel = listModel;
         this.taskManager = taskManager;
         this.updateTasks = updateTasks;
@@ -52,7 +52,7 @@ public class ChecklistListTransferHandler extends TransferHandler {
             return false;
         }
 
-        String targetChecklistName = listModel.get(index);
+        String targetChecklistName = listModel.get(index).getName();
 
         try {
             String data = (String) support.getTransferable().getTransferData(DataFlavor.stringFlavor);
@@ -68,13 +68,24 @@ public class ChecklistListTransferHandler extends TransferHandler {
                 return false;
             }
 
+            // Find the target checklist by name
+            Checklist targetChecklist = null;
+            for (Checklist checklist : taskManager.getCustomChecklists()) {
+                if (targetChecklistName.equals(checklist.getName())) {
+                    targetChecklist = checklist;
+                    break;
+                }
+            }
+            if (targetChecklist == null) {
+                return false;
+            }
+
             // Only allow moving between custom checklists
             if (!isCustomChecklist(sourceChecklistName) || !isCustomChecklist(targetChecklistName)) {
                 return false;
             }
 
-            task.setChecklistName(targetChecklistName);
-            taskManager.updateTask(task);
+            taskManager.moveTaskToChecklist(task, targetChecklist);
             updateTasks.run();
             // If the drop originated from a JList, try to select the target checklist in the UI
             try {
