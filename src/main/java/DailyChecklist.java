@@ -143,7 +143,7 @@ public class DailyChecklist {
                     Thread.currentThread().interrupt();
                     break;
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    java.util.logging.Logger.getLogger(DailyChecklist.class.getName()).log(java.util.logging.Level.SEVERE, "Error in background thread", e);
                 }
             }
         }).start();
@@ -313,7 +313,7 @@ public class DailyChecklist {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
-            e.printStackTrace();
+                    java.util.logging.Logger.getLogger(DailyChecklist.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating reminders", e);
         }
 
         setUIFonts(FontManager.FONT_NAME, FontManager.SIZE_DEFAULT);
@@ -340,7 +340,7 @@ public class DailyChecklist {
                     }
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                java.util.logging.Logger.getLogger(DailyChecklist.class.getName()).log(java.util.logging.Level.SEVERE, "Error during some operation", e);
             }
         });
     }

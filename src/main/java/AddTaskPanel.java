@@ -223,25 +223,7 @@ public class AddTaskPanel extends JPanel {
             }
             
             if (!addedTasks.isEmpty()) {
-                onTasksAdded.accept(addedTasks.toArray(new Task[0]));
-            }
-            
-            String taskType;
-            if (checklistName != null) {
-                taskType = "Custom checklist";
-            } else if (addMorningRadioButton.isSelected()) {
-                taskType = "Morning";
-            } else if (addEveningRadioButton.isSelected()) {
-                taskType = "Evening";
-            } else {
-                taskType = "Unknown";
-            }
-            String frequencyType;
-            if (weekdayComboBox != null && weekdayComboBox.isEnabled() && taskType != "Custom checklist") {
-                String selectedWeekday = (String) weekdayComboBox.getSelectedItem();
-                frequencyType = "Weekday: " + selectedWeekday;
-            } else {
-                frequencyType = "Daily";
+                onTasksAdded.accept(addedTasks.toArray(Task[]::new));
             }
             // Success message removed - replaced with scrolling and highlighting
             taskField.setText("");

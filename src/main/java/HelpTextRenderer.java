@@ -63,7 +63,7 @@ public class HelpTextRenderer {
                 processLine(doc, line, defaultStyle, boldStyle);
             }
         } catch (BadLocationException e) {
-            e.printStackTrace();
+            java.util.logging.Logger.getLogger(HelpTextRenderer.class.getName()).log(java.util.logging.Level.SEVERE, "Failed to load help text", e);
         }
     }
 

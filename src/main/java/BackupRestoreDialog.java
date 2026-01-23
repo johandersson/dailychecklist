@@ -60,7 +60,7 @@ public class BackupRestoreDialog {
         // Load all tasks from the ZIP and filter for MORNING and EVENING tasks
         List<Task> backupTasks = loadBackupTasks(chosen);
         if (backupTasks == null) {
-            JOptionPane.showMessageDialog(parent, "Failed to load backup tasks.", "Load Error", JOptionPane.ERROR_MESSAGE);
+            ErrorDialog.showError(parent, "Failed to load backup tasks.");
             return;
         }
 
@@ -88,15 +88,18 @@ public class BackupRestoreDialog {
 
         // Prepare current and backup task lists and compute per-checklist task counts for stats.
         List<Task> currentTasks = taskManager.getAllTasks();
+        java.util.Set<String> existingIds = currentTasks.stream().map(Task::getId).collect(java.util.stream.Collectors.toSet());
         List<Task> backupTasksCopy = new ArrayList<>(backupTasks);
         Map<String,String> checklistsCopy = new LinkedHashMap<>(checklists);
 
         // Count custom tasks per checklist id (preserve insertion order from checklists)
+        // Only count tasks that would actually be imported (i.e., whose UUID is not already present)
         Map<String,Integer> checklistTaskCounts = new LinkedHashMap<>();
         for (String id : checklistsCopy.keySet()) checklistTaskCounts.put(id, 0);
         for (Task t : customTasks) {
             String id = t.getChecklistId();
             if (id == null) continue;
+            if (existingIds.contains(t.getId())) continue; // skip tasks already present
             checklistTaskCounts.put(id, checklistTaskCounts.getOrDefault(id, 0) + 1);
         }
 
@@ -109,15 +112,15 @@ public class BackupRestoreDialog {
 
             // Merge imported tasks into current tasks (avoid duplicates)
             List<Task> merged = new ArrayList<>(currentTasks);
-            java.util.Set<String> existingIds = merged.stream().map(Task::getId).collect(Collectors.toSet());
+            java.util.Set<String> mergedIds = merged.stream().map(Task::getId).collect(Collectors.toSet());
             for (Task t : customTasks) {
-                if (!existingIds.contains(t.getId())) merged.add(t);
+                if (!mergedIds.contains(t.getId())) merged.add(t);
             }
             for (Task t : morningTasks) {
-                if (!existingIds.contains(t.getId())) merged.add(t);
+                if (!mergedIds.contains(t.getId())) merged.add(t);
             }
             for (Task t : eveningTasks) {
-                if (!existingIds.contains(t.getId())) merged.add(t);
+                if (!mergedIds.contains(t.getId())) merged.add(t);
             }
 
             // Apply merged tasks
@@ -126,12 +129,15 @@ public class BackupRestoreDialog {
                 updateTasks.run();
                 JOptionPane.showMessageDialog(parent, "Imported tasks and merged checklists." + (liveBackup!=null?" (backup created)":""), "Import Complete", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(parent, "Failed to import tasks: " + e.getMessage(), "Import Failed", JOptionPane.ERROR_MESSAGE);
+                ErrorDialog.showError(parent, "Failed to import tasks", e);
             }
         };
 
         // Build preview object and show the diff/preview dialog (single confirmation)
-        RestorePreview preview = new RestorePreview(checklistsCopy, checklistTaskCounts, newChecklistCount, morningTasks.size(), eveningTasks.size());
+        // Morning/evening counts should also only count tasks that would be imported (skip existing UUIDs)
+        int morningImportCount = (int) morningTasks.stream().filter(t -> !existingIds.contains(t.getId())).count();
+        int eveningImportCount = (int) eveningTasks.stream().filter(t -> !existingIds.contains(t.getId())).count();
+        RestorePreview preview = new RestorePreview(checklistsCopy, checklistTaskCounts, newChecklistCount, morningImportCount, eveningImportCount);
         // Show the diff/preview dialog (delegates to RestorePreviewDialog)
         RestorePreviewDialog.showDialog(parent, currentTasks, backupTasksCopy, chosen, onRestore, preview);
     }
@@ -198,7 +204,7 @@ public class BackupRestoreDialog {
         if (res != JOptionPane.OK_OPTION) return ids;
         int[] sel = list.getSelectedIndices();
         if (sel == null || sel.length == 0) return ids;
-        String[] keys = checklists.keySet().toArray(new String[0]);
+        String[] keys = checklists.keySet().toArray(String[]::new);
         for (int i : sel) {
             if (i >= 0 && i < keys.length) ids.add(keys[i]);
         }
@@ -246,8 +252,7 @@ public class BackupRestoreDialog {
     }
 
     private static List<Task> loadBackupTasks(File backupFile) {
-        try {
-            java.util.zip.ZipFile zipFile = new java.util.zip.ZipFile(backupFile);
+        try (java.util.zip.ZipFile zipFile = new java.util.zip.ZipFile(backupFile)) {
             java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zipFile.entries();
             while (entries.hasMoreElements()) {
                 java.util.zip.ZipEntry entry = entries.nextElement();
@@ -266,11 +271,9 @@ public class BackupRestoreDialog {
                     // Parse the XML
                     TaskXmlHandler handler = new TaskXmlHandler(tempFile.getAbsolutePath());
                     List<Task> tasks = handler.parseAllTasks();
-                    zipFile.close();
                     return tasks;
                 }
             }
-            zipFile.close();
             return null;
         } catch (Exception e) {
             return null;

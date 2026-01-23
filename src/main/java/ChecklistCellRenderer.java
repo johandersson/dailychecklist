@@ -78,7 +78,7 @@ public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
         Graphics2D g2 = (Graphics2D) g;
 
         // Draw extra icon if present
-        Icon extraIcon = getExtraIconForValue((Checklist) value);
+        Icon extraIcon = getExtraIconForValue(value);
         if (extraIcon != null) {
             String text = getTextForValue(value);
             if (text != null) {

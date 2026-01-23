@@ -17,8 +17,6 @@
  */
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
@@ -85,8 +83,8 @@ public class SearchDialog {
                     if (includeAllWeekday) return true;
                     return task.getWeekday().toLowerCase().equals(currentWeekday);
                 })
-                .collect(Collectors.toList());
-            resultList.setListData(results.toArray(new Task[0]));
+                    .collect(Collectors.toList());
+                resultList.setListData(results.toArray(Task[]::new));
         };
 
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -110,21 +108,13 @@ public class SearchDialog {
         dialog.add(scrollPane, BorderLayout.CENTER);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
-        searchButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                performSearch.run();
-            }
-        });
+        searchButton.addActionListener(e -> performSearch.run());
 
-        goToButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Task selected = resultList.getSelectedValue();
-                if (selected != null) {
-                    dailyChecklist.jumpToTask(selected);
-                    dialog.dispose();
-                }
+        goToButton.addActionListener(e -> {
+            Task selected = resultList.getSelectedValue();
+            if (selected != null) {
+                dailyChecklist.jumpToTask(selected);
+                dialog.dispose();
             }
         });
 
