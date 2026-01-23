@@ -45,8 +45,8 @@ public class DailyChecklist {
     private CustomChecklistsOverviewPanel customChecklistsOverviewPanel;
     private JTabbedPane tabbedPane;
     private ReminderQueue reminderQueue;
-    private java.util.Set<String> openedChecklists = new java.util.HashSet<>();
-    private java.util.Set<Reminder> shownReminders = new java.util.HashSet<>();
+    private final java.util.Set<String> openedChecklists = new java.util.HashSet<>();
+    private final java.util.Set<Reminder> shownReminders = new java.util.HashSet<>();
     private TaskRepository repository;
 
     public DailyChecklist() {
@@ -333,9 +333,9 @@ public class DailyChecklist {
         javax.swing.SwingUtilities.invokeLater(() -> {
             try {
                 java.awt.Container content = inst.frame.getContentPane();
-                for (java.awt.Component c : content.getComponents()) {
+                    for (java.awt.Component c : content.getComponents()) {
                     if (c instanceof javax.swing.JButton && !c.isVisible()) {
-                        boolean ok = c.requestFocusInWindow();
+                        c.requestFocusInWindow();
                         return;
                     }
                 }
