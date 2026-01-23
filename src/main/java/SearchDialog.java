@@ -44,9 +44,10 @@ public class SearchDialog {
 
         JList<Task> resultList = new JList<>();
         CheckboxListCellRenderer renderer = new CheckboxListCellRenderer();
-        renderer.setShowListName(true);
         resultList.setCellRenderer(renderer);
         resultList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        resultList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Consistent selection color
+        resultList.setSelectionForeground(java.awt.Color.BLACK);
         JScrollPane scrollPane = new JScrollPane(resultList);
 
         Runnable performSearch = () -> {
