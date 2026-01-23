@@ -33,11 +33,14 @@ import javax.swing.ListSelectionModel;
 public class SearchDialog {
     public static void showSearchDialog(java.awt.Component parent, TaskManager taskManager, DailyChecklist dailyChecklist) {
         JDialog dialog = new JDialog((java.awt.Frame) null, "Search Tasks", true);
+        dialog.setIconImage(DailyChecklist.createAppIcon());
         dialog.setLayout(new BorderLayout());
 
         JPanel searchPanel = new JPanel(new FlowLayout());
         JTextField searchField = new JTextField(20);
+        searchField.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 14));
         JButton searchButton = new JButton("Search");
+        searchButton.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 12));
         searchPanel.add(new JLabel("Search:"));
         searchPanel.add(searchField);
         searchPanel.add(searchButton);
@@ -70,7 +73,9 @@ public class SearchDialog {
 
         JPanel buttonPanel = new JPanel(new FlowLayout());
         JButton goToButton = new JButton("Go to Selected Task");
+        goToButton.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 12));
         JButton closeButton = new JButton("Close");
+        closeButton.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 12));
         buttonPanel.add(goToButton);
         buttonPanel.add(closeButton);
 
@@ -103,7 +108,7 @@ public class SearchDialog {
 
         closeButton.addActionListener(e -> dialog.dispose());
 
-        dialog.setSize(400, 300);
+        dialog.setSize(500, 400);
         dialog.setLocationRelativeTo(parent);
         dialog.setVisible(true);
     }
