@@ -140,7 +140,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
 
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightScroll);
         splitPane.setResizeWeight(0.3);
-        splitPane.setDividerSize(6);
+        splitPane.setDividerSize(4);
         splitPane.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
         setLayout(new BorderLayout());
