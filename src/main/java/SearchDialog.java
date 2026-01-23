@@ -43,7 +43,9 @@ public class SearchDialog {
         searchPanel.add(searchButton);
 
         JList<Task> resultList = new JList<>();
-        resultList.setCellRenderer(new CheckboxListCellRenderer());
+        CheckboxListCellRenderer renderer = new CheckboxListCellRenderer();
+        renderer.setShowListName(true);
+        resultList.setCellRenderer(renderer);
         resultList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane scrollPane = new JScrollPane(resultList);
 
