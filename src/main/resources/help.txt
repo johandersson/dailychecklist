@@ -44,7 +44,7 @@
 	<h3>Manage checklists</h3>
 	<ul>
 		<li>Right-click a checklist to Rename, Delete, Add Reminder or View/Edit Reminders.</li>
-		<li>Checklists with reminders show a clock icon in the UI.</li>
+		<li>Checklists with reminders display a small clock indicator and a textual status in the UI (e.g. "Due soon", "Overdue").</li>
 	</ul>
 
 	<h3>Editing custom tasks</h3>
@@ -65,10 +65,10 @@
 
 	<h3>Notification states</h3>
 	<ul>
-		<li><b>Future</b> [BLUE_CLOCK_ICON]: scheduled more than 60 minutes away.</li>
-		<li><b>Due soon</b> [YELLOW_CLOCK_ICON]: within the next 60 minutes.</li>
-		<li><b>Overdue</b> [RED_CLOCK_ICON]: scheduled time has passed.</li>
-		<li><b>Very overdue</b> [ZZZ_ICON]: UI indicates critical overdue reminders.</li>
+		<li><b>Future</b>: scheduled more than 60 minutes away.</li>
+		<li><b>Due soon</b>: within the next 60 minutes.</li>
+		<li><b>Overdue</b>: scheduled time has passed.</li>
+		<li><b>Very overdue</b>: UI indicates critical overdue reminders.</li>
 	</ul>
 
 	<h2>Focus Timer</h2>
@@ -100,11 +100,11 @@
 		<li>Timer pause/resume: <b>Space</b></li>
 	</ul>
 
-	<h2>Reminder Icon Guide</h2>
+	<h2>Reminder Status Guide</h2>
 	<ul>
-		<li>[RED_CLOCK_ICON] Overdue — the scheduled time has passed.</li>
-		<li>[YELLOW_CLOCK_ICON] Due soon — scheduled within the next 60 minutes.</li>
-		<li>[BLUE_CLOCK_ICON] Future — scheduled more than 60 minutes away.</li>
+		<li><b>Overdue</b> — the scheduled time has passed.</li>
+		<li><b>Due soon</b> — scheduled within the next 60 minutes.</li>
+		<li><b>Future</b> — scheduled more than 60 minutes away.</li>
 	</ul>
 
 	<p>For more details see the <a href="https://github.com/yourrepo/dailychecklist">project repository</a> or the README.md.</p>

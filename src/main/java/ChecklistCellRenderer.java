@@ -39,7 +39,8 @@ public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
             Reminder nearest = nearestReminderForChecklist(checklist.getName());
             if (nearest != null) {
                 ReminderClockIcon.State state = computeState(nearest);
-                return new ReminderClockIcon(nearest.getHour(), nearest.getMinute(), state);
+                // Show time text in main lists so timestamps remain visible
+                return IconCache.getReminderClockIcon(nearest.getHour(), nearest.getMinute(), state, true);
             }
         }
         return null;
@@ -65,7 +66,7 @@ public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
             if (nearest != null) {
                 ReminderClockIcon.State state = computeState(nearest);
                 if (state == ReminderClockIcon.State.VERY_OVERDUE) {
-                    return new ZzzIcon();
+                    return IconCache.getZzzIcon();
                 }
             }
         }

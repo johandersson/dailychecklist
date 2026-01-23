@@ -122,18 +122,18 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         topPanel.add(newChecklistField, BorderLayout.CENTER);
         topPanel.add(createButton, BorderLayout.EAST);
         // Flatter look: reduce extra titled/etched borders and padding
-        topPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 6, 6));
+        topPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
         JPanel leftPanel = new JPanel(new BorderLayout());
         leftPanel.add(topPanel, BorderLayout.NORTH);
         javax.swing.JScrollPane leftScroll = new JScrollPane(checklistList);
         leftScroll.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
         leftPanel.add(leftScroll, BorderLayout.CENTER);
-        leftPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 6, 6));
+        leftPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
         rightPanel = new JPanel();
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
-        rightPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 6, 6));
+        rightPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
         javax.swing.JScrollPane rightScroll = new JScrollPane(rightPanel);
         rightScroll.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));

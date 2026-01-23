@@ -67,12 +67,17 @@ public class SearchDialog {
                 java.awt.Color selBg = new java.awt.Color(184, 207, 229);
                 lbl.setBackground(isSelected ? selBg : java.awt.Color.WHITE);
                 lbl.setForeground(java.awt.Color.BLACK);
-                // Use checklist renderer to compute reminder icon if any
-                javax.swing.Icon icon = null;
-                javax.swing.Icon rem = checklistRenderer.getIconForValue(c);
-                if (rem != null) icon = rem; else icon = new ChecklistDocumentIcon();
+                // Always show the checklist document icon for search hits (no reminder clock/timestamp)
+                javax.swing.Icon icon = IconCache.getChecklistDocumentIcon();
                 lbl.setIcon(icon);
-                lbl.setIconTextGap(8);
+                // Slightly tighter gap to better horizontally align with task checkmark
+                lbl.setIconTextGap(6);
+                // Align checklist icon/text to match task list layout (task textStartX ~= 40)
+                // JLabel layouts: leftInset + iconWidth + iconTextGap ~= textStartX
+                // Nudge left slightly (-3) to better match checkbox alignment
+                int leftInset = Math.max(2, 40 - (icon.getIconWidth() + lbl.getIconTextGap()) - 3);
+                lbl.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, leftInset, 0, 0));
+                lbl.setVerticalAlignment(javax.swing.SwingConstants.CENTER);
                 return lbl;
             } else {
                 return new javax.swing.JLabel(value == null ? "" : value.toString());
@@ -81,6 +86,8 @@ public class SearchDialog {
         unifiedList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         unifiedList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Consistent selection color
         unifiedList.setSelectionForeground(java.awt.Color.BLACK);
+        // Ensure consistent vertical sizing for both checklist and task rows
+        unifiedList.setFixedCellHeight(50);
         
         // Double-click handler for unified list
         unifiedList.addMouseListener(new MouseAdapter() {
@@ -135,7 +142,7 @@ public class SearchDialog {
         });
 
         JPanel buttonPanel = new JPanel(new FlowLayout());
-        JButton goToButton = new JButton("Go to Selected Task");
+        JButton goToButton = new JButton("Open");
         goToButton.setFont(FontManager.getButtonFont());
         JButton closeButton = new JButton("Close");
         closeButton.setFont(FontManager.getButtonFont());
@@ -152,6 +159,10 @@ public class SearchDialog {
 
         goToButton.addActionListener(e -> {
             Object sel = unifiedList.getSelectedValue();
+            if (sel == null) {
+                javax.swing.JOptionPane.showMessageDialog(dialog, "Please select an item to open.", "No selection", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
             if (sel instanceof Task t) {
                 dailyChecklist.jumpToTask(t);
                 dialog.dispose();

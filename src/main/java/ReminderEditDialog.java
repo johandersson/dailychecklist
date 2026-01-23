@@ -93,7 +93,7 @@ public class ReminderEditDialog extends JDialog {
 
         JLabel headerLabel = new JLabel(headerText, JLabel.CENTER);
         headerLabel.setFont(FontManager.getTaskListFont());
-        headerLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        headerLabel.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(headerLabel, BorderLayout.CENTER);
@@ -174,7 +174,7 @@ public class ReminderEditDialog extends JDialog {
     private void addPresetSection(JPanel panel, GridBagConstraints gbc) {
         gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2;
         JPanel presetPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        presetPanel.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+        presetPanel.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
         JButton in15MinButton = createPresetButton("In 15 min", () -> setTimeFromNow(15), true);
         JButton in1HourButton = createPresetButton("In 1 hour", () -> setTimeFromNow(60), true);

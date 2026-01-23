@@ -54,7 +54,7 @@ public abstract class BaseAddTaskPanel extends JPanel {
         taskField.setLineWrap(true);
         taskField.setWrapStyleWord(true);
         JScrollPane taskScrollPane = new JScrollPane(taskField);
-        taskScrollPane.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+        taskScrollPane.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         taskScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         taskScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         taskScrollPane.setPreferredSize(new Dimension(300, 200));
