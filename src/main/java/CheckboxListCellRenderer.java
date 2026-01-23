@@ -41,7 +41,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private boolean isWeekdayTask;
     private Font circleFont; // Font for the text inside the circle
     private String doneDate; // Timestamp when task was completed
-    private boolean isSelected; // Whether this item is currently selected
+    
     private boolean showChecklistInfo; // Whether to show checklist name in display
     private ChecklistNameManager checklistNameManager; // Manager to resolve checklist IDs to names
     
@@ -122,7 +122,6 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.weekdayColor = WEEKDAY_COLORS.get(weekdayKey);
         this.isWeekdayTask = task.getWeekday() != null && WEEKDAY_ABBREVIATIONS.containsKey(weekdayKey);
         this.doneDate = task.getDoneDate();
-        this.isSelected = isSelected;
 
         setFont(FontManager.getTaskListFont()); // Use consistent font for all task lists
         setOpaque(true); // Ensure background is painted

@@ -24,9 +24,9 @@ import javax.swing.JSplitPane;
 public class ChecklistWindow extends JFrame {
     private static final long serialVersionUID = 1L;
     private CustomChecklistPanel checklistPanel;
-    private transient TaskManager taskManager;
-    private Checklist checklist;
-    private transient Runnable updateTasks;
+    private final transient TaskManager taskManager;
+    private final Checklist checklist;
+    private final transient Runnable updateTasks;
 
     @SuppressWarnings("this-escape")
     public ChecklistWindow(TaskManager taskManager, Runnable updateTasks, Checklist checklist) {

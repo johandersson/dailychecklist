@@ -28,8 +28,8 @@ import java.util.Date;
 import java.util.Properties;
 
 public class SettingsManager {
-    private Properties settings = new Properties();
-    private String settingsPath = ApplicationConfiguration.SETTINGS_FILE_PATH;
+    private final Properties settings = new Properties();
+    private final String settingsPath = ApplicationConfiguration.SETTINGS_FILE_PATH;
     private String lastDate;
     private Component parentComponent;
 

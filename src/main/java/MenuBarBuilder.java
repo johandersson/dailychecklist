@@ -32,7 +32,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
 import javax.swing.event.HyperlinkEvent;
-import javax.swing.event.HyperlinkListener;
 import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
@@ -44,7 +43,7 @@ public class MenuBarBuilder {
 
         // Search Tasks
         JMenuItem searchItem = new JMenuItem("Search Tasks");
-        searchItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, java.awt.event.InputEvent.CTRL_MASK));
+        searchItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, java.awt.event.InputEvent.CTRL_DOWN_MASK));
         searchItem.addActionListener(e -> SearchDialog.showSearchDialog(parent, taskManager, dailyChecklist));
         fileMenu.add(searchItem);
 
@@ -60,7 +59,7 @@ public class MenuBarBuilder {
                 taskManager.createManualBackup();
                 JOptionPane.showMessageDialog(parent, "Manual backup created.", "Backup", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(parent, "Failed to create manual backup: " + ex.getMessage(), "Backup Failed", JOptionPane.ERROR_MESSAGE);
+                ErrorDialog.showError(parent, "Failed to create manual backup", ex);
             }
         });
         fileMenu.add(backupNowItem);
@@ -121,16 +120,12 @@ public class MenuBarBuilder {
             contentPane.setEditable(false);
             contentPane.setBackground(Color.WHITE);
             contentPane.setBorder(BorderFactory.createEmptyBorder());
-            contentPane.addHyperlinkListener(new HyperlinkListener() {
-                @Override
-                public void hyperlinkUpdate(HyperlinkEvent e) {
-                    if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
-                        try {
-                            Desktop.getDesktop().browse(e.getURL().toURI());
-                        } catch (Exception ex) {
-                            // Handle exception, perhaps show a message
-                            JOptionPane.showMessageDialog(aboutDialog, "Unable to open link: " + e.getURL(), "Error", JOptionPane.ERROR_MESSAGE);
-                        }
+            contentPane.addHyperlinkListener(he -> {
+                if (he.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                    try {
+                        Desktop.getDesktop().browse(he.getURL().toURI());
+                    } catch (Exception ex) {
+                        ErrorDialog.showError(aboutDialog, "Unable to open link: " + he.getURL(), ex);
                     }
                 }
             });
