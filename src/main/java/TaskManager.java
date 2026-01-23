@@ -97,6 +97,9 @@ public class TaskManager {
                 if (type != TaskType.CUSTOM || checklistName == null || Objects.equals(checklistName.trim(), task.getChecklistName())) {
                     filtered.add(task);
                 }
+            } else if (type == TaskType.CUSTOM && checklistName != null && Objects.equals(checklistName.trim(), task.getChecklistName())) {
+                // Include tasks with matching checklistName even if type is not CUSTOM
+                filtered.add(task);
             }
         }
         return filtered;
