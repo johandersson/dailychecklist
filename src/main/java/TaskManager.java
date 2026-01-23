@@ -45,8 +45,8 @@ public class TaskManager {
     }
 
     public Task getTaskById(String id) {
-        if (repository instanceof XMLTaskRepository) {
-            return ((XMLTaskRepository) repository).getTaskById(id);
+        if (repository instanceof XMLTaskRepository xmlRepo) {
+            return xmlRepo.getTaskById(id);
         }
         // Fallback: linear search
         for (Task task : getAllTasks()) {
@@ -72,8 +72,8 @@ public class TaskManager {
      * Returns true if successful, false if failed.
      */
     public boolean updateTaskQuiet(Task task) {
-        if (repository instanceof XMLTaskRepository) {
-            return ((XMLTaskRepository) repository).updateTaskQuiet(task);
+        if (repository instanceof XMLTaskRepository xmlRepo) {
+            return xmlRepo.updateTaskQuiet(task);
         }
         // Fallback for other repository types
         try {
@@ -170,8 +170,8 @@ public class TaskManager {
      * Manually creates a backup of all data.
      */
     public void createManualBackup() {
-        if (repository instanceof XMLTaskRepository) {
-            ((XMLTaskRepository) repository).createManualBackup();
+        if (repository instanceof XMLTaskRepository xmlRepo) {
+            xmlRepo.createManualBackup();
         }
     }
 
