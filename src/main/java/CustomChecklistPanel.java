@@ -219,7 +219,7 @@ public class CustomChecklistPanel extends JPanel {
             String dateText = String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
             String timeText = String.format("%02d:%02d", reminder.getHour(), reminder.getMinute());
 
-            javax.swing.JPanel small = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 2, 0));
+            javax.swing.JPanel small = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 0));
             small.setOpaque(false);
             javax.swing.JLabel iconLabel = new javax.swing.JLabel(icon);
             javax.swing.JLabel textLabel = new javax.swing.JLabel(dateText + " " + timeText);
