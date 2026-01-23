@@ -244,8 +244,8 @@ public class TaskTransferHandler extends TransferHandler {
         List<Task> tasks = transferData.tasks;
 
         // Ensure drop index is within valid bounds
-        JList<?> list = (JList<?>) support.getComponent();
-        int originalSize = list.getModel().getSize();
+        JList<?> targetList = (JList<?>) support.getComponent();
+        int originalSize = targetList.getModel().getSize();
         if (dropIndex > originalSize) {
             dropIndex = originalSize;
         }
@@ -325,8 +325,8 @@ public class TaskTransferHandler extends TransferHandler {
         }
 
         // Ensure drop index is within valid bounds
-        JList<?> list = (JList<?>) support.getComponent();
-        int maxIndex = list.getModel().getSize();
+        JList<?> targetList = (JList<?>) support.getComponent();
+        int maxIndex = targetList.getModel().getSize();
         if (dropIndex > maxIndex) {
             dropIndex = maxIndex;
         }
@@ -522,8 +522,8 @@ public class TaskTransferHandler extends TransferHandler {
         }
         int index = dropLocation.getIndex();
         // Ensure index is within valid bounds for the component
-        JList<?> list = (JList<?>) support.getComponent();
-        int maxIndex = list.getModel().getSize();
+        JList<?> targetList = (JList<?>) support.getComponent();
+        int maxIndex = targetList.getModel().getSize();
         if (index < 0) {
             return 0;
         }
