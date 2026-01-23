@@ -319,6 +319,16 @@ public class CustomChecklistPanel extends JPanel {
         }
     }
 
+    public void scrollToTask(Task task) {
+        for (int i = 0; i < customListModel.getSize(); i++) {
+            if (customListModel.getElementAt(i).getId().equals(task.getId())) {
+                customTaskList.setSelectedIndex(i);
+                customTaskList.ensureIndexIsVisible(i);
+                break;
+            }
+        }
+    }
+
     /**
      * Expose the internal task list for diagnostics and targeted focus checks.
      */

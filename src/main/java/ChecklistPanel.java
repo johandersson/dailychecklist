@@ -93,7 +93,7 @@ public class ChecklistPanel extends JPanel {
             taskList.setDragEnabled(true);
             taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklistName, () -> {
                 List<Task> allTasks = taskManager.getAllTasks();
-                taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel);
+                taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected());
             }, morningListModel, eveningListModel));
             taskList.setDropMode(DropMode.INSERT);
         }
@@ -418,6 +418,26 @@ public class ChecklistPanel extends JPanel {
                 }
             }
         });
+    }
+
+    public void scrollToTask(Task task) {
+        JList<Task> list;
+        DefaultListModel<Task> model;
+        if (task.getType() == TaskType.MORNING) {
+            list = morningTaskList;
+            model = morningListModel;
+        } else {
+            list = eveningTaskList;
+            model = eveningListModel;
+        }
+        for (int i = 0; i < model.getSize(); i++) {
+            if (model.getElementAt(i).getId().equals(task.getId())) {
+                list.setSelectedIndex(i);
+                list.ensureIndexIsVisible(i);
+                highlightTask(list, i);
+                break;
+            }
+        }
     }
 
     private void highlightTask(JList<Task> list, int index) {

@@ -118,7 +118,7 @@ public class DailyChecklist {
             KeyBindingManager.bindKeys(frame.getRootPane(), frame, checklistManager, () -> {
                 checklistPanel.updateTasks();
                 customChecklistsOverviewPanel.updateTasks();
-            });
+            }, this);
             frame.addWindowListener(new WindowAdapter() {
                 @Override
                 public void windowActivated(WindowEvent e) {
@@ -443,6 +443,25 @@ public class DailyChecklist {
 
         g2.dispose();
         return image;
+    }
+
+    public void jumpToTask(Task task) {
+        String checklistName = task.getChecklistName();
+        if (checklistName == null || checklistName.trim().isEmpty()) {
+            // Daily checklist
+            tabbedPane.setSelectedIndex(0);
+            checklistPanel.scrollToTask(task);
+        } else {
+            // Custom checklist
+            for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+                if (checklistName.equals(tabbedPane.getTitleAt(i))) {
+                    tabbedPane.setSelectedIndex(i);
+                    CustomChecklistPanel panel = (CustomChecklistPanel) tabbedPane.getComponentAt(i);
+                    panel.scrollToTask(task);
+                    break;
+                }
+            }
+        }
     }
 
     public void shutdown() {
