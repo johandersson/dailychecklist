@@ -224,9 +224,13 @@ public class ReminderManager {
             boolean isRecentlyOverdue = !reminderTime.isAfter(now) && reminderTime.isAfter(now.minusHours(1));
 
             if (isUpcoming || isRecentlyOverdue) {
-                // Skip reminders for checklists that have been opened in this session, but not for recently overdue
+                // Skip reminders for checklists that don't exist anymore
                 String checklistName = r.getChecklistName();
-                if (isRecentlyOverdue || (checklistName == null || openedChecklists == null || !openedChecklists.contains(checklistName))) {
+                if (checklistName == null) continue;
+                if (!checklistExists(checklistName)) continue;
+
+                // Skip reminders for checklists that have been opened in this session, but not for recently overdue
+                if (isRecentlyOverdue || (openedChecklists == null || !openedChecklists.contains(checklistName))) {
                     dueReminders.add(r);
                 }
             }
@@ -243,8 +247,14 @@ public class ReminderManager {
         LocalDateTime nextTime = null;
 
         for (Reminder reminder : allReminders) {
+            // Skip reminders for checklists that don't exist anymore
+            String checklistName = reminder.getChecklistName();
+            if (checklistName == null || !checklistExists(checklistName)) {
+                continue;
+            }
+
             // Skip reminders for checklists that are already opened
-            if (openedChecklists.contains(reminder.getChecklistName())) {
+            if (openedChecklists != null && openedChecklists.contains(checklistName)) {
                 continue;
             }
 
@@ -271,8 +281,31 @@ public class ReminderManager {
      */
     public boolean hasReminders(String checklistName) {
         List<Reminder> reminders = getReminders();
-        return reminders.stream().anyMatch(reminder -> 
-            Objects.equals(reminder.getChecklistName(), checklistName));
+        if (checklistName == null) return false;
+        if (!checklistExists(checklistName)) return false;
+        return reminders.stream().anyMatch(reminder -> Objects.equals(reminder.getChecklistName(), checklistName));
+    }
+
+    /**
+     * Returns true if the given checklist name or id exists in the checklist-names properties
+     * or is a built-in daily checklist name (MORNING/EVENING).
+     */
+    private boolean checklistExists(String checklistName) {
+        if (checklistName == null) return false;
+        // Built-in daily checklists
+        if ("MORNING".equalsIgnoreCase(checklistName) || "EVENING".equalsIgnoreCase(checklistName)) return true;
+
+        Properties props = new Properties();
+        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(ApplicationConfiguration.CHECKLIST_NAMES_FILE_PATH), java.nio.charset.StandardCharsets.UTF_8)) {
+            props.load(reader);
+            for (String key : props.stringPropertyNames()) {
+                String val = props.getProperty(key);
+                if (checklistName.equals(key) || checklistName.equals(val)) return true;
+            }
+        } catch (IOException e) {
+            // If file unreadable, assume no match
+        }
+        return false;
     }
 
     /**

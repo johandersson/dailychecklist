@@ -79,7 +79,8 @@ public class SettingsManager {
     }
 
     public boolean getShowWeekdayTasks() {
-        return Boolean.parseBoolean(settings.getProperty("showWeekdayTasks", "true"));
+        // Default to false so weekday-specific tasks are shown only for today's weekday
+        return Boolean.parseBoolean(settings.getProperty("showWeekdayTasks", "false"));
     }
 
     public void checkDateAndUpdate(TaskManager taskManager, Runnable updateTasks, boolean showWeekdayTasks) {

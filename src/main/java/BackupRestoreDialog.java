@@ -66,14 +66,10 @@ public class BackupRestoreDialog {
             return;
         }
 
-        List<Task> toImport = backupTasks.stream()
-            .filter(t -> t.getType() == TaskType.MORNING || t.getType() == TaskType.EVENING)
-            .collect(Collectors.toList());
-
-        if (toImport.isEmpty()) {
-            JOptionPane.showMessageDialog(parent, "No morning/evening tasks found in the selected backup.", "Nothing To Import", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
+        // Compute task breakdown from the backup
+        List<Task> morningTasks = backupTasks.stream().filter(t -> t.getType() == TaskType.MORNING).collect(Collectors.toList());
+        List<Task> eveningTasks = backupTasks.stream().filter(t -> t.getType() == TaskType.EVENING).collect(Collectors.toList());
+        List<Task> customTasks = backupTasks.stream().filter(t -> t.getType() == TaskType.CUSTOM).collect(Collectors.toList());
 
         // Compute how many checklists would be added
         int newChecklistCount = 0;
@@ -92,36 +88,43 @@ public class BackupRestoreDialog {
             newChecklistCount = checklists.size();
         }
 
-        // Ask user to confirm import with stats
-        String msg = String.format("This import will add %d custom checklist(s) and import %d morning/evening task(s). Proceed?", newChecklistCount, toImport.size());
-        int conf = JOptionPane.showConfirmDialog(parent, msg, "Confirm Import", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (conf != JOptionPane.YES_OPTION) return;
-
-        // Backup current data file before merging
-        File liveBackup = backupLiveData();
-
-        // Merge checklist names into live properties
-        if (!checklists.isEmpty()) mergeChecklistsToLive(checklists);
-
-        // Merge imported tasks into current tasks (avoid duplicates)
+        // Prepare current and backup task lists and show the colored diff dialog as the single confirmation.
         List<Task> currentTasks = taskManager.getAllTasks();
-        List<String> existingIds = currentTasks.stream().map(Task::getId).collect(Collectors.toList());
-        for (Task t : toImport) {
-            if (!existingIds.contains(t.getId())) {
-                currentTasks.add(t);
-            }
-        }
+        List<Task> backupTasksCopy = new ArrayList<>(backupTasks);
+        Map<String,String> checklistsCopy = new LinkedHashMap<>(checklists);
 
-        // Show diff and confirm merge
-        showDiffDialog(parent, taskManager.getAllTasks(), currentTasks, chosen, () -> {
+        Runnable onRestore = () -> {
+            // Backup current data file before merging
+            File liveBackup = backupLiveData();
+
+            // Merge all checklist names from backup into live properties
+            if (!checklistsCopy.isEmpty()) mergeChecklistsToLive(checklistsCopy);
+
+            // Merge imported tasks into current tasks (avoid duplicates)
+            List<Task> merged = new ArrayList<>(currentTasks);
+            java.util.Set<String> existingIds = merged.stream().map(Task::getId).collect(Collectors.toSet());
+            for (Task t : customTasks) {
+                if (!existingIds.contains(t.getId())) merged.add(t);
+            }
+            for (Task t : morningTasks) {
+                if (!existingIds.contains(t.getId())) merged.add(t);
+            }
+            for (Task t : eveningTasks) {
+                if (!existingIds.contains(t.getId())) merged.add(t);
+            }
+
+            // Apply merged tasks
             try {
-                taskManager.setTasks(currentTasks);
+                taskManager.setTasks(merged);
                 updateTasks.run();
-                JOptionPane.showMessageDialog(parent, "Imported morning/evening tasks and merged checklists." + (liveBackup!=null?" (backup created)":""), "Import Complete", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(parent, "Imported tasks and merged checklists." + (liveBackup!=null?" (backup created)":""), "Import Complete", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(parent, "Failed to import tasks: " + e.getMessage(), "Import Failed", JOptionPane.ERROR_MESSAGE);
             }
-        });
+        };
+
+        // Show the diff/preview dialog and let the user confirm via that dialog only
+        showDiffDialog(parent, currentTasks, backupTasksCopy, chosen, onRestore);
     }
 
     private static void mergeChecklistsToLive(Map<String,String> checklists) {

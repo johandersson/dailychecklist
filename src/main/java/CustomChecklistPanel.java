@@ -165,7 +165,7 @@ public class CustomChecklistPanel extends JPanel {
 
     private void removeTask(JList<Task> list, int index) {
         Task task = list.getModel().getElementAt(index);
-        int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to remove this task?", "Confirm Removal", JOptionPane.YES_NO_OPTION);
+        int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to remove the task '" + task.getName() + "'?", "Confirm Removal", JOptionPane.YES_NO_OPTION);
         if (result == JOptionPane.YES_OPTION) {
             taskManager.removeTask(task);
             updateTasks();
