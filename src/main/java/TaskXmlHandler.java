@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -32,7 +31,6 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -96,9 +94,16 @@ public class TaskXmlHandler {
         transformer.setOutputProperty("encoding", "UTF-8");
         transformer.setOutputProperty("indent", "yes");
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+
         DOMSource source = new DOMSource(document);
-        StreamResult result = new StreamResult(new File(fileName));
-        transformer.transform(source, result);
+        // Explicitly specify UTF-8 encoding for the output stream
+        try (java.io.OutputStreamWriter writer = new java.io.OutputStreamWriter(
+                new java.io.FileOutputStream(fileName), "UTF-8")) {
+            StreamResult result = new StreamResult(writer);
+            transformer.transform(source, result);
+        } catch (java.io.IOException e) {
+            throw new TransformerException("Failed to write XML file: " + e.getMessage(), e);
+        }
     }
 
     /**

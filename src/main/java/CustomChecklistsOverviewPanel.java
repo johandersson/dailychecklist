@@ -188,8 +188,12 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             rightPanel.remove(currentAddPanel);
         }
         if (checklistName != null) {
-            currentChecklistPanel = new CustomChecklistPanel(taskManager, checklistName, this::updateTasks);
-            panelMap.put(checklistName, currentChecklistPanel);
+            // Reuse existing panel from panelMap if available, otherwise create new one
+            currentChecklistPanel = panelMap.get(checklistName);
+            if (currentChecklistPanel == null) {
+                currentChecklistPanel = new CustomChecklistPanel(taskManager, checklistName, this::updateTasks);
+                panelMap.put(checklistName, currentChecklistPanel);
+            }
             currentChecklistPanel.updateTasks();
             rightPanel.add(currentChecklistPanel);
             currentAddPanel = new AddTaskPanel(taskManager, tasks -> {
@@ -226,6 +230,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 listModel.addElement(name);
             }
         }
+        
+        // Clean up panelMap - remove panels for checklists that no longer exist
+        panelMap.keySet().removeIf(checklistName -> !allChecklistNames.contains(checklistName));
         
         // Restore selection
         if (selectedChecklist != null && listModel.contains(selectedChecklist)) {
@@ -318,6 +325,11 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             allChecklistNames.add(newName);     // Add new name
             taskManager.removeChecklistName(oldName);  // Remove old name from persistent storage
             taskManager.addChecklistName(newName);     // Add new name to persistent storage
+            // Update panelMap key
+            if (panelMap.containsKey(oldName)) {
+                CustomChecklistPanel panel = panelMap.remove(oldName);
+                panelMap.put(newName, panel);
+            }
             selectChecklist(newName);
         }
     }
@@ -359,6 +371,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             
         allChecklistNames.remove(name);  // Remove from tracked checklists
         taskManager.removeChecklistName(name);  // Remove from persistent storage
+        panelMap.remove(name);  // Remove panel from cache
         updateTasks();  // Refresh the local checklist list
         updateTasks.run();  // Update other panels
         // After deletion, select the first checklist if available
@@ -434,5 +447,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 }
             }
         }
+    }
+
+    public Map<String, CustomChecklistPanel> getPanelMap() {
+        return panelMap;
     }
 }

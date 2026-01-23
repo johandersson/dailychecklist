@@ -8,6 +8,7 @@ Stay organized and boost your productivity with the **Daily Checklist** applicat
 
 - **Daily Task Management**: Add, edit, rename, and remove tasks for your morning and evening routines with flexible scheduling (daily, weekday, or specific days).
 - **Custom Checklists**: Create named checklists for specific projects, habits, or one-off task lists with support for adding multiple tasks at once.
+- **Search Functionality**: Quickly find tasks across all checklists with real-time search (Ctrl+F) and jump directly to selected tasks.
 - **Reminders**: Set date/time reminders for any checklist with notifications and visual clock icons.
 - **Focus Timer**: Start a customizable timer for any task to maintain focus and track progress with visual indicators.
 - **Split-Pane UI**: Modern interface with daily tasks on the left and custom checklists on the right.

@@ -454,18 +454,13 @@ public class DailyChecklist {
             checklistPanel.scrollToTask(task);
         } else {
             // Custom checklist
-            boolean found = false;
-            for (int i = 0; i < tabbedPane.getTabCount(); i++) {
-                if (checklistName.equals(tabbedPane.getTitleAt(i))) {
-                    tabbedPane.setSelectedIndex(i);
-                    CustomChecklistPanel panel = (CustomChecklistPanel) tabbedPane.getComponentAt(i);
-                    panel.scrollToTask(task);
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                javax.swing.JOptionPane.showMessageDialog(frame, "The custom checklist '" + checklistName + "' is not currently open. Please open it from the Custom Checklists tab first.", "Checklist Not Open", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            tabbedPane.setSelectedIndex(1);
+            openedChecklists.add(checklistName);
+            customChecklistsOverviewPanel.selectChecklistByName(checklistName);
+            // Get the panel and scroll
+            CustomChecklistPanel panel = (CustomChecklistPanel) customChecklistsOverviewPanel.getPanelMap().get(checklistName);
+            if (panel != null) {
+                panel.scrollToTask(task);
             }
         }
     }

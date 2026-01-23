@@ -98,6 +98,24 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 <li>Drag and drop tasks to reorder them (shows visual preview of dragged items).</li>
 </ul>
 
+<h2>Searching Tasks</h2>
+
+<h3>Using Search</h3>
+<ul>
+<li>Press Ctrl+F or click the search button to open the search dialog.</li>
+<li>Type in the search box to find tasks by name (search is case-insensitive and searches across all checklists).</li>
+<li>Results update in real-time as you type.</li>
+<li>Select a task from the results and click "Go to Selected Task" to jump directly to that task.</li>
+<li>Daily tasks will switch to the Daily tab, while custom tasks will open their respective custom checklist.</li>
+</ul>
+
+<h3>Search Behavior</h3>
+<ul>
+<li>Search finds tasks from all checklists (daily and custom).</li>
+<li>Custom tasks only appear in their designated custom checklists, not in the daily view.</li>
+<li>When jumping to a custom task from search, the app automatically opens that checklist if it's not already open.</li>
+</ul>
+
 <h2>Using Reminders</h2>
 
 <h3>Adding Reminders</h3>
@@ -197,6 +215,7 @@ body { font-family: Arial, sans-serif; font-size: 12pt; color: #333; }
 
 <ul>
 <li><b>Add Task</b>: Ctrl+A</li>
+<li><b>Search Tasks</b>: Ctrl+F</li>
 <li><b>Refresh Tasks</b>: F5</li>
 <li><b>Multi-select Tasks</b>: Ctrl+click (hold Ctrl while clicking multiple tasks)</li>
 <li><b>Range-select Tasks</b>: Shift+click (select range between first and last clicked task)</li>

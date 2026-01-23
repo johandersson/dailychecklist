@@ -22,6 +22,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -84,6 +85,89 @@ public class XMLTaskRepository implements TaskRepository {
         String[] dataFiles = {FILE_NAME, REMINDER_FILE_NAME, CHECKLIST_NAMES_FILE_NAME, ApplicationConfiguration.SETTINGS_FILE_PATH};
         backupManager = new BackupManager(ApplicationConfiguration.BACKUP_DIRECTORY, ApplicationConfiguration.MAX_BACKUP_FILES, ApplicationConfiguration.BACKUP_INTERVAL_MILLIS, dataFiles, parentComponent);
         backupManager.initialize();
+
+        // Register any orphaned checklist names from existing tasks
+        registerOrphanedChecklistNames();
+    }
+
+    /**
+     * Scans all tasks and ensures their checklist names are registered.
+     * This prevents tasks from becoming invisible if their checklist names weren't properly saved.
+     * Uses efficient streaming XML parsing to minimize memory usage and startup time.
+     */
+    private void registerOrphanedChecklistNames() {
+        try {
+            Set<String> existingChecklistNames = checklistNameManager.getChecklistNames();
+            Set<String> orphanedNames = findOrphanedChecklistNames(existingChecklistNames);
+
+            // Only add names that aren't already registered
+            for (String checklistName : orphanedNames) {
+                checklistNameManager.addChecklistName(checklistName);
+            }
+        } catch (Exception e) {
+            // Log error but don't fail initialization
+            System.err.println("Failed to register orphaned checklist names: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Efficiently scans the XML file to find checklist names that exist in tasks but not in the registry.
+     * Uses streaming XML parsing to avoid loading all tasks into memory.
+     */
+    private Set<String> findOrphanedChecklistNames(Set<String> existingChecklistNames) throws Exception {
+        Set<String> orphanedNames = new HashSet<>();
+        File file = new File(FILE_NAME);
+
+        if (!file.exists()) {
+            return orphanedNames; // No file means no orphaned names
+        }
+
+        javax.xml.parsers.SAXParserFactory factory = javax.xml.parsers.SAXParserFactory.newInstance();
+        javax.xml.parsers.SAXParser saxParser = factory.newSAXParser();
+
+        // Custom SAX handler that only extracts checklist names from CUSTOM tasks
+        org.xml.sax.helpers.DefaultHandler handler = new org.xml.sax.helpers.DefaultHandler() {
+            private boolean inCustomTask = false;
+            private boolean inChecklistName = false;
+            private StringBuilder checklistNameBuffer = new StringBuilder();
+
+            @Override
+            public void startElement(String uri, String localName, String qName, org.xml.sax.Attributes attributes) {
+                if ("task".equals(qName)) {
+                    // Check if this is a CUSTOM task
+                    String type = attributes.getValue("type");
+                    if ("CUSTOM".equals(type)) {
+                        inCustomTask = true;
+                    }
+                } else if (inCustomTask && "checklistName".equals(qName)) {
+                    inChecklistName = true;
+                    checklistNameBuffer.setLength(0); // Clear buffer
+                }
+            }
+
+            @Override
+            public void characters(char[] ch, int start, int length) {
+                if (inChecklistName) {
+                    checklistNameBuffer.append(ch, start, length);
+                }
+            }
+
+            @Override
+            public void endElement(String uri, String localName, String qName) {
+                if ("checklistName".equals(qName) && inChecklistName) {
+                    String checklistName = checklistNameBuffer.toString().trim();
+                    if (!checklistName.isEmpty() && !existingChecklistNames.contains(checklistName)) {
+                        orphanedNames.add(checklistName);
+                    }
+                    inChecklistName = false;
+                } else if ("task".equals(qName)) {
+                    inCustomTask = false;
+                }
+            }
+        };
+
+        saxParser.parse(file, handler);
+        return orphanedNames;
     }
 
     /**
@@ -279,10 +363,44 @@ public class XMLTaskRepository implements TaskRepository {
             }
             taskXmlHandler.setAllTasks(tasks);
             tasksCacheDirty = true; // Mark cache as dirty
+
+            // After setting tasks, rebuild the checklist names registry from the new tasks
+            rebuildChecklistNamesRegistry(tasks);
         } catch (Exception e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "tasks", e);
             }
+        }
+    }
+
+    /**
+     * Rebuilds the checklist names registry from the provided tasks.
+     * This ensures checklist names are properly registered after operations like backup restore.
+     */
+    private void rebuildChecklistNamesRegistry(List<Task> tasks) {
+        try {
+            Set<String> checklistNames = new HashSet<>();
+            for (Task task : tasks) {
+                if (task.getType() == TaskType.CUSTOM && task.getChecklistName() != null && !task.getChecklistName().trim().isEmpty()) {
+                    checklistNames.add(task.getChecklistName().trim());
+                }
+            }
+
+            // Clear existing registry and add all found names
+            Set<String> existingNames = checklistNameManager.getChecklistNames();
+            for (String existingName : existingNames) {
+                if (!checklistNames.contains(existingName)) {
+                    checklistNameManager.removeChecklistName(existingName);
+                }
+            }
+
+            for (String checklistName : checklistNames) {
+                if (!existingNames.contains(checklistName)) {
+                    checklistNameManager.addChecklistName(checklistName);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to rebuild checklist names registry: " + e.getMessage());
         }
     }
 
