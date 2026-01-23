@@ -174,7 +174,7 @@ public class CustomChecklistPanel extends JPanel {
 
     private JPanel createPanel(String title, JList<Task> taskList) {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(javax.swing.BorderFactory.createTitledBorder(title));
+        panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
         // Add reminder status panel at the top
         reminderStatusPanel = createReminderStatusPanel();

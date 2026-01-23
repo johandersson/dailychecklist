@@ -32,7 +32,7 @@ import javax.swing.ListSelectionModel;
 
 public class SearchDialog {
     public static void showSearchDialog(java.awt.Component parent, TaskManager taskManager, DailyChecklist dailyChecklist) {
-        JDialog dialog = new JDialog((java.awt.Frame) null, "Search Tasks", true);
+        JDialog dialog = new JDialog((java.awt.Frame) null, "Search", true);
         dialog.setIconImage(DailyChecklist.createAppIcon());
         dialog.setLayout(new BorderLayout());
 
@@ -48,21 +48,51 @@ public class SearchDialog {
         searchPanel.add(searchButton);
         searchPanel.add(searchAllWeekdayBox);
 
-        JList<Task> resultList = new JList<>();
-        CheckboxListCellRenderer renderer = new CheckboxListCellRenderer(true); // Show checklist info in search results
-        resultList.setCellRenderer(renderer);
+        // Unified results list (tasks and custom lists together)
+        javax.swing.DefaultListModel<Object> unifiedModel = new javax.swing.DefaultListModel<>();
+        JList<Object> unifiedList = new JList<>(unifiedModel);
+
+        CheckboxListCellRenderer taskRenderer = new CheckboxListCellRenderer(true); // Show checklist info in search results
+        ChecklistCellRenderer checklistRenderer = new ChecklistCellRenderer(taskManager);
+
+        unifiedList.setCellRenderer((list, value, index, isSelected, cellHasFocus) -> {
+            if (value instanceof Task t) {
+                return taskRenderer.getListCellRendererComponent((JList) list, t, index, isSelected, cellHasFocus);
+            } else if (value instanceof Checklist c) {
+                // Build a simple label component using checklist renderer but show document icon for search
+                javax.swing.JLabel lbl = new javax.swing.JLabel();
+                lbl.setFont(FontManager.getTaskListFont());
+                lbl.setOpaque(true);
+                lbl.setText(c.getName());
+                java.awt.Color selBg = new java.awt.Color(184, 207, 229);
+                lbl.setBackground(isSelected ? selBg : java.awt.Color.WHITE);
+                lbl.setForeground(java.awt.Color.BLACK);
+                // Use checklist renderer to compute reminder icon if any
+                javax.swing.Icon icon = null;
+                javax.swing.Icon rem = checklistRenderer.getIconForValue(c);
+                if (rem != null) icon = rem; else icon = new ChecklistDocumentIcon();
+                lbl.setIcon(icon);
+                lbl.setIconTextGap(8);
+                return lbl;
+            } else {
+                return new javax.swing.JLabel(value == null ? "" : value.toString());
+            }
+        });
         resultList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         resultList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Consistent selection color
         resultList.setSelectionForeground(java.awt.Color.BLACK);
         
-        // Add double-click listener to jump to task
-        resultList.addMouseListener(new MouseAdapter() {
+        // Double-click handler for unified list
+        unifiedList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
-                    Task selected = resultList.getSelectedValue();
-                    if (selected != null) {
-                        dailyChecklist.jumpToTask(selected);
+                    Object sel = unifiedList.getSelectedValue();
+                    if (sel instanceof Task t) {
+                        dailyChecklist.jumpToTask(t);
+                        dialog.dispose();
+                    } else if (sel instanceof Checklist c) {
+                        dailyChecklist.showCustomChecklist(c.getName());
                         dialog.dispose();
                     }
                 }
@@ -83,8 +113,16 @@ public class SearchDialog {
                     if (includeAllWeekday) return true;
                     return task.getWeekday().toLowerCase().equals(currentWeekday);
                 })
-                    .collect(Collectors.toList());
-                resultList.setListData(results.toArray(Task[]::new));
+                .collect(Collectors.toList());
+
+            List<Checklist> allLists = taskManager.getCustomChecklists().stream()
+                .filter(c -> c.getName().toLowerCase().contains(query))
+                .collect(Collectors.toList());
+
+            // Populate unified model: lists first, then tasks
+            unifiedModel.clear();
+            for (Checklist c : allLists) unifiedModel.addElement(c);
+            for (Task t : results) unifiedModel.addElement(t);
         };
 
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -104,8 +142,10 @@ public class SearchDialog {
         buttonPanel.add(goToButton);
         buttonPanel.add(closeButton);
 
+        JScrollPane unifiedScroll = new JScrollPane(unifiedList);
+        unifiedScroll.setBorder(javax.swing.BorderFactory.createEmptyBorder());
         dialog.add(searchPanel, BorderLayout.NORTH);
-        dialog.add(scrollPane, BorderLayout.CENTER);
+        dialog.add(unifiedScroll, BorderLayout.CENTER);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
         searchButton.addActionListener(e -> performSearch.run());

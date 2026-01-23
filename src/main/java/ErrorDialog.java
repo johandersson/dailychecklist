@@ -34,7 +34,7 @@ public class ErrorDialog extends JDialog {
         add(titlePanel, BorderLayout.NORTH);
 
         JPanel content = new JPanel(new BorderLayout());
-        content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        content.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
         JLabel msg = new JLabel("<html>" + escapeHtml(message).replaceAll("\n", "<br>") + "</html>");
         msg.setFont(FontManager.getTaskListFont());

@@ -17,7 +17,6 @@
  */
 import java.awt.BorderLayout;
 import java.util.List;
-
 import javax.swing.JEditorPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -30,7 +29,7 @@ public class TaskDiffPanel extends JPanel {
 
     public TaskDiffPanel(List<Task> currentTasks, List<Task> backupTasks) {
         setLayout(new BorderLayout());
-        setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
         // Calculate differences
         TaskListDiff diff = new TaskListDiff(currentTasks, backupTasks);
