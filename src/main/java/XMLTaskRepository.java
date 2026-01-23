@@ -211,6 +211,12 @@ public class XMLTaskRepository implements TaskRepository {
 
     @Override
     public void addTask(Task task) {
+        // Validate task before saving
+        if (!TaskXmlHandler.validateTask(task)) {
+            System.err.println("Invalid task data, skipping save: " + task);
+            return;
+        }
+
         try {
             taskXmlHandler.addTask(task);
             tasksCacheDirty = true; // Mark cache as dirty
@@ -223,6 +229,12 @@ public class XMLTaskRepository implements TaskRepository {
 
     @Override
     public void updateTask(Task task) {
+        // Validate task before saving
+        if (!TaskXmlHandler.validateTask(task)) {
+            System.err.println("Invalid task data, skipping save: " + task);
+            return;
+        }
+
         try {
             taskXmlHandler.updateTask(task);
             tasksCacheDirty = true; // Mark cache as dirty

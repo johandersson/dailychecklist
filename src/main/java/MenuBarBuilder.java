@@ -38,14 +38,14 @@ import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
 public class MenuBarBuilder {
-    public static JMenuBar build(java.awt.Component parent, TaskManager taskManager, Runnable updateTasks) {
+    public static JMenuBar build(java.awt.Component parent, TaskManager taskManager, Runnable updateTasks, DailyChecklist dailyChecklist) {
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
 
         // Search Tasks
         JMenuItem searchItem = new JMenuItem("Search Tasks");
         searchItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, java.awt.event.InputEvent.CTRL_MASK));
-        searchItem.addActionListener(e -> SearchDialog.showSearchDialog(parent, taskManager, null));
+        searchItem.addActionListener(e -> SearchDialog.showSearchDialog(parent, taskManager, dailyChecklist));
         fileMenu.add(searchItem);
 
         // Refresh Tasks

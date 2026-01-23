@@ -20,6 +20,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.zip.ZipEntry;
@@ -126,7 +128,10 @@ public class BackupManager {
             // Generate timestamp for backup filename
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
             String timestamp = sdf.format(new java.util.Date());
-            String backupFileName = "dailychecklist-backup-" + timestamp + "-" + reason + ".zip";
+
+            // Calculate checksum of data files for corruption detection
+            String checksum = calculateDataChecksum();
+            String backupFileName = "dailychecklist-backup-" + timestamp + "-" + reason + "-" + checksum + ".zip";
 
             // Create zip file containing all data files
             createBackupZip(new File(backupDirFile, backupFileName));
@@ -196,6 +201,55 @@ public class BackupManager {
      */
     public void createManualBackup() {
         createBackup("manual");
+    }
+
+    /**
+     * Calculates MD5 checksum of all data files for corruption detection.
+     */
+    private String calculateDataChecksum() {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            for (String filePath : dataFiles) {
+                File file = new File(filePath);
+                if (file.exists()) {
+                    try (FileInputStream fis = new FileInputStream(file)) {
+                        byte[] buffer = new byte[8192];
+                        int bytesRead;
+                        while ((bytesRead = fis.read(buffer)) != -1) {
+                            md.update(buffer, 0, bytesRead);
+                        }
+                    }
+                }
+            }
+            byte[] hashBytes = md.digest();
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hashBytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException | IOException e) {
+            // Fallback to timestamp-based naming if checksum fails
+            return "checksum-error";
+        }
+    }
+
+    /**
+     * Verifies the integrity of a backup file by comparing its stored checksum with current data.
+     */
+    public boolean verifyBackupIntegrity(File backupFile) {
+        try {
+            String fileName = backupFile.getName();
+            // Extract checksum from filename (format: dailychecklist-backup-yyyy-MM-dd_HH-mm-ss-reason-checksum.zip)
+            String[] parts = fileName.split("-");
+            if (parts.length >= 6) {
+                String storedChecksum = parts[parts.length - 1].replace(".zip", "");
+                String currentChecksum = calculateDataChecksum();
+                return storedChecksum.equals(currentChecksum);
+            }
+        } catch (Exception e) {
+            // Ignore verification errors
+        }
+        return false;
     }
 
     /**
