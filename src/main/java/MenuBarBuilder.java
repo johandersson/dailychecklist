@@ -233,6 +233,10 @@ public class MenuBarBuilder {
         fileMenu.add(helpItem);
 
         fileMenu.addSeparator();
+
+        // Ensure the File menu is added to the menu bar
+        menuBar.add(fileMenu);
+
         return menuBar;
     }
 
