@@ -96,7 +96,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.doneDate = task.getDoneDate();
         this.isSelected = isSelected;
 
-        setFont(new Font("Yu Gothic UI", Font.PLAIN, 14)); // Use consistent font for all task lists
+        setFont(FontManager.getTaskListFont()); // Use consistent font for all task lists
         setOpaque(true); // Ensure background is painted
         if (isSelected) {
             setBackground(list.getSelectionBackground());
@@ -166,7 +166,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         // Draw timestamp if task is checked - always in black
         if (isChecked && doneDate != null && !doneDate.isEmpty()) {
             g2.setColor(Color.BLACK);
-            g2.setFont(getFont().deriveFont(Font.PLAIN, 10));
+            g2.setFont(getFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL));
             g2.drawString("✓ " + doneDate, textStartX, getHeight() / 2 + 20);
         }
     }
@@ -184,7 +184,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
                 return new Font(preferredFontName, style, size);
             }
         }
-        return new Font("Arial", style, size); // Fallback font for circle text
+        return new Font(FontManager.FONT_NAME, style, size); // Fallback to Yu Gothic UI
     }
 }
 

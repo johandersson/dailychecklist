@@ -19,7 +19,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.FlowLayout;
-import java.awt.Font;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -73,7 +72,7 @@ public class MenuBarBuilder {
             JPanel titlePanel = new JPanel();
             titlePanel.setBackground(new Color(0, 123, 255)); // Bootstrap blue
             JLabel titleLabel = new JLabel("Daily Checklist");
-            titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
+            titleLabel.setFont(FontManager.getTitleFont());
             titleLabel.setForeground(Color.WHITE);
             titlePanel.add(titleLabel);
             aboutDialog.add(titlePanel, BorderLayout.NORTH);
@@ -869,7 +868,7 @@ public class MenuBarBuilder {
             buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
             buttonPanel.setBackground(Color.WHITE);
             JButton closeButton = new JButton("Close");
-            closeButton.setFont(new Font("Arial", Font.PLAIN, 14));
+            closeButton.setFont(FontManager.getButtonFont());
             closeButton.setBackground(Color.LIGHT_GRAY);
             closeButton.setForeground(Color.BLACK);
             closeButton.setFocusPainted(false);
@@ -895,7 +894,7 @@ public class MenuBarBuilder {
             JPanel titlePanel = new JPanel();
             titlePanel.setBackground(new Color(0, 123, 255)); // Bootstrap blue
             JLabel titleLabel = new JLabel("Daily Checklist Help");
-            titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+            titleLabel.setFont(FontManager.getHeader1Font());
             titleLabel.setForeground(Color.WHITE);
             titlePanel.add(titleLabel);
             helpDialog.add(titlePanel, BorderLayout.NORTH);
@@ -924,7 +923,7 @@ public class MenuBarBuilder {
 
             // Create styles
             Style defaultStyle = doc.addStyle("default", null);
-            StyleConstants.setFontFamily(defaultStyle, "Arial");
+            StyleConstants.setFontFamily(defaultStyle, FontManager.FONT_NAME);
             StyleConstants.setFontSize(defaultStyle, 12);
 
             Style header1Style = doc.addStyle("h1", defaultStyle);
@@ -955,7 +954,7 @@ public class MenuBarBuilder {
             buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
             buttonPanel.setBackground(Color.WHITE);
             JButton closeButton = new JButton("Close");
-            closeButton.setFont(new Font("Arial", Font.PLAIN, 14));
+            closeButton.setFont(FontManager.getButtonFont());
             closeButton.setBackground(Color.LIGHT_GRAY);
             closeButton.setForeground(Color.BLACK);
             closeButton.setFocusPainted(false);

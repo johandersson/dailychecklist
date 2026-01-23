@@ -38,9 +38,9 @@ public class SearchDialog {
 
         JPanel searchPanel = new JPanel(new FlowLayout());
         JTextField searchField = new JTextField(20);
-        searchField.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 14));
+        searchField.setFont(FontManager.getTaskListFont());
         JButton searchButton = new JButton("Search");
-        searchButton.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 12));
+        searchButton.setFont(FontManager.getButtonFont());
         searchPanel.add(new JLabel("Search:"));
         searchPanel.add(searchField);
         searchPanel.add(searchButton);
@@ -73,9 +73,9 @@ public class SearchDialog {
 
         JPanel buttonPanel = new JPanel(new FlowLayout());
         JButton goToButton = new JButton("Go to Selected Task");
-        goToButton.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 12));
+        goToButton.setFont(FontManager.getButtonFont());
         JButton closeButton = new JButton("Close");
-        closeButton.setFont(new java.awt.Font("Yu Gothic UI", java.awt.Font.PLAIN, 12));
+        closeButton.setFont(FontManager.getButtonFont());
         buttonPanel.add(goToButton);
         buttonPanel.add(closeButton);
 
