@@ -19,6 +19,8 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.swing.JButton;
@@ -46,11 +48,26 @@ public class SearchDialog {
         searchPanel.add(searchButton);
 
         JList<Task> resultList = new JList<>();
-        CheckboxListCellRenderer renderer = new CheckboxListCellRenderer();
+        CheckboxListCellRenderer renderer = new CheckboxListCellRenderer(true); // Show checklist info in search results
         resultList.setCellRenderer(renderer);
         resultList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         resultList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Consistent selection color
         resultList.setSelectionForeground(java.awt.Color.BLACK);
+        
+        // Add double-click listener to jump to task
+        resultList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    Task selected = resultList.getSelectedValue();
+                    if (selected != null) {
+                        dailyChecklist.jumpToTask(selected);
+                        dialog.dispose();
+                    }
+                }
+            }
+        });
+        
         JScrollPane scrollPane = new JScrollPane(resultList);
 
         Runnable performSearch = () -> {
