@@ -42,8 +42,6 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private Font circleFont; // Font for the text inside the circle
     private String doneDate; // Timestamp when task was completed
     private boolean isSelected; // Whether this item is currently selected
-    private String listName;
-    private boolean showListName = false;
     
     // Cached checkmark image for performance
     private static final BufferedImage checkmarkImage;
@@ -87,10 +85,6 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.circleFont = getAvailableFont("Yu Gothic UI", Font.BOLD, 12); // Font for circle text
     }
 
-    public void setShowListName(boolean showListName) {
-        this.showListName = showListName;
-    }
-
     @Override
     public Component getListCellRendererComponent(JList<? extends Task> list, Task task, int index, boolean isSelected, boolean cellHasFocus) {
         this.isChecked = task.isDone();
@@ -101,11 +95,6 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.isWeekdayTask = task.getWeekday() != null && WEEKDAY_ABBREVIATIONS.containsKey(weekdayKey);
         this.doneDate = task.getDoneDate();
         this.isSelected = isSelected;
-        if (task.getChecklistName() != null && !task.getChecklistName().trim().isEmpty()) {
-            this.listName = task.getChecklistName();
-        } else {
-            this.listName = task.getType() == TaskType.MORNING ? "Morning" : "Evening";
-        }
 
         setFont(new Font("Yu Gothic UI", Font.PLAIN, 14)); // Use consistent font for all task lists
         setOpaque(true); // Ensure background is painted
@@ -173,12 +162,6 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         g2.setColor(getForeground());
         g2.setFont(getFont());
         g2.drawString(taskName, textStartX, getHeight() / 2 + 5);
-        
-        if (showListName) {
-            // Draw list name in smaller font
-            g2.setFont(getFont().deriveFont(Font.PLAIN, 10));
-            g2.drawString(" (" + listName + ")", textStartX + g2.getFontMetrics().stringWidth(taskName), getHeight() / 2 + 5);
-        }
         
         // Draw timestamp if task is checked - always in black
         if (isChecked && doneDate != null && !doneDate.isEmpty()) {
