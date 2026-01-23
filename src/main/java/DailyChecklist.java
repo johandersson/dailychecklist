@@ -403,7 +403,7 @@ public class DailyChecklist {
     /**
      * Creates a programmatic icon that looks like the checked checkbox from the app.
      */
-    private Image createAppIcon() {
+    public static Image createAppIcon() {
         int size = 32;
         BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
         java.awt.Graphics2D g2 = image.createGraphics();
@@ -453,13 +453,18 @@ public class DailyChecklist {
             checklistPanel.scrollToTask(task);
         } else {
             // Custom checklist
+            boolean found = false;
             for (int i = 0; i < tabbedPane.getTabCount(); i++) {
                 if (checklistName.equals(tabbedPane.getTitleAt(i))) {
                     tabbedPane.setSelectedIndex(i);
                     CustomChecklistPanel panel = (CustomChecklistPanel) tabbedPane.getComponentAt(i);
                     panel.scrollToTask(task);
+                    found = true;
                     break;
                 }
+            }
+            if (!found) {
+                javax.swing.JOptionPane.showMessageDialog(frame, "The custom checklist '" + checklistName + "' is not currently open. Please open it from the Custom Checklists tab first.", "Checklist Not Open", javax.swing.JOptionPane.INFORMATION_MESSAGE);
             }
         }
     }
