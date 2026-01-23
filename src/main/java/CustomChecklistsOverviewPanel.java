@@ -300,10 +300,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                     // Restore focus to the task list
                     if (rightPanel != null && rightPanel.getComponentCount() > 0) {
                         java.awt.Component c = rightPanel.getComponent(0);
-                        if (c instanceof CustomChecklistPanel) {
-                            CustomChecklistPanel panel = (CustomChecklistPanel) c;
-                            panel.getTaskList().requestFocusInWindow();
-                        }
+                        if (c instanceof CustomChecklistPanel panel) {
+                                panel.getTaskList().requestFocusInWindow();
+                            }
                     }
                 }
             });
@@ -428,10 +427,13 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         final Checklist checklistToRestore = selectedChecklist;
         final String selectedTaskId;
         String _tmpSelectedTaskId = null;
-        if (rightPanel != null && rightPanel.getComponentCount() > 0) {
+                if (rightPanel != null && rightPanel.getComponentCount() > 0) {
             java.awt.Component c = rightPanel.getComponent(0);
-                if (c instanceof CustomChecklistPanel) {
-                    try { _tmpSelectedTaskId = ((CustomChecklistPanel) c).getTaskList().getSelectedValue() == null ? null : ((CustomChecklistPanel) c).getTaskList().getSelectedValue().getId(); } catch (Exception ignore) {}
+                if (c instanceof CustomChecklistPanel panel) {
+                    try {
+                        Task sel = panel.getTaskList().getSelectedValue();
+                        _tmpSelectedTaskId = sel == null ? null : sel.getId();
+                    } catch (Exception ignore) {}
                 }
             }
         selectedTaskId = _tmpSelectedTaskId;
@@ -443,10 +445,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         if (checklistToRestore != null) {
             checklistList.setSelectedValue(checklistToRestore, true);
             // Restore selection and focus on right panel's task list if available
-            if (rightPanel != null && rightPanel.getComponentCount() > 0) {
+                if (rightPanel != null && rightPanel.getComponentCount() > 0) {
                 java.awt.Component c = rightPanel.getComponent(0);
-                if (c instanceof CustomChecklistPanel) {
-                    CustomChecklistPanel panel = (CustomChecklistPanel) c;
+                if (c instanceof CustomChecklistPanel panel) {
                     JList<Task> list = panel.getTaskList();
                     if (selectedTaskId != null) {
                         // Try to restore selected task by id

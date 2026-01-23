@@ -389,14 +389,16 @@ public class ChecklistPanel extends JPanel {
                 JList<Task> targetList;
                 DefaultListModel<Task> targetModel;
                 
-                if (task.getType() == TaskType.MORNING) {
-                    targetList = morningTaskList;
-                    targetModel = morningListModel;
-                } else if (task.getType() == TaskType.EVENING) {
-                    targetList = eveningTaskList;
-                    targetModel = eveningListModel;
-                } else {
-                    continue; // Skip custom tasks
+                switch (task.getType()) {
+                    case MORNING -> {
+                        targetList = morningTaskList;
+                        targetModel = morningListModel;
+                    }
+                    case EVENING -> {
+                        targetList = eveningTaskList;
+                        targetModel = eveningListModel;
+                    }
+                    default -> { continue; } // Skip custom tasks
                 }
                 
                 // Find the task in the model
@@ -421,12 +423,15 @@ public class ChecklistPanel extends JPanel {
     public void scrollToTask(Task task) {
         JList<Task> list;
         DefaultListModel<Task> model;
-        if (task.getType() == TaskType.MORNING) {
-            list = morningTaskList;
-            model = morningListModel;
-        } else {
-            list = eveningTaskList;
-            model = eveningListModel;
+        switch (task.getType()) {
+            case MORNING -> {
+                list = morningTaskList;
+                model = morningListModel;
+            }
+            default -> {
+                list = eveningTaskList;
+                model = eveningListModel;
+            }
         }
         for (int i = 0; i < model.getSize(); i++) {
                 if (model.getElementAt(i).getId().equals(task.getId())) {
