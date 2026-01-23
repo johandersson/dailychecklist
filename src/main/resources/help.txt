@@ -2,9 +2,7 @@
 <body style="font-family: Arial, sans-serif; color: #222; line-height:1.4;">
 	<h1>Daily Checklist Help</h1>
 
-	<p>Daily Checklist is a focused app for managing daily routines (not general todo history). It
-	records whether a task was completed each day but resets status daily. This app is designed for
-	quick, repeatable daily checklists rather than long‑lived task tracking.</p>
+	<p>Daily Checklist is a focused app for managing daily routines (not general todo history). It records whether a task was completed each day but resets status daily. This app is designed for quick, repeatable daily checklists rather than long‑lived task tracking.</p>
 
 	<h2>Getting Started</h2>
 	<ol>
@@ -41,8 +39,7 @@
 	<p>In the right panel, enter a name and click "Create Checklist". The name cannot be empty.</p>
 
 	<h3>Add tasks to a checklist</h3>
-	<p>Select a checklist, enter tasks (one per line) in the Add Tasks area, and click "Add Tasks".
-	Empty lines are skipped. Tasks appear in the selected checklist.</p>
+	<p>Select a checklist, enter tasks (one per line) in the Add Tasks area, and click "Add Tasks". Empty lines are skipped. Tasks appear in the selected checklist.</p>
 
 	<h3>Manage checklists</h3>
 	<ul>
@@ -57,8 +54,7 @@
 	</ul>
 
 	<h2>Searching Tasks</h2>
-	<p>Press <b>Ctrl+F</b> or use the Search menu to open the search dialog. Type to filter tasks across
-	all checklists in real time (case-insensitive). Select a result and click "Go to Selected Task" to jump to it in the UI.</p>
+	<p>Press <b>Ctrl+F</b> or use the Search menu to open the search dialog. Type to filter tasks across all checklists in real time (case-insensitive). Select a result and click "Go to Selected Task" to jump to it in the UI.</p>
 
 	<h2>Reminders</h2>
 	<h3>Add and manage</h3>
