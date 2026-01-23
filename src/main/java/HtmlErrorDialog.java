@@ -22,7 +22,7 @@ public class HtmlErrorDialog extends JDialog {
     }
 
     public static void showHtmlError(java.awt.Component parent, String htmlMessage, Throwable t) {
-        java.awt.Frame owner = parent instanceof java.awt.Frame ? (java.awt.Frame) parent : null;
+        java.awt.Frame owner = parent instanceof java.awt.Frame frame ? frame : null;
         HtmlErrorDialog d = new HtmlErrorDialog(owner, "Error - Daily Checklist");
 
         JLabel html = new JLabel(htmlMessage);
