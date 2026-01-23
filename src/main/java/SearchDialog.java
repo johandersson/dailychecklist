@@ -88,6 +88,8 @@ public class SearchDialog {
         unifiedList.setSelectionForeground(java.awt.Color.BLACK);
         // Ensure consistent vertical sizing for both checklist and task rows
         unifiedList.setFixedCellHeight(50);
+
+        // (Open button enabling will be wired after the button is created below)
         
         // Double-click handler for unified list
         unifiedList.addMouseListener(new MouseAdapter() {
@@ -143,11 +145,19 @@ public class SearchDialog {
 
         JPanel buttonPanel = new JPanel(new FlowLayout());
         JButton goToButton = new JButton("Open");
+        // Disabled until an item is selected
+        goToButton.setEnabled(false);
         goToButton.setFont(FontManager.getButtonFont());
         JButton closeButton = new JButton("Close");
         closeButton.setFont(FontManager.getButtonFont());
         buttonPanel.add(goToButton);
         buttonPanel.add(closeButton);
+
+        // Now wire selection -> button enable/disable
+        unifiedList.addListSelectionListener(e -> {
+            boolean enabled = unifiedList.getSelectedValue() != null;
+            goToButton.setEnabled(enabled);
+        });
 
         JScrollPane unifiedScroll = new JScrollPane(unifiedList);
         unifiedScroll.setBorder(javax.swing.BorderFactory.createEmptyBorder());
