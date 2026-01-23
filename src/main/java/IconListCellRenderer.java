@@ -17,7 +17,6 @@
  */
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -41,7 +40,7 @@ public abstract class IconListCellRenderer<T> extends JPanel implements ListCell
     @SuppressWarnings("this-escape")
     public IconListCellRenderer() {
         setPreferredSize(new Dimension(200, 36));
-        setFont(new Font("Yu Gothic UI", Font.PLAIN, 14));
+        setFont(FontManager.getTaskListFont());
         setOpaque(true);
     }
 

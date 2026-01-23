@@ -92,7 +92,7 @@ public class ReminderEditDialog extends JDialog {
         }
 
         JLabel headerLabel = new JLabel(headerText, JLabel.CENTER);
-        headerLabel.setFont(headerLabel.getFont().deriveFont(14.0f));
+        headerLabel.setFont(FontManager.getTaskListFont());
         headerLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         JPanel panel = new JPanel(new BorderLayout());

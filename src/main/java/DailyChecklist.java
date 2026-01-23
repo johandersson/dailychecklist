@@ -309,7 +309,7 @@ public class DailyChecklist {
             e.printStackTrace();
         }
 
-        setUIFonts("Yu Gothic UI", 16);
+        setUIFonts(FontManager.FONT_NAME, FontManager.SIZE_DEFAULT);
         frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
@@ -358,21 +358,22 @@ public class DailyChecklist {
     }
 
     static void setUIFonts(String fontName, int fontSize) {
-        UIManager.put("Label.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("Button.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("TextField.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("RadioButton.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("CheckBox.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("TabbedPane.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("TitledBorder.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("List.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("TextArea.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("TextPane.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("TextField.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("ComboBox.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("Menu.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("MenuItem.font", new Font(fontName, Font.PLAIN, fontSize));
-        UIManager.put("ToolTip.font", new Font(fontName, Font.PLAIN, fontSize));
+        Font font = new Font(fontName, Font.PLAIN, fontSize);
+        UIManager.put("Label.font", font);
+        UIManager.put("Button.font", font);
+        UIManager.put("TextField.font", font);
+        UIManager.put("RadioButton.font", font);
+        UIManager.put("CheckBox.font", font);
+        UIManager.put("TabbedPane.font", font);
+        UIManager.put("TitledBorder.font", font);
+        UIManager.put("List.font", font);
+        UIManager.put("TextArea.font", font);
+        UIManager.put("TextPane.font", font);
+        UIManager.put("TextField.font", font);
+        UIManager.put("ComboBox.font", font);
+        UIManager.put("Menu.font", font);
+        UIManager.put("MenuItem.font", font);
+        UIManager.put("ToolTip.font", font);
     }
 
     public static void main(String[] args) {

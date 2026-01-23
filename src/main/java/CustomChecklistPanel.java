@@ -223,7 +223,7 @@ public class CustomChecklistPanel extends JPanel {
             small.setOpaque(false);
             javax.swing.JLabel iconLabel = new javax.swing.JLabel(icon);
             javax.swing.JLabel textLabel = new javax.swing.JLabel(dateText + " " + timeText);
-            textLabel.setFont(textLabel.getFont().deriveFont(11.0f));
+            textLabel.setFont(FontManager.getSmallMediumFont());
 
             // Choose a darker orange for readability
             java.awt.Color dueSoonColor = new java.awt.Color(204, 102, 0);
@@ -251,7 +251,7 @@ public class CustomChecklistPanel extends JPanel {
             panel.add(small, BorderLayout.WEST);
         } else {
             JLabel noReminderLabel = new JLabel("No reminder set");
-            noReminderLabel.setFont(noReminderLabel.getFont().deriveFont(10.0f));
+            noReminderLabel.setFont(FontManager.getSmallFont());
             noReminderLabel.setForeground(java.awt.Color.GRAY);
             panel.add(noReminderLabel, BorderLayout.WEST);
         }
