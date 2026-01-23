@@ -78,9 +78,9 @@ public class SearchDialog {
                 return new javax.swing.JLabel(value == null ? "" : value.toString());
             }
         });
-        resultList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        resultList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Consistent selection color
-        resultList.setSelectionForeground(java.awt.Color.BLACK);
+        unifiedList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        unifiedList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Consistent selection color
+        unifiedList.setSelectionForeground(java.awt.Color.BLACK);
         
         // Double-click handler for unified list
         unifiedList.addMouseListener(new MouseAdapter() {
@@ -99,7 +99,7 @@ public class SearchDialog {
             }
         });
         
-        JScrollPane scrollPane = new JScrollPane(resultList);
+        // (previously used resultList) unifiedScroll will be used below
 
         Runnable performSearch = () -> {
             String query = searchField.getText().toLowerCase();
@@ -151,9 +151,12 @@ public class SearchDialog {
         searchButton.addActionListener(e -> performSearch.run());
 
         goToButton.addActionListener(e -> {
-            Task selected = resultList.getSelectedValue();
-            if (selected != null) {
-                dailyChecklist.jumpToTask(selected);
+            Object sel = unifiedList.getSelectedValue();
+            if (sel instanceof Task t) {
+                dailyChecklist.jumpToTask(t);
+                dialog.dispose();
+            } else if (sel instanceof Checklist c) {
+                dailyChecklist.showCustomChecklist(c.getName());
                 dialog.dispose();
             }
         });
