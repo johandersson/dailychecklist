@@ -409,24 +409,34 @@ public class ChecklistPanel extends JPanel {
     // Helper: select the most relevant reminder for a Morning/Evening type
     private Reminder selectReminderForType(String title) {
         java.util.List<Reminder> reminders = taskManager.getReminders();
-        Reminder display = null;
-        java.time.LocalDateTime best = null;
+        Reminder checklistLevel = findChecklistLevelReminder(reminders, title);
+        if (checklistLevel != null) return checklistLevel;
+        return findEarliestTaskReminderForType(reminders, title);
+    }
 
-        java.util.List<Task> allTasks = taskManager.getAllTasks();
+    private Reminder findChecklistLevelReminder(java.util.List<Reminder> reminders, String title) {
         for (Reminder r : reminders) {
             if (r.getTaskId() == null && title.equalsIgnoreCase(r.getChecklistName())) {
-                display = r;
-                break;
+                return r;
             }
-            if (r.getTaskId() != null) {
-                Task t = allTasks.stream().filter(x -> r.getTaskId().equals(x.getId())).findFirst().orElse(null);
-                if (t != null && ((title.equalsIgnoreCase("Morning") && t.getType() == TaskType.MORNING) || (title.equalsIgnoreCase("Evening") && t.getType() == TaskType.EVENING))) {
-                    java.time.LocalDateTime rt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-                    if (best == null || rt.isBefore(best)) {
-                        best = rt;
-                        display = r;
-                    }
-                }
+        }
+        return null;
+    }
+
+    private Reminder findEarliestTaskReminderForType(java.util.List<Reminder> reminders, String title) {
+        java.time.LocalDateTime best = null;
+        Reminder display = null;
+        java.util.List<Task> allTasks = taskManager.getAllTasks();
+        for (Reminder r : reminders) {
+            if (r.getTaskId() == null) continue;
+            Task t = allTasks.stream().filter(x -> r.getTaskId().equals(x.getId())).findFirst().orElse(null);
+            if (t == null) continue;
+            boolean matchesType = (title.equalsIgnoreCase("Morning") && t.getType() == TaskType.MORNING) || (title.equalsIgnoreCase("Evening") && t.getType() == TaskType.EVENING);
+            if (!matchesType) continue;
+            java.time.LocalDateTime rt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+            if (best == null || rt.isBefore(best)) {
+                best = rt;
+                display = r;
             }
         }
         return display;
