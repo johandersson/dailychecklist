@@ -252,7 +252,7 @@ public class ReminderEditDialog extends JDialog {
     private JComboBox<Integer> createMinuteComboBox() {
         LocalDateTime now = LocalDateTime.now();
         JComboBox<Integer> box = new JComboBox<>(IntStream.rangeClosed(0, 59).boxed().toArray(Integer[]::new));
-        box.setSelectedItem(existingReminder != null ? existingReminder.getMinute() : Math.round((float) now.getMinute() / 5) * 5);
+        box.setSelectedItem(existingReminder != null ? existingReminder.getMinute() : now.getMinute());
         return box;
     }
 
