@@ -370,7 +370,8 @@ public class DailyChecklist {
             newTime.getMonthValue(),
             newTime.getDayOfMonth(),
             newTime.getHour(),
-            newTime.getMinute()
+            newTime.getMinute(),
+            originalReminder.getTaskId()
         );
         checklistManager.removeReminder(originalReminder);
         checklistManager.addReminder(newReminder);
@@ -387,7 +388,8 @@ public class DailyChecklist {
             tomorrow.getMonthValue(),
             tomorrow.getDayOfMonth(),
             originalReminder.getHour(),
-            originalReminder.getMinute()
+            originalReminder.getMinute(),
+            originalReminder.getTaskId()
         );
         checklistManager.removeReminder(originalReminder);
         checklistManager.addReminder(newReminder);
