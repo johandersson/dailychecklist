@@ -52,8 +52,8 @@ public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
 
     @Override
     protected Icon getIconForValue(Checklist checklist) {
-        // Left-side icons not used for checklist rows; we render the reminder at the right end instead.
-        return null;
+        // Show the checklist document icon on the left (matches search dialog appearance)
+        return IconCache.getChecklistDocumentIcon();
     }
 
     @Override

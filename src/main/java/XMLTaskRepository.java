@@ -17,6 +17,7 @@
  */
 import java.awt.Component;
 import java.io.File;
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
@@ -26,6 +27,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
+import org.xml.sax.SAXException;
 
 public class XMLTaskRepository implements TaskRepository {
     private static String FILE_NAME = ApplicationConfiguration.APPLICATION_DATA_DIR + File.separator + ApplicationConfiguration.DATA_FILE_NAME;
@@ -95,9 +99,10 @@ public class XMLTaskRepository implements TaskRepository {
         File file = new File(FILE_NAME);
         if (!file.exists()) {
             try {
-                // Create an empty tasks document
-                taskXmlHandler.setAllTasks(new ArrayList<>());
-            } catch (Exception e) {
+                // Ensure parent data directory exists and create an empty tasks document safely
+                ApplicationConfiguration.ensureDataDirectoryExists();
+                taskXmlHandler.ensureFileExists();
+            } catch (ParserConfigurationException | TransformerException | IOException e) {
                 // Show user-friendly error dialog and re-throw as runtime exception
                 if (parentComponent != null) {
                     ApplicationErrorHandler.showDataSaveError(parentComponent, "data file", e);
@@ -153,7 +158,7 @@ public class XMLTaskRepository implements TaskRepository {
                     }
                 }
                 tasksCacheDirty = false;
-            } catch (Exception e) {
+            } catch (ParserConfigurationException | SAXException | IOException e) {
                 if (parentComponent != null) {
                     ApplicationErrorHandler.showDataLoadError(parentComponent, "cached tasks", e);
                 }
@@ -220,7 +225,7 @@ public class XMLTaskRepository implements TaskRepository {
         try {
             taskXmlHandler.addTask(task);
             tasksCacheDirty = true; // Mark cache as dirty
-        } catch (Exception e) {
+        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
             }
@@ -238,7 +243,7 @@ public class XMLTaskRepository implements TaskRepository {
         try {
             taskXmlHandler.updateTask(task);
             tasksCacheDirty = true; // Mark cache as dirty
-        } catch (Exception e) {
+        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
             }
@@ -254,7 +259,7 @@ public class XMLTaskRepository implements TaskRepository {
             taskXmlHandler.updateTask(task);
             tasksCacheDirty = true; // Mark cache as dirty
             return true;
-        } catch (Exception e) {
+        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
             // Don't show error dialog, just return failure
             return false;
         }
@@ -265,7 +270,7 @@ public class XMLTaskRepository implements TaskRepository {
         try {
             taskXmlHandler.removeTask(task);
             tasksCacheDirty = true; // Mark cache as dirty
-        } catch (Exception e) {
+        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
             }
@@ -295,7 +300,7 @@ public class XMLTaskRepository implements TaskRepository {
 
             // After setting tasks, rebuild the checklist names registry from the new tasks
             rebuildChecklistNamesRegistry(tasks);
-        } catch (Exception e) {
+        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "tasks", e);
             }
@@ -308,7 +313,7 @@ public class XMLTaskRepository implements TaskRepository {
      */
     private void rebuildChecklistNamesRegistry(List<Task> tasks) {
         try {
-            Set<Checklist> checklists = new HashSet<>();
+            Set<Checklist> foundChecklists = new HashSet<>();
             for (Task task : tasks) {
                 if (task.getType() == TaskType.CUSTOM) {
                     String checklistId = task.getChecklistId();
@@ -319,38 +324,33 @@ public class XMLTaskRepository implements TaskRepository {
                         boolean looksLikeUuid = trimmed.matches("[0-9a-fA-F\\-]{36}");
 
                         if (looksLikeUuid) {
-                            // Prefer any existing registry entry for this id
                             Checklist checklist = checklistNameManager.getChecklistById(trimmed);
                             if (checklist == null) {
                                 // No recorded name for this id — create a checklist with a neutral default name
                                 checklist = new Checklist(trimmed, "Untitled Checklist");
-                                checklists.add(checklist);
-                            } else {
-                                checklists.add(checklist);
                             }
+                            foundChecklists.add(checklist);
                         } else {
                             // Older backups stored the checklist name in this field — treat as name
                             Checklist checklist = checklistNameManager.getChecklistByName(trimmed);
                             if (checklist == null) {
                                 checklist = new Checklist(trimmed);
                             }
-                            checklists.add(checklist);
+                            foundChecklists.add(checklist);
                         }
                     }
                 }
             }
 
-            // Clear existing registry and add all found checklists
-            Set<Checklist> existingChecklists = checklistNameManager.getChecklists();
-            for (Checklist existingChecklist : existingChecklists) {
-                if (!checklists.contains(existingChecklist)) {
-                    checklistNameManager.removeChecklist(existingChecklist);
-                }
-            }
-
-            for (Checklist checklist : checklists) {
-                if (!existingChecklists.contains(checklist)) {
+            // Add or update registry entries for checklists referenced by tasks
+            for (Checklist checklist : foundChecklists) {
+                // If not present, add it. If present but name is empty, update the name.
+                Checklist existing = checklistNameManager.getChecklistById(checklist.getId());
+                if (existing == null) {
                     checklistNameManager.addChecklist(checklist);
+                } else if ((existing.getName() == null || existing.getName().trim().isEmpty())
+                        && checklist.getName() != null && !checklist.getName().trim().isEmpty()) {
+                    checklistNameManager.updateChecklistName(existing, checklist.getName());
                 }
             }
         } catch (Exception e) {

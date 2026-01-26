@@ -27,10 +27,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import javax.swing.JFileChooser;
-import javax.swing.JList;
 import javax.swing.JOptionPane;
-import javax.swing.JScrollPane;
-import javax.swing.ListSelectionModel;
 
 /**
  * Dialog for restoring data from backup with confirmation and diff display.
@@ -82,7 +79,7 @@ public class BackupRestoreDialog {
                 for (String k : p.stringPropertyNames()) liveKeys.add(k);
             }
             for (String k : checklists.keySet()) if (!liveKeys.contains(k)) newChecklistCount++;
-        } catch (Exception ex) {
+        } catch (java.io.IOException ex) {
             newChecklistCount = checklists.size();
         }
 
@@ -128,7 +125,7 @@ public class BackupRestoreDialog {
                 taskManager.setTasks(merged);
                 updateTasks.run();
                 JOptionPane.showMessageDialog(parent, "Imported tasks and merged checklists." + (liveBackup!=null?" (backup created)":""), "Import Complete", JOptionPane.INFORMATION_MESSAGE);
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 ErrorDialog.showError(parent, "Failed to import tasks", e);
             }
         };
@@ -166,7 +163,7 @@ public class BackupRestoreDialog {
                     live.store(w, "Merged from backup on " + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()));
                 }
             }
-        } catch (Exception ex) {
+        } catch (java.io.IOException ex) {
             // ignore merge failures
         }
     }
@@ -184,32 +181,13 @@ public class BackupRestoreDialog {
                     map.put(key, p.getProperty(key));
                 }
             }
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             // ignore and return empty map
         }
         return map;
     }
 
-    private static List<String> chooseChecklistsDialog(Component parent, Map<String,String> checklists) {
-        List<String> ids = new ArrayList<>();
-        String[] display = new String[checklists.size()];
-        int idx = 0;
-        for (Map.Entry<String,String> e : checklists.entrySet()) {
-            display[idx++] = e.getValue() + " (" + e.getKey() + ")";
-        }
-        JList<String> list = new JList<>(display);
-        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        JScrollPane scroll = new JScrollPane(list);
-        int res = JOptionPane.showConfirmDialog(parent, scroll, "Select checklists to import", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (res != JOptionPane.OK_OPTION) return ids;
-        int[] sel = list.getSelectedIndices();
-        if (sel == null || sel.length == 0) return ids;
-        String[] keys = checklists.keySet().toArray(String[]::new);
-        for (int i : sel) {
-            if (i >= 0 && i < keys.length) ids.add(keys[i]);
-        }
-        return ids;
-    }
+    // chooseChecklistsDialog removed: not used anywhere in codebase
 
     private static File backupLiveData() {
         try {
@@ -224,32 +202,12 @@ public class BackupRestoreDialog {
                 while ((r = is.read(buf)) > 0) os.write(buf, 0, r);
             }
             return target;
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             return null;
         }
     }
 
-    private static File findLatestBackup() {
-        File backupDir = new File(ApplicationConfiguration.BACKUP_DIRECTORY);
-        if (!backupDir.exists() || !backupDir.isDirectory()) {
-            return null;
-        }
-
-        File[] files = backupDir.listFiles((dir, name) -> name.startsWith("dailychecklist-backup-") && name.endsWith(".zip"));
-        if (files == null || files.length == 0) {
-            return null;
-        }
-
-        File latest = null;
-        long latestTime = 0;
-        for (File file : files) {
-            if (file.lastModified() > latestTime) {
-                latest = file;
-                latestTime = file.lastModified();
-            }
-        }
-        return latest;
-    }
+    // findLatestBackup removed: unused helper
 
     private static List<Task> loadBackupTasks(File backupFile) {
         try (java.util.zip.ZipFile zipFile = new java.util.zip.ZipFile(backupFile)) {
@@ -275,15 +233,12 @@ public class BackupRestoreDialog {
                 }
             }
             return null;
-        } catch (Exception e) {
+        } catch (javax.xml.parsers.ParserConfigurationException | org.xml.sax.SAXException | java.io.IOException e) {
             return null;
         }
     }
 
     
 
-    private static String escapeHtml(String s) {
-        if (s == null) return "";
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
-    }
+    // escapeHtml removed: not used
 }

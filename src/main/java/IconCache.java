@@ -1,3 +1,20 @@
+/*
+ * Daily Checklist
+ * Copyright (C) 2025 Johan Andersson
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,8 +29,9 @@ import javax.swing.ImageIcon;
 public final class IconCache {
     private IconCache() {}
 
-    private static final ChecklistDocumentIcon CHECKLIST_DOC = new ChecklistDocumentIcon();
+    private static final ChecklistDocumentIcon CHECKLIST_DOC_RAW = new ChecklistDocumentIcon();
     private static final ZzzIcon ZZZ = new ZzzIcon();
+    private static final javax.swing.Icon CHECKLIST_DOC;
 
     // Key format: hour-minute-state-showTime
     private static final ConcurrentMap<String, Icon> reminderClockCache = new ConcurrentHashMap<>();
@@ -56,5 +74,19 @@ public final class IconCache {
             }
             return icon;
         });
+    }
+
+    static {
+        // Pre-render the checklist document icon into an ImageIcon for consistent painting
+        int w = CHECKLIST_DOC_RAW.getIconWidth();
+        int h = CHECKLIST_DOC_RAW.getIconHeight();
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(Math.max(1, w), Math.max(1, h), java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D g = img.createGraphics();
+        try {
+            CHECKLIST_DOC_RAW.paintIcon(null, g, 0, 0);
+        } finally {
+            g.dispose();
+        }
+        CHECKLIST_DOC = new javax.swing.ImageIcon(img);
     }
 }

@@ -107,6 +107,21 @@ public class TaskXmlHandler {
     }
 
     /**
+     * Ensure the XML data file exists. Creates parent directories and an empty document if missing.
+     */
+    public void ensureFileExists() throws ParserConfigurationException, TransformerException, IOException {
+        File file = new File(fileName);
+        File parent = file.getAbsoluteFile().getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+        if (!file.exists()) {
+            Document doc = createNewDocument();
+            writeDocument(doc);
+        }
+    }
+
+    /**
      * Parses all tasks from the XML document.
      */
     public List<Task> parseAllTasks() throws ParserConfigurationException, SAXException, IOException {

@@ -53,12 +53,19 @@ public class SearchDialog {
         JList<Object> unifiedList = new JList<>(unifiedModel);
 
         CheckboxListCellRenderer taskRenderer = new CheckboxListCellRenderer(true); // Show checklist info in search results
-        ChecklistCellRenderer checklistRenderer = new ChecklistCellRenderer(taskManager);
+
+        // Template task list used only to satisfy the renderer's typed JList parameter
+        final JList<Task> taskListTemplate = new JList<>();
 
         unifiedList.setCellRenderer((list, value, index, isSelected, cellHasFocus) -> {
-            if (value instanceof Task t) {
-                return taskRenderer.getListCellRendererComponent((JList) list, t, index, isSelected, cellHasFocus);
-            } else if (value instanceof Checklist c) {
+            if (value instanceof Task) {
+                Task t = (Task) value;
+                // Keep renderer behavior consistent by copying selection colors
+                taskListTemplate.setSelectionBackground(list.getSelectionBackground());
+                taskListTemplate.setSelectionForeground(list.getSelectionForeground());
+                return taskRenderer.getListCellRendererComponent(taskListTemplate, t, index, isSelected, cellHasFocus);
+            } else if (value instanceof Checklist) {
+                Checklist c = (Checklist) value;
                 // Build a simple label component using checklist renderer but show document icon for search
                 javax.swing.JLabel lbl = new javax.swing.JLabel();
                 lbl.setFont(FontManager.getTaskListFont());
@@ -95,13 +102,13 @@ public class SearchDialog {
         unifiedList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
+                    if (e.getClickCount() == 2) {
                     Object sel = unifiedList.getSelectedValue();
-                    if (sel instanceof Task t) {
-                        dailyChecklist.jumpToTask(t);
+                    if (sel instanceof Task) {
+                        dailyChecklist.jumpToTask((Task) sel);
                         dialog.dispose();
-                    } else if (sel instanceof Checklist c) {
-                        dailyChecklist.showCustomChecklist(c.getName());
+                    } else if (sel instanceof Checklist) {
+                        dailyChecklist.showCustomChecklist(((Checklist) sel).getName());
                         dialog.dispose();
                     }
                 }
@@ -167,17 +174,17 @@ public class SearchDialog {
 
         searchButton.addActionListener(e -> performSearch.run());
 
-        goToButton.addActionListener(e -> {
+        goToButton.addActionListener((var e) -> {
             Object sel = unifiedList.getSelectedValue();
             if (sel == null) {
                 javax.swing.JOptionPane.showMessageDialog(dialog, "Please select an item to open.", "No selection", javax.swing.JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
-            if (sel instanceof Task t) {
-                dailyChecklist.jumpToTask(t);
+            if (sel instanceof Task) {
+                dailyChecklist.jumpToTask((Task) sel);
                 dialog.dispose();
-            } else if (sel instanceof Checklist c) {
-                dailyChecklist.showCustomChecklist(c.getName());
+            } else if (sel instanceof Checklist) {
+                dailyChecklist.showCustomChecklist(((Checklist) sel).getName());
                 dialog.dispose();
             }
         });

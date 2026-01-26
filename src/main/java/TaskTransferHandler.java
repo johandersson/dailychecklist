@@ -39,8 +39,7 @@ public class TaskTransferHandler extends TransferHandler {
     private transient final TaskManager taskManager;
     private final String checklistName; // null for daily checklists
     private transient final Runnable updateAllPanels;
-    private final DefaultListModel<Task> morningListModel;
-    private final DefaultListModel<Task> eveningListModel;
+    
 
     public TaskTransferHandler(JList<Task> list, DefaultListModel<Task> listModel, TaskManager taskManager, String checklistName) {
         this(list, listModel, taskManager, checklistName, null);
@@ -56,8 +55,8 @@ public class TaskTransferHandler extends TransferHandler {
         this.taskManager = taskManager;
         this.checklistName = checklistName;
         this.updateAllPanels = updateAllPanels;
-        this.morningListModel = morningListModel;
-        this.eveningListModel = eveningListModel;
+        // morning/evening list models are accepted by the factory for callers,
+        // but not used by this handler directly.
     }
 
     @Override
@@ -185,10 +184,11 @@ public class TaskTransferHandler extends TransferHandler {
                 return false;
             }
 
+            int dropIndex = getDropIndex(support);
             if (transferData.sourceChecklistName.equals(checklistName)) {
-                return handleSameChecklistReorder(support, transferData, getDropIndex(support));
+                return handleSameChecklistReorder(transferData, dropIndex);
             } else {
-                return handleCrossChecklistMove(support, transferData, getDropIndex(support));
+                return handleCrossChecklistMove(transferData, dropIndex);
             }
         } catch (UnsupportedFlavorException | IOException e) {
             return false;
@@ -240,276 +240,16 @@ public class TaskTransferHandler extends TransferHandler {
         return new TransferData(sourceChecklistName, tasks);
     }
 
-    private boolean handleSameChecklistReorder(TransferHandler.TransferSupport support, TransferData transferData, int dropIndex) {
-        List<Task> tasks = transferData.tasks;
-
-        // Ensure drop index is within valid bounds
-        JList<?> targetList = (JList<?>) support.getComponent();
-        int originalSize = targetList.getModel().getSize();
-        if (dropIndex > originalSize) {
-            dropIndex = originalSize;
-        }
-        if (dropIndex < 0) {
-            dropIndex = 0;
-        }
-
-        // Sort tasks by their current position in the list for proper insertion order
-        tasks.sort((t1, t2) -> {
-            int idx1 = -1, idx2 = -1;
-            for (int i = 0; i < listModel.getSize(); i++) {
-                if (listModel.get(i).getId().equals(t1.getId())) idx1 = i;
-                if (listModel.get(i).getId().equals(t2.getId())) idx2 = i;
-            }
-            return Integer.compare(idx1, idx2);
-        });
-
-        // Calculate how many items will be removed before the drop position
-        int itemsRemovedBeforeDrop = 0;
-        for (Task task : tasks) {
-            for (int i = 0; i < listModel.getSize(); i++) {
-                if (listModel.get(i).getId().equals(task.getId())) {
-                    if (i < dropIndex) {
-                        itemsRemovedBeforeDrop++;
-                    }
-                    break;
-                }
-            }
-        }
-
-        // Adjust drop index for removals that occur before it
-        dropIndex -= itemsRemovedBeforeDrop;
-
-        // Defer the list model changes to avoid NPE during cleanup
-        final int finalDropIndex = dropIndex;
-        javax.swing.SwingUtilities.invokeLater(() -> {
-            // Remove all tasks from their current positions
-            for (Task task : tasks) {
-                for (int i = 0; i < listModel.getSize(); i++) {
-                    if (listModel.get(i).getId().equals(task.getId())) {
-                        listModel.remove(i);
-                        break;
-                    }
-                }
-            }
-
-            // Ensure drop index is still valid after all removals
-            int adjustedDropIndex = finalDropIndex;
-            if (adjustedDropIndex < 0) {
-                adjustedDropIndex = 0;
-            }
-            if (adjustedDropIndex > listModel.getSize()) {
-                adjustedDropIndex = listModel.getSize();
-            }
-
-            // Insert all tasks at the drop position
-            for (int i = 0; i < tasks.size(); i++) {
-                listModel.add(adjustedDropIndex + i, tasks.get(i));
-            }
-
-            // Persist the new order in the underlying data
-            persistTaskOrder(listModel, checklistName);
-        });
-
-        return true;
+    private boolean handleSameChecklistReorder(TransferData transferData, int dropIndex) {
+        return TaskReorderHandler.performReorder(listModel, taskManager, checklistName, transferData.tasks, dropIndex);
     }
 
-    private boolean handleCrossChecklistMove(TransferHandler.TransferSupport support, TransferData transferData, int dropIndex) {
-        String sourceChecklistName = transferData.sourceChecklistName;
-        List<Task> tasks = transferData.tasks;
-
-        // Check if move is allowed
-        boolean isSourceDaily = "MORNING".equals(sourceChecklistName) || "EVENING".equals(sourceChecklistName);
-        boolean isTargetDaily = "MORNING".equals(checklistName) || "EVENING".equals(checklistName);
-        if (isSourceDaily != isTargetDaily) {
-            return false; // Disallow moving between daily and custom checklists
-        }
-
-        // Ensure drop index is within valid bounds
-        JList<?> targetList = (JList<?>) support.getComponent();
-        int maxIndex = targetList.getModel().getSize();
-        if (dropIndex > maxIndex) {
-            dropIndex = maxIndex;
-        }
-        if (dropIndex < 0) {
-            dropIndex = 0;
-        }
-
-        // Defer the list model changes to avoid NPE during cleanup
-        final int finalDropIndex = dropIndex;
-        javax.swing.SwingUtilities.invokeLater(() -> {
-            // Update the properties for all tasks
-            for (Task task : tasks) {
-                updateTaskPropertiesForMove(task, sourceChecklistName, checklistName);
-                taskManager.updateTask(task);
-            }
-
-            // For daily checklists, reorder the tasks to place moved tasks at the correct position
-            if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
-                reorderTasksForDailyList(checklistName, tasks, finalDropIndex);
-            }
-
-            // Restore focus to the target list for custom checklists
-            if (!("MORNING".equals(checklistName) || "EVENING".equals(checklistName))) {
-                list.requestFocusInWindow();
-            }
-
-            // Update all panels to reflect the changes
-            if (updateAllPanels != null) {
-                updateAllPanels.run();
-            }
-        });
-
-        return true;
+    private boolean handleCrossChecklistMove(TransferData transferData, int dropIndex) {
+        // Delegate to TaskMoveHandler which encapsulates move logic and selection/jump ordering
+        return TaskMoveHandler.performMove(list, listModel, taskManager, checklistName, updateAllPanels, transferData.tasks, dropIndex);
     }
 
-    private void updateTaskPropertiesForMove(Task task, String sourceChecklistName, String targetChecklistName) {
-        boolean sourceIsDaily = "MORNING".equals(sourceChecklistName) || "EVENING".equals(sourceChecklistName);
-        boolean targetIsDaily = "MORNING".equals(targetChecklistName) || "EVENING".equals(targetChecklistName);
-
-        if (targetIsDaily && !sourceIsDaily) {
-            // Moving to daily from custom
-            task.setChecklistId(null);
-            task.setType("MORNING".equals(targetChecklistName) ? TaskType.MORNING : TaskType.EVENING);
-        } else if (!targetIsDaily && sourceIsDaily) {
-            // Moving to custom from daily - find the target checklist
-            Checklist targetChecklist = taskManager.getCustomChecklists().stream()
-                .filter(c -> targetChecklistName.equals(c.getName()))
-                .findFirst()
-                .orElse(null);
-            if (targetChecklist != null) {
-                task.setChecklistId(targetChecklist.getId());
-                task.setType(TaskType.CUSTOM);
-            }
-        } else if (sourceIsDaily && targetIsDaily && !sourceChecklistName.equals(targetChecklistName)) {
-            // Moving between morning and evening
-            task.setChecklistId(null);
-            task.setType("MORNING".equals(targetChecklistName) ? TaskType.MORNING : TaskType.EVENING);
-        } else if (!sourceIsDaily && !targetIsDaily) {
-            // Moving between custom checklists - find the target checklist
-            Checklist targetChecklist = taskManager.getCustomChecklists().stream()
-                .filter(c -> targetChecklistName.equals(c.getName()))
-                .findFirst()
-                .orElse(null);
-            if (targetChecklist != null) {
-                task.setChecklistId(targetChecklist.getId());
-            }
-        }
-    }
-
-    private void persistTaskOrder(DefaultListModel<Task> listModel, String checklistName) {
-        List<Task> allTasks = new ArrayList<>(taskManager.getAllTasks());
-        
-        // Find the tasks that belong to this checklist in their current order
-        List<Task> checklistTasks = new ArrayList<>();
-        for (Task t : allTasks) {
-            boolean belongsToChecklist = false;
-            if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
-                belongsToChecklist = checklistName.equals(t.getType().toString());
-            } else {
-                // For custom checklists, find the checklist by name and check ID
-                Checklist checklist = taskManager.getCustomChecklists().stream()
-                    .filter(c -> checklistName.equals(c.getName()))
-                    .findFirst()
-                    .orElse(null);
-                belongsToChecklist = checklist != null && checklist.getId().equals(t.getChecklistId());
-            }
-            if (belongsToChecklist) {
-                checklistTasks.add(t);
-            }
-        }
-        
-        // Reorder checklistTasks to match listModel order
-        List<Task> reorderedTasks = new ArrayList<>();
-        for (int i = 0; i < listModel.getSize(); i++) {
-            Task task = listModel.get(i);
-            int indexInChecklistTasks = checklistTasks.indexOf(task);
-            if (indexInChecklistTasks >= 0) {
-                reorderedTasks.add(checklistTasks.get(indexInChecklistTasks));
-            }
-        }
-        
-        // Replace the tasks in allTasks with the reordered ones
-        allTasks.removeAll(checklistTasks);
-        // Find the position to insert (after the last task of the same type/checklist)
-        int insertIndex = 0;
-        for (Task t : allTasks) {
-            boolean belongsToChecklist = false;
-            if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
-                belongsToChecklist = checklistName.equals(t.getType().toString());
-            } else {
-                // For custom checklists, find the checklist by name and check ID
-                Checklist checklist = taskManager.getCustomChecklists().stream()
-                    .filter(c -> checklistName.equals(c.getName()))
-                    .findFirst()
-                    .orElse(null);
-                belongsToChecklist = checklist != null && checklist.getId().equals(t.getChecklistId());
-            }
-            if (belongsToChecklist) {
-                insertIndex = allTasks.indexOf(t) + 1;
-            }
-        }
-        allTasks.addAll(insertIndex, reorderedTasks);
-        
-        // Save the reordered tasks
-        taskManager.setTasks(allTasks);
-    }
-
-    private void reorderTasksForDailyList(String checklistName, List<Task> movedTasks, int dropIndex) {
-        List<Task> allTasks = new ArrayList<>(taskManager.getAllTasks());
-        TaskType targetType = "MORNING".equals(checklistName) ? TaskType.MORNING : TaskType.EVENING;
-        
-        // Get all tasks of the target type in their current order
-        List<Task> targetTasks = new ArrayList<>();
-        for (Task task : allTasks) {
-            if (task.getType() == targetType) {
-                targetTasks.add(task);
-            }
-        }
-        
-        // Find the insertion point
-        int insertIndex = dropIndex;
-        if (insertIndex > targetTasks.size()) {
-            insertIndex = targetTasks.size();
-        }
-        
-        // Remove moved tasks from their current positions and collect them
-        List<Task> tasksToInsert = new ArrayList<>();
-        for (Task movedTask : movedTasks) {
-            allTasks.removeIf(task -> task.getId().equals(movedTask.getId()));
-            tasksToInsert.add(movedTask);
-        }
-        
-        // Find the position in allTasks where target tasks start
-        int targetStartIndex = -1;
-        for (int i = 0; i < allTasks.size(); i++) {
-            if (allTasks.get(i).getType() == targetType) {
-                targetStartIndex = i;
-                break;
-            }
-        }
-        
-        if (targetStartIndex == -1) {
-            // No target tasks yet, add at the end
-            allTasks.addAll(tasksToInsert);
-        } else {
-            // Find the insertion point within the target tasks
-            int currentTargetIndex = 0;
-            int insertionPoint = targetStartIndex;
-            
-            for (int i = targetStartIndex; i < allTasks.size() && currentTargetIndex < insertIndex; i++) {
-                if (allTasks.get(i).getType() == targetType) {
-                    currentTargetIndex++;
-                    insertionPoint = i + 1;
-                }
-            }
-            
-            // Insert the moved tasks at the correct position
-            allTasks.addAll(insertionPoint, tasksToInsert);
-        }
-        
-        // Update the task manager with the new order
-        taskManager.setTasks(allTasks);
-    }
+    
 
     private Task findTaskById(String taskId) {
         return taskManager.getTaskById(taskId);

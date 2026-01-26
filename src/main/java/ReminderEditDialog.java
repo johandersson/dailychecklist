@@ -34,7 +34,7 @@ import javax.swing.JPanel;
 /**
  * A dialog for adding or editing reminders with full date/time selection and preset buttons.
  */
-@SuppressWarnings("serial")
+@SuppressWarnings({"serial","this-escape"})
 public class ReminderEditDialog extends JDialog {
     private static final long serialVersionUID = 1L;
     private transient final TaskManager taskManager;

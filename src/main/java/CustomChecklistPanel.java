@@ -52,30 +52,33 @@ public class CustomChecklistPanel extends JPanel {
         this.updateAllPanels = updateAllPanels;
         initialize();
         // Listen for model changes and refresh UI
-        try {
-            taskManager.addTaskChangeListener(() -> {
-                java.awt.Component focused = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                boolean wasListFocused = focused == customTaskList;
-                updateTasks();
-                if (wasListFocused || (focused != null && SwingUtilities.isDescendingFrom(focused, this))) {
-                    requestSelectionFocus();
-                } else if (focused != null && focused.isShowing() && focused.isFocusable()) {
-                    focused.requestFocusInWindow();
-                }
-            });
-        } catch (Exception ignore) {}
+        taskManager.addTaskChangeListener(() -> {
+            java.awt.Component focused = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+            boolean wasListFocused = focused == customTaskList;
+            updateTasks();
+            if (wasListFocused || (focused != null && SwingUtilities.isDescendingFrom(focused, this))) {
+                requestSelectionFocus();
+            } else if (focused != null && focused.isShowing() && focused.isFocusable()) {
+                focused.requestFocusInWindow();
+            }
+        });
     }
 
     private void initialize() {
         customListModel = new DefaultListModel<>();
         customTaskList = createTaskList(customListModel);
-        JPanel customPanel = createPanel(checklist.getName(), customTaskList);
+        JPanel customPanel = createPanel(customTaskList);
         setLayout(new BorderLayout());
         add(customPanel, BorderLayout.CENTER);
     }
 
     private JList<Task> createTaskList(DefaultListModel<Task> listModel) {
         JList<Task> taskList = TaskListFactory.createTaskList(listModel, taskManager, checklist.getName(), updateAllPanels, null, null);
+        installTaskListMouseListener(taskList);
+        return taskList;
+    }
+
+    private void installTaskListMouseListener(JList<Task> taskList) {
         taskList.addMouseListener(new MouseAdapter() {
             @Override
             @SuppressWarnings("unchecked")
@@ -91,13 +94,11 @@ public class CustomChecklistPanel extends JPanel {
                                          e.getPoint().y >= checkboxY && e.getPoint().y <= checkboxY + checkboxSize;
 
                     if (SwingUtilities.isRightMouseButton(e)) {
-                        // Right-click: ensure the item is selected
                         if (!list.isSelectedIndex(index)) {
                             list.setSelectedIndex(index);
                         }
                         showContextMenu(e, list, index);
                     } else if (onCheckbox && e.getClickCount() == 1) {
-                        // Single-click on checkbox: toggle done
                         Task task = list.getModel().getElementAt(index);
                         task.setDone(!task.isDone());
                         if (task.isDone()) {
@@ -108,7 +109,6 @@ public class CustomChecklistPanel extends JPanel {
                         taskManager.updateTask(task);
                         list.repaint(cellBounds);
                     } else if (e.getClickCount() == 2) {
-                        // Double-click: edit name
                         Task task = list.getModel().getElementAt(index);
                         String rawNewName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for task:", task.getName());
                         String newName = TaskManager.validateInputWithError(rawNewName, "Task name");
@@ -118,11 +118,9 @@ public class CustomChecklistPanel extends JPanel {
                             list.repaint(cellBounds);
                         }
                     }
-                    // Single click elsewhere: let JList handle selection normally
                 }
             }
         });
-        return taskList;
     }
 
     private void showContextMenu(MouseEvent e, JList<Task> list, int index) {
@@ -162,7 +160,7 @@ public class CustomChecklistPanel extends JPanel {
         }
     }
 
-    private JPanel createPanel(String title, JList<Task> taskList) {
+    private JPanel createPanel(JList<Task> taskList) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
@@ -315,7 +313,7 @@ public class CustomChecklistPanel extends JPanel {
                     }
                     customTaskList.revalidate();
                     customTaskList.repaint();
-                } catch (Exception e) {
+                } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
                     java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading custom checklist tasks", e);
                 }
             }
@@ -335,8 +333,8 @@ public class CustomChecklistPanel extends JPanel {
                     if (customTaskList.getSelectedIndex() >= 0) {
                         customTaskList.ensureIndexIsVisible(customTaskList.getSelectedIndex());
                     }
-                } catch (Exception ex) {
-                    try { customTaskList.requestFocusInWindow(); } catch (Exception ignore) {}
+                } catch (RuntimeException ex) {
+                    try { customTaskList.requestFocusInWindow(); } catch (RuntimeException ignore) {}
                 }
             });
         }

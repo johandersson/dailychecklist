@@ -44,7 +44,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private JList<Checklist> checklistList;
     private DefaultListModel<Checklist> listModel;
     private final transient TaskManager taskManager;
-    private transient Runnable updateTasks;
+    private final transient Runnable updateTasks;
     private JTextField newChecklistField;
     private JButton createButton;
     private JSplitPane splitPane;
@@ -52,8 +52,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private CustomChecklistPanel currentChecklistPanel;
     private Checklist selectedChecklist;
     private AddTaskPanel currentAddPanel;
-    private Set<Checklist> allChecklists;
-    private Map<String, CustomChecklistPanel> panelMap = new HashMap<>();
+    private final Set<Checklist> allChecklists;
+    private final Map<String, CustomChecklistPanel> panelMap = new HashMap<>();
 
     @SuppressWarnings("this-escape")
     public CustomChecklistsOverviewPanel(TaskManager taskManager, Runnable updateTasks) {
@@ -62,9 +62,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         this.allChecklists = new java.util.HashSet<>();
         initialize();
         // Listen for model changes and refresh overview
-        try {
-            taskManager.addTaskChangeListener(() -> javax.swing.SwingUtilities.invokeLater(this::updateTasks));
-        } catch (Exception ignore) {}
+        taskManager.addTaskChangeListener(() -> javax.swing.SwingUtilities.invokeLater(this::updateTasks));
     }
 
     private void initialize() {
@@ -166,7 +164,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                         allChecklists.addAll(checklists);
                     }
                     updateChecklistList();
-                } catch (Exception e) {
+                } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
                     java.util.logging.Logger.getLogger(CustomChecklistsOverviewPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading checklists", e);
                 }
             }
