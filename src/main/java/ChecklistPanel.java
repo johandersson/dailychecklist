@@ -204,20 +204,28 @@ public class ChecklistPanel extends JPanel {
     private void showContextMenu(MouseEvent e, JList<Task> list, int index) {
         JPopupMenu contextMenu = new JPopupMenu();
 
-        // Check for multiple selection
+        addMultiSelectionMenuItems(contextMenu, list);
+        contextMenu.add(createEditMenuItem(list, index));
+        addTypeChangeMenu(contextMenu, list, index);
+        addFrequencyMenuIfNeeded(contextMenu, list, index);
+        addTaskActionItems(contextMenu, list, index);
+
+        contextMenu.show(e.getComponent(), e.getX(), e.getY());
+    }
+
+    // Adds delete selected when multiple items are selected
+    private void addMultiSelectionMenuItems(JPopupMenu menu, JList<Task> list) {
         int[] selectedIndices = list.getSelectedIndices();
         if (selectedIndices.length > 1) {
             JMenuItem deleteSelectedItem = new JMenuItem("Delete Selected Tasks");
             deleteSelectedItem.addActionListener(event -> deleteSelectedTasks(list));
-            contextMenu.add(deleteSelectedItem);
-            contextMenu.addSeparator(); // Separator before individual actions
+            menu.add(deleteSelectedItem);
+            menu.addSeparator();
         }
+    }
 
+    private JMenuItem createEditMenuItem(JList<Task> list, int index) {
         JMenuItem editItem = new JMenuItem("Rename task");
-        //Change task type item, with under menu of morning/evening
-        JMenu changeTypeItem = new JMenu("Change task type");
-        JMenuItem eveningItem = getMorningAndEveneingItems(list, index);
-        //on editItem, add listener to edit task name inline in the list
         editItem.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
             String rawNewName = javax.swing.JOptionPane.showInputDialog(this, "Enter new name for task:", task.getName());
@@ -228,34 +236,50 @@ public class ChecklistPanel extends JPanel {
                 list.repaint(list.getCellBounds(index, index));
             }
         });
+        return editItem;
+    }
 
-        //if task is weekday task
-        if (list.getModel().getElementAt(index).getWeekday() != null) {
-            addMenuItemToChangeFrequencyToDaily(contextMenu, list, index);
-        }
-
-        //if task is a weekday task, add menu item to change the weekday
-        if (list.getModel().getElementAt(index).getWeekday() != null) {
-            addMenuItemToChangeWeekday(contextMenu, list, index);
-        }
-
-        //if task is not weekday task, add menu item to change frequency to weekday
-        if (list.getModel().getElementAt(index).getWeekday() == null) {
-            addMenuItemToChangeWeekday(contextMenu, list, index);
-        }
+    private void addTypeChangeMenu(JPopupMenu menu, JList<Task> list, int index) {
+        JMenu changeTypeItem = new JMenu("Change task type");
+        JMenuItem eveningItem = getMorningAndEveneingItems(list, index);
         changeTypeItem.add(eveningItem);
-        //Add menu item to edit task
-        JMenuItem removeItem = new JMenuItem("Remove task");
-        //Start FocusTimer window item
-        JMenuItem startFocusTimerItem = new JMenuItem("Start Focus Timer on task");
-        JMenuItem setTaskReminderItem = new JMenuItem("Set task reminder");
-        JMenuItem removeTaskReminderItem = new JMenuItem("Remove task reminder");
+        menu.add(changeTypeItem);
+    }
 
+    private void addFrequencyMenuIfNeeded(JPopupMenu menu, JList<Task> list, int index) {
+        Task t = list.getModel().getElementAt(index);
+        if (t.getWeekday() != null) {
+            addMenuItemToChangeFrequencyToDaily(menu, list, index);
+            addMenuItemToChangeWeekday(menu, list, index);
+        } else {
+            addMenuItemToChangeWeekday(menu, list, index);
+        }
+    }
+
+    private void addTaskActionItems(JPopupMenu menu, JList<Task> list, int index) {
+        menu.add(createRemoveMenuItem(list, index));
+        menu.add(createStartFocusTimerMenuItem(list, index));
+        menu.add(createSetTaskReminderMenuItem(list, index));
+        menu.add(createRemoveTaskReminderMenuItem(list, index));
+    }
+
+    private JMenuItem createRemoveMenuItem(JList<Task> list, int index) {
+        JMenuItem removeItem = new JMenuItem("Remove task");
         removeItem.addActionListener(event -> removeTask(list, index));
+        return removeItem;
+    }
+
+    private JMenuItem createStartFocusTimerMenuItem(JList<Task> list, int index) {
+        JMenuItem startFocusTimerItem = new JMenuItem("Start Focus Timer on task");
         startFocusTimerItem.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
             FocusTimer.getInstance().startFocusTimer(task.getName(), "5 minutes");
         });
+        return startFocusTimerItem;
+    }
+
+    private JMenuItem createSetTaskReminderMenuItem(JList<Task> list, int index) {
+        JMenuItem setTaskReminderItem = new JMenuItem("Set task reminder");
         setTaskReminderItem.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
             Reminder existing = taskManager.getReminders().stream()
@@ -265,6 +289,11 @@ public class ChecklistPanel extends JPanel {
             ReminderEditDialog dialog = new ReminderEditDialog(taskManager, checklistName, existing, () -> updateTasks(), task.getId());
             dialog.setVisible(true);
         });
+        return setTaskReminderItem;
+    }
+
+    private JMenuItem createRemoveTaskReminderMenuItem(JList<Task> list, int index) {
+        JMenuItem removeTaskReminderItem = new JMenuItem("Remove task reminder");
         removeTaskReminderItem.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
             Reminder existing = taskManager.getReminders().stream()
@@ -280,12 +309,7 @@ public class ChecklistPanel extends JPanel {
                 javax.swing.JOptionPane.showMessageDialog(this, "No reminder set for this task.", "Info", javax.swing.JOptionPane.INFORMATION_MESSAGE);
             }
         });
-        contextMenu.add(editItem);
-        contextMenu.add(removeItem);
-        contextMenu.add(startFocusTimerItem);
-        contextMenu.add(setTaskReminderItem);
-        contextMenu.add(removeTaskReminderItem);
-        contextMenu.show(e.getComponent(), e.getX(), e.getY());
+        return removeTaskReminderItem;
     }
 
     private JMenuItem getMorningAndEveneingItems(JList<Task> list, int index) {
