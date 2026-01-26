@@ -428,18 +428,29 @@ public class ChecklistPanel extends JPanel {
         Reminder display = null;
         java.util.List<Task> allTasks = taskManager.getAllTasks();
         for (Reminder r : reminders) {
-            if (r.getTaskId() == null) continue;
-            Task t = allTasks.stream().filter(x -> r.getTaskId().equals(x.getId())).findFirst().orElse(null);
+            Task t = taskForReminder(r, allTasks);
             if (t == null) continue;
-            boolean matchesType = (title.equalsIgnoreCase("Morning") && t.getType() == TaskType.MORNING) || (title.equalsIgnoreCase("Evening") && t.getType() == TaskType.EVENING);
-            if (!matchesType) continue;
-            java.time.LocalDateTime rt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+            if (!reminderMatchesType(t, title)) continue;
+            java.time.LocalDateTime rt = reminderDateTime(r);
             if (best == null || rt.isBefore(best)) {
                 best = rt;
                 display = r;
             }
         }
         return display;
+    }
+
+    private Task taskForReminder(Reminder r, java.util.List<Task> allTasks) {
+        if (r.getTaskId() == null) return null;
+        return allTasks.stream().filter(x -> r.getTaskId().equals(x.getId())).findFirst().orElse(null);
+    }
+
+    private boolean reminderMatchesType(Task t, String title) {
+        return (title.equalsIgnoreCase("Morning") && t.getType() == TaskType.MORNING) || (title.equalsIgnoreCase("Evening") && t.getType() == TaskType.EVENING);
+    }
+
+    private java.time.LocalDateTime reminderDateTime(Reminder r) {
+        return java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
     }
 
     // Helper: build the UI panel given a selected reminder (or null)
