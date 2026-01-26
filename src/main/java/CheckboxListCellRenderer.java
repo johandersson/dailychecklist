@@ -157,6 +157,22 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.isWeekdayTask = task.getWeekday() != null && WEEKDAY_ABBREVIATIONS.containsKey(weekdayKey);
         this.doneDate = task.getDoneDate();
 
+        // Build informative tooltip for this task list cell.
+        StringBuilder tip = new StringBuilder();
+        if (this.taskReminder != null) {
+            tip.append(String.format("Reminder: %04d-%02d-%02d %02d:%02d", this.taskReminder.getYear(), this.taskReminder.getMonth(), this.taskReminder.getDay(), this.taskReminder.getHour(), this.taskReminder.getMinute()));
+        }
+        if (this.isWeekdayTask) {
+            String wd = task.getWeekday();
+            if (wd != null && !wd.isEmpty()) {
+                // Capitalize first letter
+                String nice = wd.substring(0, 1).toUpperCase() + wd.substring(1).toLowerCase();
+                if (tip.length() > 0) tip.append(" — ");
+                tip.append("Weekday: ").append(nice);
+            }
+        }
+        setToolTipText(tip.length() > 0 ? tip.toString() : null);
+
         setFont(FontManager.getTaskListFont()); // Use consistent font for all task lists
         setOpaque(true); // Ensure background is painted
         if (isSelected) {

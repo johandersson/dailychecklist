@@ -48,17 +48,21 @@ public abstract class BaseAddTaskPanel extends JPanel {
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        // Allow the task entry area to expand and fill available space
+        gbc.fill = GridBagConstraints.BOTH;
 
-        taskField = new JTextArea(25, 40);
+        taskField = new JTextArea(12, 40);
         taskField.setLineWrap(true);
         taskField.setWrapStyleWord(true);
         JScrollPane taskScrollPane = new JScrollPane(taskField);
         taskScrollPane.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         taskScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         taskScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        // Prefer a reasonable starting size but allow expansion via GridBag weights
         taskScrollPane.setPreferredSize(new Dimension(300, 200));
-        taskScrollPane.setMinimumSize(new Dimension(300, 200));
+        taskScrollPane.setMinimumSize(new Dimension(200, 120));
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
         taskField.setFont(new Font("Yu Gothic UI", Font.PLAIN, 16));
         taskField.setForeground(Color.BLACK);
         taskField.setBackground(Color.WHITE);
@@ -72,7 +76,9 @@ public abstract class BaseAddTaskPanel extends JPanel {
         gbc.gridx = 0;
         gbc.gridy = getButtonRow();
         gbc.gridwidth = 2;
+        // Keep the button row compact and centered
         gbc.anchor = GridBagConstraints.CENTER;
+        gbc.weighty = 0.0; // button row should not take extra vertical space
         add(addButton, gbc);
     }
 
