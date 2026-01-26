@@ -5,9 +5,17 @@ public final class ReminderSelector {
 
     public static Reminder selectReminderForType(TaskManager taskManager, String title) {
         List<Reminder> reminders = taskManager.getReminders();
-        Reminder checklistLevel = findChecklistLevelReminder(reminders, title);
-        if (checklistLevel != null) return checklistLevel;
+        // Do not allow checklist-level reminders for the built-in daily lists
+        if (!isDailyChecklistTitle(title)) {
+            Reminder checklistLevel = findChecklistLevelReminder(reminders, title);
+            if (checklistLevel != null) return checklistLevel;
+        }
         return findEarliestTaskReminderForType(taskManager, reminders, title);
+    }
+
+    private static boolean isDailyChecklistTitle(String title) {
+        if (title == null) return false;
+        return title.equalsIgnoreCase("Morning") || title.equalsIgnoreCase("Evening");
     }
 
     private static Reminder findChecklistLevelReminder(List<Reminder> reminders, String title) {
