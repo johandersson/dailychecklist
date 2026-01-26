@@ -36,6 +36,7 @@ import javax.swing.Timer;
             private static final int CHUNK_SIZE = 5 * 60; // 5 minutes in seconds
             private final JLabel[] circles = new JLabel[4]; // 4 chunks of 5 minutes
             private JFrame frame;
+            private int totalDurationSeconds = 20 * 60; // tracks selected duration for circles
             // removed unused 'lastTask' and 'lastAmountOfMinutesForTask' fields
 
             private static FocusTimer instance;
@@ -48,6 +49,36 @@ import javax.swing.Timer;
                     frame.setSize(400, 300);
                     frame.setAlwaysOnTop(true);
                     frame.getContentPane().setBackground(Color.WHITE);
+                    frame.setLayout(new BorderLayout());
+
+                    // Create UI components once and reuse for better performance
+                    circlePanel = new JPanel(new FlowLayout());
+                    circlePanel.setBackground(Color.WHITE);
+                    for (int i = 0; i < circles.length; i++) {
+                        circles[i] = new JLabel("\u25CF");
+                        circles[i].setFont(new Font("Yu Gothic UI Light", Font.PLAIN, 24));
+                        circles[i].setForeground(Color.LIGHT_GRAY);
+                        circlePanel.add(circles[i]);
+                    }
+
+                    timerLabel = new JLabel(formatTime(timeRemaining), SwingConstants.CENTER);
+                    timerLabel.setFont(new Font("Yu Gothic UI Light", Font.PLAIN, 48));
+
+                    taskLabel = new JLabel("", SwingConstants.CENTER);
+                    taskLabel.setFont(new Font("Yu Gothic UI Light", Font.PLAIN, 24));
+
+                    frame.add(circlePanel, BorderLayout.NORTH);
+                    frame.add(timerLabel, BorderLayout.CENTER);
+                    frame.add(taskLabel, BorderLayout.SOUTH);
+
+                    // Single window listener to stop timer when the window closes
+                    frame.addWindowListener(new WindowAdapter() {
+                        @Override
+                        public void windowClosing(WindowEvent e) {
+                            if (timer != null && timer.isRunning()) timer.stop();
+                            frame.setVisible(false);
+                        }
+                    });
                 }
             }
 
@@ -95,41 +126,15 @@ import javax.swing.Timer;
             }
 
             private void setupAndStartTimer(String taskName) {
-                frame.getContentPane().removeAll();
-                frame.addWindowListener(
-                        new WindowAdapter() {
-                            @Override
-                            public void windowClosing(WindowEvent e) {
-                                timer.stop();
-                                frame.dispose();
-                            }
-                        }
-                );
-                // Circle panel for time chunks
-                circlePanel = new JPanel();
-                circlePanel.setLayout(new FlowLayout());
-                circlePanel.setBackground(Color.WHITE);
-                for (int i = 0; i < circles.length; i++) {
-                    circles[i] = new JLabel("\u25CF"); // Unicode for a filled circle
-                    circles[i].setFont(new Font("Yu Gothic UI Light", Font.PLAIN, 24));
-                    circles[i].setForeground(Color.LIGHT_GRAY);
-                    circlePanel.add(circles[i]);
+                // Reset UI state and reuse components
+                if (timer != null && timer.isRunning()) {
+                    timer.stop();
                 }
-
-                // Timer label
-                timerLabel = new JLabel(formatTime(timeRemaining), SwingConstants.CENTER);
-                timerLabel.setFont(new Font("Yu Gothic UI Light", Font.PLAIN, 48));
-
-                // Task label
-                taskLabel = new JLabel(taskName, SwingConstants.CENTER);
-                taskLabel.setFont(new Font("Yu Gothic UI Light", Font.PLAIN, 24));
-
-                frame.add(circlePanel, BorderLayout.NORTH);
-                frame.add(timerLabel, BorderLayout.CENTER);
-                frame.add(taskLabel, BorderLayout.SOUTH);
-
-                frame.revalidate();
-                frame.repaint();
+                timerLabel.setText(formatTime(timeRemaining));
+                taskLabel.setText(taskName);
+                // store the total duration so circles reflect the chosen length
+                totalDurationSeconds = Math.max(1, totalDurationSeconds == 0 ? timeRemaining : totalDurationSeconds);
+                updateCircles();
 
                 // Timer setup
                 timer = new Timer(1000, e -> {
@@ -146,6 +151,7 @@ import javax.swing.Timer;
                 timer.start();
 
                 frame.setVisible(true);
+                frame.toFront();
             }
 
             private String formatTime(int seconds) {
@@ -155,59 +161,16 @@ import javax.swing.Timer;
             }
 
             private void updateCircles() {
-                int completedChunks = (20 * 60 - timeRemaining) / CHUNK_SIZE;
+                int completedChunks = (totalDurationSeconds - timeRemaining) / CHUNK_SIZE;
+                if (completedChunks < 0) completedChunks = 0;
+                if (completedChunks > circles.length) completedChunks = circles.length;
                 for (int i = 0; i < circles.length; i++) {
                     if (i < completedChunks) {
-                        circles[i].setForeground(Color.LIGHT_GRAY);
-                    } else {
                         var lightGreen = new Color(192, 219, 165);
                         circles[i].setForeground(lightGreen);
+                    } else {
+                        circles[i].setForeground(Color.LIGHT_GRAY);
                     }
                 }
-            }
-
-            /**
-             * Creates a programmatic icon that looks like the checked checkbox from the app.
-             */
-            private java.awt.Image createAppIcon() {
-                int size = 32;
-                java.awt.image.BufferedImage image = new java.awt.image.BufferedImage(size, size, java.awt.image.BufferedImage.TYPE_INT_ARGB);
-                java.awt.Graphics2D g2 = image.createGraphics();
-
-                // Enable anti-aliasing
-                g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Clear background to transparent
-                g2.setComposite(java.awt.AlphaComposite.Clear);
-                g2.fillRect(0, 0, size, size);
-                g2.setComposite(java.awt.AlphaComposite.SrcOver);
-
-                // Define checkbox dimensions (centered)
-                int checkboxSize = 24;
-                int checkboxX = (size - checkboxSize) / 2;
-                int checkboxY = (size - checkboxSize) / 2;
-
-                // Draw subtle shadow
-                g2.setColor(new java.awt.Color(200, 200, 200, 100));
-                g2.fillRoundRect(checkboxX + 1, checkboxY + 1, checkboxSize, checkboxSize, 6, 6);
-
-                // Draw checkbox outline
-                g2.setColor(new java.awt.Color(120, 120, 120));
-                g2.drawRoundRect(checkboxX, checkboxY, checkboxSize, checkboxSize, 6, 6);
-
-                // Fill checkbox with white
-                g2.setColor(java.awt.Color.WHITE);
-                g2.fillRoundRect(checkboxX + 1, checkboxY + 1, checkboxSize - 2, checkboxSize - 2, 6, 6);
-
-                // Draw checkmark
-                g2.setColor(new java.awt.Color(76, 175, 80)); // Material green
-                g2.setStroke(new java.awt.BasicStroke(3, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
-                int offsetX = checkboxX + 3;
-                int offsetY = checkboxY + 6;
-                g2.drawLine(offsetX + 2, offsetY + 6, offsetX + 7, offsetY + 11);
-                g2.drawLine(offsetX + 7, offsetY + 11, offsetX + 15, offsetY + 1);
-
-                g2.dispose();
-                return image;
             }
         }

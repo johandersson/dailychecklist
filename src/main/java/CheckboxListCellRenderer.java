@@ -42,7 +42,10 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private boolean isWeekdayTask;
     private Font circleFont; // Font for the text inside the circle
     private String doneDate; // Timestamp when task was completed
-    private static final int RIGHT_ICON_SPACE = 120; // reserved space on right for weekday/reminder icons (expanded to fit clock+time)
+    // Reserved areas on the right for icons: reminder area + weekday area.
+    private static final int REMINDER_ICON_AREA = 80; // space reserved for reminder clock + optional time text
+    private static final int WEEKDAY_ICON_AREA = 40; // space reserved for weekday circle
+    private static final int RIGHT_ICON_SPACE = REMINDER_ICON_AREA + WEEKDAY_ICON_AREA + 12; // total reserved space
     
     private boolean showChecklistInfo; // Whether to show checklist name in display
     private ChecklistNameManager checklistNameManager; // Manager to resolve checklist IDs to names
@@ -232,10 +235,11 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             g2.drawString(timeText, textStartX, getHeight() / 2 + 20);
         }
 
-        // Draw weekday circle at the right side so it aligns with other right-side icons
+        // Draw weekday circle at the far right so it doesn't overlap with reminder icon
         if (isWeekdayTask) {
             int circleSize = 30;
-            int circleX = getWidth() - RIGHT_ICON_SPACE + (RIGHT_ICON_SPACE - circleSize) / 2;
+            int areaX = getWidth() - WEEKDAY_ICON_AREA;
+            int circleX = areaX + (WEEKDAY_ICON_AREA - circleSize) / 2;
             int circleY = getHeight() / 2 - circleSize / 2;
             g2.setColor(weekdayColor != null ? weekdayColor : new Color(120, 120, 120));
             g2.fillOval(circleX, circleY, circleSize, circleSize);
@@ -255,9 +259,10 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             javax.swing.Icon icon = IconCache.getReminderClockIcon(taskReminder.getHour(), taskReminder.getMinute(), state, true);
             int iconW = icon.getIconWidth();
             int iconH = icon.getIconHeight();
-            int areaX = getWidth() - RIGHT_ICON_SPACE;
-            // center the icon (and its time text) within the reserved area
-            int iconX = areaX + Math.max(2, (RIGHT_ICON_SPACE - iconW) / 2);
+            // reminder area is left of the weekday area
+            int areaX = getWidth() - WEEKDAY_ICON_AREA - REMINDER_ICON_AREA;
+            // center the icon (and its time text) within the reminder reserved area
+            int iconX = areaX + Math.max(2, (REMINDER_ICON_AREA - iconW) / 2);
             int iconY = getHeight() / 2 - iconH / 2;
             icon.paintIcon(this, g2, iconX, iconY);
         }

@@ -92,46 +92,7 @@ public class ChecklistPanel extends JPanel {
             @SuppressWarnings("unchecked")
             public void mouseClicked(MouseEvent e) {
                 JList<Task> list = (JList<Task>) e.getSource();
-                int index = list.locationToIndex(e.getPoint());
-                if (index >= 0) {
-                    java.awt.Rectangle cellBounds = list.getCellBounds(index, index);
-                    int checkboxX = cellBounds.x + 10;
-                    int checkboxY = cellBounds.y + cellBounds.height / 2 - 10;
-                    int checkboxSize = 20;
-                    boolean onCheckbox = e.getPoint().x >= checkboxX && e.getPoint().x <= checkboxX + checkboxSize &&
-                                         e.getPoint().y >= checkboxY && e.getPoint().y <= checkboxY + checkboxSize;
-
-                    if (SwingUtilities.isRightMouseButton(e)) {
-                        // Right-click: ensure the item is selected
-                        if (!list.isSelectedIndex(index)) {
-                            list.setSelectedIndex(index);
-                        }
-                        showContextMenu(e, list, index);
-                    } else if (onCheckbox && e.getClickCount() == 1) {
-                        // Single-click on checkbox: toggle done
-                        Task task = list.getModel().getElementAt(index);
-                        task.setDone(!task.isDone());
-                        if (task.isDone()) {
-                            task.setDoneDate(new Date(System.currentTimeMillis()));
-                        } else {
-                            task.setDoneDate(null);
-                        }
-                        taskManager.updateTask(task);
-                        list.repaint(cellBounds);
-                    } else if (e.getClickCount() == 2) {
-                        // Double-click: toggle done
-                        Task task = list.getModel().getElementAt(index);
-                        task.setDone(!task.isDone());
-                        if (task.isDone()) {
-                            task.setDoneDate(new Date(System.currentTimeMillis()));
-                        } else {
-                            task.setDoneDate(null);
-                        }
-                        taskManager.updateTask(task);
-                        list.repaint(cellBounds);
-                    }
-                    // Single click elsewhere: let JList handle selection normally
-                }
+                handleTaskListMouseClicked(e, list);
             }
         });
         taskList.addKeyListener(new java.awt.event.KeyAdapter() {
@@ -145,6 +106,47 @@ public class ChecklistPanel extends JPanel {
         return taskList;
     }
 
+    // Extracted helper to keep createTaskList small
+    private void handleTaskListMouseClicked(MouseEvent e, JList<Task> list) {
+        int index = list.locationToIndex(e.getPoint());
+        if (index < 0) return;
+
+        java.awt.Rectangle cellBounds = list.getCellBounds(index, index);
+        int checkboxX = cellBounds.x + 10;
+        int checkboxY = cellBounds.y + cellBounds.height / 2 - 10;
+        int checkboxSize = 20;
+        boolean onCheckbox = e.getPoint().x >= checkboxX && e.getPoint().x <= checkboxX + checkboxSize &&
+                            e.getPoint().y >= checkboxY && e.getPoint().y <= checkboxY + checkboxSize;
+
+        if (SwingUtilities.isRightMouseButton(e)) {
+            if (!list.isSelectedIndex(index)) list.setSelectedIndex(index);
+            showContextMenu(e, list, index);
+            return;
+        }
+
+        if (onCheckbox && e.getClickCount() == 1) {
+            toggleTaskDone(list, index);
+            list.repaint(cellBounds);
+            return;
+        }
+
+        if (e.getClickCount() == 2) {
+            toggleTaskDone(list, index);
+            list.repaint(cellBounds);
+        }
+    }
+
+    private void toggleTaskDone(JList<Task> list, int index) {
+        Task task = list.getModel().getElementAt(index);
+        task.setDone(!task.isDone());
+        if (task.isDone()) {
+            task.setDoneDate(new Date(System.currentTimeMillis()));
+        } else {
+            task.setDoneDate(null);
+        }
+        taskManager.updateTask(task);
+    }
+
     private void deleteSelectedTasks(JList<Task> list) {
         int[] selectedIndices = list.getSelectedIndices();
         if (selectedIndices.length == 0) return;
@@ -153,25 +155,31 @@ public class ChecklistPanel extends JPanel {
             tasksToDelete.add(list.getModel().getElementAt(index));
         }
 
-        // Create custom confirmation dialog
+        if (confirmDeleteTasks(tasksToDelete)) {
+            for (Task task : tasksToDelete) {
+                taskManager.removeTask(task);
+            }
+            updateTasks();
+        }
+    }
+
+    // Extracted confirmation dialog for deletion to keep deleteSelectedTasks concise
+    private boolean confirmDeleteTasks(java.util.List<Task> tasksToDelete) {
         javax.swing.JDialog dialog = new javax.swing.JDialog((java.awt.Frame) javax.swing.SwingUtilities.getWindowAncestor(this), "Confirm Deletion", true);
         dialog.setLayout(new java.awt.BorderLayout());
         dialog.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
 
-        // Label
         javax.swing.JLabel label = new javax.swing.JLabel("Are you sure you want to delete the following tasks?");
         label.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 4, 6));
         dialog.add(label, java.awt.BorderLayout.NORTH);
 
-        // List of tasks
         javax.swing.JList<Task> taskList = new javax.swing.JList<>(tasksToDelete.toArray(Task[]::new));
         taskList.setCellRenderer(new CheckboxListCellRenderer(taskManager));
-        taskList.setEnabled(false); // Read-only
+        taskList.setEnabled(false);
         javax.swing.JScrollPane scrollPane = new javax.swing.JScrollPane(taskList);
         scrollPane.setPreferredSize(new java.awt.Dimension(300, 150));
         dialog.add(scrollPane, java.awt.BorderLayout.CENTER);
 
-        // Buttons
         javax.swing.JPanel buttonPanel = new javax.swing.JPanel(new java.awt.FlowLayout());
         javax.swing.JButton yesButton = new javax.swing.JButton("Yes, Delete");
         javax.swing.JButton noButton = new javax.swing.JButton("No, Cancel");
@@ -179,7 +187,6 @@ public class ChecklistPanel extends JPanel {
         buttonPanel.add(noButton);
         dialog.add(buttonPanel, java.awt.BorderLayout.SOUTH);
 
-        // Action listeners
         final boolean[] confirmed = {false};
         yesButton.addActionListener(e -> {
             confirmed[0] = true;
@@ -191,13 +198,7 @@ public class ChecklistPanel extends JPanel {
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
 
-        if (confirmed[0]) {
-            for (Task task : tasksToDelete) {
-                taskManager.removeTask(task);
-            }
-            // Update the UI
-            updateTasks();
-        }
+        return confirmed[0];
     }
 
     private void showContextMenu(MouseEvent e, JList<Task> list, int index) {
@@ -369,21 +370,30 @@ public class ChecklistPanel extends JPanel {
     private JPanel createReminderStatusPanelForType(String title) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 5, 2, 5));
+        // Remove timestamp/clock icon above the Morning list (not needed)
+        if (title.equalsIgnoreCase("Morning")) {
+            JPanel empty = new JPanel();
+            empty.setOpaque(false);
+            empty.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 5, 2, 5));
+            return empty;
+        }
 
-        // Determine reminder info for this type (Morning/Evening)
+        Reminder display = selectReminderForType(title);
+        return buildReminderPanelForType(title, display);
+    }
+
+    // Helper: select the most relevant reminder for a Morning/Evening type
+    private Reminder selectReminderForType(String title) {
         java.util.List<Reminder> reminders = taskManager.getReminders();
         Reminder display = null;
         java.time.LocalDateTime best = null;
 
-        // For daily lists, checklistName in reminders may be null; match by task type
         java.util.List<Task> allTasks = taskManager.getAllTasks();
         for (Reminder r : reminders) {
-            // If reminder is checklist-level and matches the built-in name
             if (r.getTaskId() == null && title.equalsIgnoreCase(r.getChecklistName())) {
                 display = r;
                 break;
             }
-            // If task-level, find tasks of this type
             if (r.getTaskId() != null) {
                 Task t = allTasks.stream().filter(x -> r.getTaskId().equals(x.getId())).findFirst().orElse(null);
                 if (t != null && ((title.equalsIgnoreCase("Morning") && t.getType() == TaskType.MORNING) || (title.equalsIgnoreCase("Evening") && t.getType() == TaskType.EVENING))) {
@@ -395,6 +405,13 @@ public class ChecklistPanel extends JPanel {
                 }
             }
         }
+        return display;
+    }
+
+    // Helper: build the UI panel given a selected reminder (or null)
+    private JPanel buildReminderPanelForType(String title, Reminder display) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 5, 2, 5));
 
         if (display != null) {
             java.time.LocalDateTime now = java.time.LocalDateTime.now();
