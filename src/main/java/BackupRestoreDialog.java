@@ -28,6 +28,7 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
  * Dialog for restoring data from backup with confirmation and diff display.
@@ -45,11 +46,37 @@ public class BackupRestoreDialog {
         JFileChooser chooser = new JFileChooser(ApplicationConfiguration.BACKUP_DIRECTORY);
         chooser.setDialogTitle("Select backup ZIP to restore from");
         chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        // Allow all files but offer a ZIP filter so users can easily pick backups
+        FileNameExtensionFilter zipFilter = new FileNameExtensionFilter("Daily Checklist backups (*.zip)", "zip");
+        chooser.addChoosableFileFilter(zipFilter);
+        chooser.setFileFilter(zipFilter);
+        chooser.setAcceptAllFileFilterUsed(true);
         int res = chooser.showOpenDialog(parent);
         if (res != JFileChooser.APPROVE_OPTION) {
             return;
         }
         File chosen = chooser.getSelectedFile();
+
+        // Quick validation: ensure the file is a readable ZIP and looks like a program backup
+        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(chosen)) {
+            boolean hasTasks = zf.getEntry("tasks.xml") != null;
+            boolean hasNames = zf.getEntry("checklist-names.properties") != null;
+            if (!hasTasks && !hasNames) {
+                JOptionPane.showMessageDialog(parent,
+                    "The selected file does not look like a Daily Checklist backup (missing tasks.xml and checklist-names.properties).",
+                    "Invalid Backup", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        } catch (java.util.zip.ZipException ze) {
+            // Not a valid zip archive
+            JOptionPane.showMessageDialog(parent,
+                "The selected file is not a valid ZIP archive or is corrupted.",
+                "Invalid ZIP File", JOptionPane.ERROR_MESSAGE);
+            return;
+        } catch (java.io.IOException ioe) {
+            ApplicationErrorHandler.showBackupError(parent, ioe instanceof Exception ? (Exception)ioe : new Exception(ioe));
+            return;
+        }
 
         // Read available checklists from the selected ZIP
         Map<String,String> checklists = readChecklistsFromZip(chosen);
