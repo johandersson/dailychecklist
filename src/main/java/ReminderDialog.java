@@ -84,8 +84,9 @@ public class ReminderDialog extends JDialog {
         openButton.setToolTipText("Open the checklist in the application");
         JButton dismissButton = new JButton("Remove Reminders");
         dismissButton.setToolTipText("Remove all reminders for this checklist");
-        JButton markAsDoneButton = new JButton("Mark as Done");
-        markAsDoneButton.setToolTipText("Mark all tasks as done and open the checklist");
+        boolean isTaskLevel = reminder.getTaskId() != null;
+        JButton markAsDoneButton = new JButton(isTaskLevel ? "Mark task as Done" : "Mark as Done");
+        markAsDoneButton.setToolTipText(isTaskLevel ? "Mark the targeted task as done" : "Mark all tasks in checklist as done and open the checklist");
         JButton remindLaterButton = new JButton("Remind me in 15 minutes");
         remindLaterButton.setToolTipText("Remind me again in 15 minutes");
         JButton remindTomorrowButton = new JButton("Remind me tomorrow");
@@ -118,7 +119,11 @@ public class ReminderDialog extends JDialog {
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         buttonPanel.add(openButton);
-        buttonPanel.add(markAsDoneButton);
+        // Only show mark-as-done button for task-level reminders; for checklist-level reminders
+        // we intentionally omit this button to avoid ambiguity as requested.
+        if (isTaskLevel) {
+            buttonPanel.add(markAsDoneButton);
+        }
         buttonPanel.add(remindLaterButton);
         buttonPanel.add(remindTomorrowButton);
         buttonPanel.add(dismissButton);

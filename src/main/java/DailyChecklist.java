@@ -241,20 +241,36 @@ public class DailyChecklist {
                 },
                 // On Mark as Done action
                 () -> {
-                    // Remove all reminders for this checklist
+                    // If this is a task-level reminder, mark that single task done and remove the reminder.
+                    if (reminder.getTaskId() != null) {
+                        Task t = checklistManager.getTaskById(reminder.getTaskId());
+                        if (t != null && !t.isDone()) {
+                            t.setDone(true);
+                            t.setDoneDate(new Date(System.currentTimeMillis()));
+                            checklistManager.updateTask(t);
+                        }
+                        checklistManager.removeReminder(reminder);
+                        // Refresh UI
+                        checklistPanel.updateTasks();
+                        customChecklistsOverviewPanel.updateTasks();
+                        frame.setVisible(true);
+                        frame.toFront();
+                        frame.requestFocus();
+                        return;
+                    }
+
+                    // Otherwise, fall back to marking all tasks in the checklist as done
                     List<Reminder> allReminders = checklistManager.getReminders();
                     allReminders.stream()
                         .filter(r -> Objects.equals(r.getChecklistName(), reminder.getChecklistName()))
                         .forEach(checklistManager::removeReminder);
-                    
-                    // Switch to custom checklists tab
+
+                    // Switch to custom checklists tab and mark all tasks done
                     tabbedPane.setSelectedIndex(1);
                     final String checklistName = reminder.getChecklistName();
                     if (checklistName == null || checklistName.trim().isEmpty()) {
-                        // Skip reminders with no checklist name - do nothing
                         return;
                     }
-                    // Mark this checklist as opened for this session
                     Checklist checklist = checklistManager.getCustomChecklists().stream()
                         .filter(c -> checklistName.equals(c.getName()))
                         .findFirst()
@@ -262,17 +278,6 @@ public class DailyChecklist {
                     if (checklist != null) {
                         openedChecklists.add(checklist.getName());
                         customChecklistsOverviewPanel.selectChecklistByName(checklist.getName());
-                        // If the reminder targets a specific task, jump to it
-                        if (reminder.getTaskId() != null) {
-                            Task t = checklistManager.getAllTasks().stream()
-                                .filter(x -> reminder.getTaskId().equals(x.getId()))
-                                .findFirst().orElse(null);
-                            if (t != null) {
-                                jumpToTask(t);
-                            }
-                        }
-                        
-                        // Mark all tasks in this checklist as done
                         List<Task> tasks = checklistManager.getTasks(TaskType.CUSTOM, checklist);
                         for (Task task : tasks) {
                             if (!task.isDone()) {
@@ -282,11 +287,11 @@ public class DailyChecklist {
                             }
                         }
                     }
-                    
-                    // Refresh the UI
+
+                    // Refresh UI
                     checklistPanel.updateTasks();
                     customChecklistsOverviewPanel.updateTasks();
-                    
+
                     frame.setVisible(true);
                     frame.toFront();
                     frame.requestFocus();

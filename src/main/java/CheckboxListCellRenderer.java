@@ -42,7 +42,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private boolean isWeekdayTask;
     private Font circleFont; // Font for the text inside the circle
     private String doneDate; // Timestamp when task was completed
-    private static final int RIGHT_ICON_SPACE = 80; // reserved space on right for weekday/reminder icons (expanded to fit clock+time)
+    private static final int RIGHT_ICON_SPACE = 120; // reserved space on right for weekday/reminder icons (expanded to fit clock+time)
     
     private boolean showChecklistInfo; // Whether to show checklist name in display
     private ChecklistNameManager checklistNameManager; // Manager to resolve checklist IDs to names
