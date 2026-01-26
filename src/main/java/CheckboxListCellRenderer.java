@@ -41,6 +41,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private boolean isWeekdayTask;
     private Font circleFont; // Font for the text inside the circle
     private String doneDate; // Timestamp when task was completed
+    private static final int RIGHT_ICON_SPACE = 46; // reserved space on right for weekday/reminder icons
     
     private boolean showChecklistInfo; // Whether to show checklist name in display
     private ChecklistNameManager checklistNameManager; // Manager to resolve checklist IDs to names
@@ -167,34 +168,52 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             g2.drawImage(checkmarkImage, checkboxX, checkboxY, null);
         }
 
-        // Draw the weekday circle **only if it's a weekday task**
+        // Draw the task text next to the checkbox. Reserve space on the right for weekday/reminder icons.
+        g2.setColor(getForeground());
+        g2.setFont(getFont());
+        FontMetrics fmMain = g2.getFontMetrics();
+        int textY = getHeight() / 2 + 5;
+        int availableWidth = getWidth() - textStartX - RIGHT_ICON_SPACE - 6;
+        String drawTaskName = taskName != null ? taskName : "";
+        if (availableWidth > 12 && fmMain.stringWidth(drawTaskName) > availableWidth) {
+            while (fmMain.stringWidth(drawTaskName + "…") > availableWidth && drawTaskName.length() > 0) {
+                drawTaskName = drawTaskName.substring(0, drawTaskName.length() - 1);
+            }
+            drawTaskName = drawTaskName + "…";
+        }
+        g2.drawString(drawTaskName, textStartX, textY);
+
+        // Draw timestamp if task is checked - always in black, smaller font beneath the title
+        if (isChecked && doneDate != null && !doneDate.isEmpty()) {
+            g2.setColor(Color.BLACK);
+            g2.setFont(getFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL));
+            FontMetrics fmSmall = g2.getFontMetrics();
+            int availableWidthSmall = getWidth() - textStartX - RIGHT_ICON_SPACE - 6;
+            String timeText = "✓ " + doneDate;
+            if (availableWidthSmall > 12 && fmSmall.stringWidth(timeText) > availableWidthSmall) {
+                while (fmSmall.stringWidth(timeText + "…") > availableWidthSmall && timeText.length() > 0) {
+                    timeText = timeText.substring(0, timeText.length() - 1);
+                }
+                timeText = timeText + "…";
+            }
+            g2.drawString(timeText, textStartX, getHeight() / 2 + 20);
+        }
+
+        // Draw weekday circle at the right side so it aligns with other right-side icons
         if (isWeekdayTask) {
-            int circleX = textStartX, circleY = getHeight() / 2 - 15, circleSize = 30;
-            g2.setColor(weekdayColor);
+            int circleSize = 30;
+            int circleX = getWidth() - RIGHT_ICON_SPACE + (RIGHT_ICON_SPACE - circleSize) / 2;
+            int circleY = getHeight() / 2 - circleSize / 2;
+            g2.setColor(weekdayColor != null ? weekdayColor : new Color(120, 120, 120));
             g2.fillOval(circleX, circleY, circleSize, circleSize);
 
             // Draw the weekday abbreviation inside the circle (centered)
             g2.setColor(Color.WHITE);
             g2.setFont(circleFont);
             FontMetrics fm = g2.getFontMetrics();
-            int textX = circleX + (circleSize - fm.stringWidth(weekdayAbbreviation)) / 2;
-            int textY = circleY + circleSize / 2 + (fm.getAscent() - fm.getDescent()) / 2;
-
-            g2.drawString(weekdayAbbreviation, textX, textY);
-
-            textStartX = circleX + circleSize + 10; // Adjust task text position
-        }
-
-        // Draw the task text next to the checkbox and circle
-        g2.setColor(getForeground());
-        g2.setFont(getFont());
-        g2.drawString(taskName, textStartX, getHeight() / 2 + 5);
-        
-        // Draw timestamp if task is checked - always in black
-        if (isChecked && doneDate != null && !doneDate.isEmpty()) {
-            g2.setColor(Color.BLACK);
-            g2.setFont(getFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL));
-            g2.drawString("✓ " + doneDate, textStartX, getHeight() / 2 + 20);
+            int textX = circleX + (circleSize - fm.stringWidth(weekdayAbbreviation != null ? weekdayAbbreviation : "")) / 2;
+            int textCenterY = circleY + circleSize / 2 + (fm.getAscent() - fm.getDescent()) / 2;
+            g2.drawString(weekdayAbbreviation != null ? weekdayAbbreviation : "", textX, textCenterY);
         }
     }
 

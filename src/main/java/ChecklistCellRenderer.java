@@ -52,11 +52,16 @@ public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
 
     @Override
     protected Icon getIconForValue(Checklist checklist) {
+        // Left-side icons not used for checklist rows; we render the reminder at the right end instead.
+        return null;
+    }
+
+    @Override
+    protected Icon getRightIconForValue(Checklist checklist) {
         if (checklist != null) {
             Reminder nearest = nearestReminderForChecklist(checklist.getName());
             if (nearest != null) {
                 ReminderClockIcon.State state = computeState(nearest);
-                // Show time text in main lists so timestamps remain visible
                 return IconCache.getReminderClockIcon(nearest.getHour(), nearest.getMinute(), state, true);
             }
         }
@@ -95,17 +100,12 @@ public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
-        // Draw extra icon if present
+        // Draw extra icon (e.g., Zzz) left of the reserved right icon space so it stays aligned
         Icon extraIcon = getExtraIconForValue(value);
         if (extraIcon != null) {
-            String text = getTextForValue(value);
-            if (text != null) {
-                java.awt.FontMetrics fm = g2.getFontMetrics(getFont());
-                int textWidth = fm.stringWidth(text);
-                int iconX = 30 + textWidth + 5; // 30 is textX from base, +5 spacing
-                int iconY = getHeight() / 2 - extraIcon.getIconHeight() / 2;
-                extraIcon.paintIcon(this, g2, iconX, iconY);
-            }
+            int iconX = getWidth() - RIGHT_ICON_SPACE + 4; // inside the reserved area
+            int iconY = getHeight() / 2 - extraIcon.getIconHeight() / 2;
+            extraIcon.paintIcon(this, g2, iconX, iconY);
         }
     }
 
