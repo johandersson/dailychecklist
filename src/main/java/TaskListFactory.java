@@ -29,7 +29,8 @@ public class TaskListFactory {
         taskList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Consistent selection color
         taskList.setSelectionForeground(java.awt.Color.BLACK);
         if (!java.awt.GraphicsEnvironment.isHeadless()) {
-            taskList.setDragEnabled(true);
+            boolean isDaily = "MORNING".equals(checklistName) || "EVENING".equals(checklistName);
+            taskList.setDragEnabled(!isDaily); // disable drag for built-in daily lists to avoid accidental moves
             taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklistName, updateCallback, morningListModel, eveningListModel));
             taskList.setDropMode(DropMode.INSERT);
         }
