@@ -67,8 +67,49 @@ public class CustomChecklistsOverviewPanel extends JPanel {
 
     private void initialize() {
         listModel = new DefaultListModel<>();
-        checklistList = new JList<>(listModel);
+        checklistList = new JList<>(listModel) {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public String getToolTipText(java.awt.event.MouseEvent e) {
+                int idx = locationToIndex(e.getPoint());
+                if (idx < 0) return super.getToolTipText(e);
+                java.awt.Rectangle cb = getCellBounds(idx, idx);
+                if (cb == null) return super.getToolTipText(e);
+                int relX = e.getX() - cb.x;
+                int cellW = cb.width;
+                // IconListCellRenderer reserves RIGHT_ICON_SPACE on right
+                int rightAreaStart = cellW - IconListCellRenderer.RIGHT_ICON_SPACE;
+                Checklist c = getModel().getElementAt(idx);
+                if (c != null) {
+                    // Find nearest reminder for this checklist
+                    Reminder nearest = null;
+                    if (taskManager != null) {
+                        java.util.List<Reminder> reminders = taskManager.getReminders();
+                        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+                        long bestDiff = Long.MAX_VALUE;
+                        for (Reminder r : reminders) {
+                            if (!java.util.Objects.equals(r.getChecklistName(), c.getName())) continue;
+                            java.time.LocalDateTime dt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+                            long diff = Math.abs(java.time.Duration.between(now, dt).toMinutes());
+                            if (diff < bestDiff) { bestDiff = diff; nearest = r; }
+                        }
+                    }
+                    if (nearest != null) {
+                        // Compute actual icon bounds so tooltip triggers where the icon is painted
+                        javax.swing.Icon icon = IconCache.getReminderClockIcon(nearest.getHour(), nearest.getMinute(), ReminderClockIcon.State.FUTURE, true);
+                        int iconW = icon != null ? icon.getIconWidth() : IconListCellRenderer.RIGHT_ICON_SPACE;
+                        int iconStart = cellW - iconW - 6;
+                        if (relX >= iconStart) {
+                            String txt = String.format("Reminder: %04d-%02d-%02d %02d:%02d", nearest.getYear(), nearest.getMonth(), nearest.getDay(), nearest.getHour(), nearest.getMinute());
+                            return "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + txt + "</p></html>";
+                        }
+                    }
+                }
+                return super.getToolTipText(e);
+            }
+        };
         checklistList.setCellRenderer(new ChecklistCellRenderer(taskManager));
+        javax.swing.ToolTipManager.sharedInstance().registerComponent(checklistList);
         checklistList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Same as task lists
         checklistList.setSelectionForeground(java.awt.Color.BLACK);
         checklistList.setTransferHandler(new ChecklistListTransferHandler(listModel, taskManager, this::updateTasks));
