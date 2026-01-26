@@ -64,6 +64,14 @@ public class ReminderManager {
             }
         }
 
+        // Remove any checklist-level reminders for the built-in daily lists
+        // These should not exist (only task-level reminders allowed for Morning/Evening)
+        boolean cleaned = removeChecklistLevelDailyReminders(reminders);
+        if (cleaned) {
+            // Persist cleaned reminders back to properties so they don't reappear
+            saveRemindersToProperties(reminders);
+        }
+
         cachedReminders = new ArrayList<>(reminders);
         remindersDirty = false;
         return reminders;
@@ -340,5 +348,20 @@ public class ReminderManager {
      */
     public void markDirty() {
         remindersDirty = true;
+    }
+
+    /**
+     * Remove checklist-level reminders that target built-in daily lists (Morning/Evening).
+     * Returns true if any reminders were removed.
+     */
+    private boolean removeChecklistLevelDailyReminders(List<Reminder> reminders) {
+        if (reminders == null || reminders.isEmpty()) return false;
+        boolean changed = reminders.removeIf(r -> r.getTaskId() == null && r.getChecklistName() != null &&
+                ("MORNING".equalsIgnoreCase(r.getChecklistName()) || "EVENING".equalsIgnoreCase(r.getChecklistName())));
+        if (changed) {
+            // mark cache dirty when called directly
+            remindersDirty = false; // we'll reset cache after saving
+        }
+        return changed;
     }
 }
