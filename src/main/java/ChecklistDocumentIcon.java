@@ -67,7 +67,7 @@ public class ChecklistDocumentIcon implements Icon {
         // increase internal padding so contents don't touch the rounded corners
         final int startX = x + 4;
         final int startY = y + 6;
-        final int checkboxSize = 7; // slightly smaller boxes to avoid spillover
+        final int checkboxSize = 6; // slightly smaller boxes to avoid spillover
         final int rowSpacing = 12;
         final int rows = 2; // keep two rows
 
@@ -79,32 +79,32 @@ public class ChecklistDocumentIcon implements Icon {
     }
 
     private void drawCheckboxWithShadow(Graphics2D g2, int bx, int by, int size) {
-        // subtle shadow (slightly larger roundness for bigger box)
-        g2.setColor(new Color(0, 0, 0, 20));
-        g2.fillRoundRect(bx + 1, by + 1, size, size, 4, 4);
+        // subtle shadow
+        g2.setColor(new Color(0, 0, 0, 18));
+        g2.fillRoundRect(bx + 1, by + 1, size, size, 3, 3);
 
         // box background
         g2.setColor(DOC_BG);
-        g2.fillRoundRect(bx, by, size, size, 4, 4);
+        g2.fillRoundRect(bx, by, size, size, 3, 3);
 
-        // box border
+        // box border (thinner)
         g2.setColor(CHECKBOX_BORDER);
-        g2.setStroke(new BasicStroke(1.2f));
-        g2.drawRoundRect(bx, by, size, size, 4, 4);
+        g2.setStroke(new BasicStroke(1.0f));
+        g2.drawRoundRect(bx, by, size, size, 3, 3);
 
-        // checkmark - keep it nicely inside the box and avoid overlap between rows
+        // checkmark - smaller and thinner but still distinguishable
         Object prevAA = g2.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setColor(CHECKMARK_COLOR);
-        g2.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        int cx = bx; // center relative to box
+        g2.setStroke(new BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        int cx = bx;
         int cy = by;
-        int x1 = cx + 2;
+        int x1 = cx + 1;
         int y1 = cy + size / 2;
         int x2 = cx + size / 2;
-        int y2 = cy + size - 3;
+        int y2 = cy + size - 2;
         int x3 = cx + size - 2;
-        int y3 = cy + 3;
+        int y3 = cy + 2;
         g2.drawLine(x1, y1, x2, y2);
         g2.drawLine(x2, y2, x3, y3);
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, prevAA);

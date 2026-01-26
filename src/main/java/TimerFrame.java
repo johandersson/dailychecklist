@@ -29,7 +29,7 @@ public class TimerFrame {
         if (!GraphicsEnvironment.isHeadless()) {
             frame = new JFrame();
             frame.setTitle("Focus Timer");
-            frame.setIconImage(createAppIcon());
+            frame.setIconImage(IconCache.getAppIcon());
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(500, 300);
             frame.setAlwaysOnTop(true);
