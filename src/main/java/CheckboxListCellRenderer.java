@@ -42,7 +42,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private boolean isWeekdayTask;
     private Font circleFont; // Font for the text inside the circle
     private String doneDate; // Timestamp when task was completed
-    private static final int RIGHT_ICON_SPACE = 40; // reserved space on right for weekday/reminder icons (tightened)
+    private static final int RIGHT_ICON_SPACE = 80; // reserved space on right for weekday/reminder icons (expanded to fit clock+time)
     
     private boolean showChecklistInfo; // Whether to show checklist name in display
     private ChecklistNameManager checklistNameManager; // Manager to resolve checklist IDs to names
@@ -249,12 +249,16 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             g2.drawString(weekdayAbbreviation != null ? weekdayAbbreviation : "", textX, textCenterY);
         }
 
-        // Draw a reminder clock icon (and optional time text) to the far right for task-level reminders
+        // Draw a reminder clock icon (and optional time text) inside the reserved right area for task-level reminders
         if (taskReminder != null) {
             ReminderClockIcon.State state = computeState(taskReminder);
             javax.swing.Icon icon = IconCache.getReminderClockIcon(taskReminder.getHour(), taskReminder.getMinute(), state, true);
-            int iconX = getWidth() - RIGHT_ICON_SPACE + 4;
-            int iconY = getHeight() / 2 - icon.getIconHeight() / 2;
+            int iconW = icon.getIconWidth();
+            int iconH = icon.getIconHeight();
+            int areaX = getWidth() - RIGHT_ICON_SPACE;
+            // center the icon (and its time text) within the reserved area
+            int iconX = areaX + Math.max(2, (RIGHT_ICON_SPACE - iconW) / 2);
+            int iconY = getHeight() / 2 - iconH / 2;
             icon.paintIcon(this, g2, iconX, iconY);
         }
     }
