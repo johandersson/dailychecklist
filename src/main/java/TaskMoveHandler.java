@@ -43,79 +43,82 @@ public class TaskMoveHandler {
             }
 
             // After panels are updated, ensure the moved tasks are selected in the target list
-            // and scrolled into view. For custom checklists the panel update is asynchronous,
-            // so retry until the moved tasks appear in the model (or until timeout).
-            try {
-                if (!isTargetDaily) {
-                    final int[] attempts = {0};
-                    final int maxAttempts = 10;
-                    javax.swing.Timer retryTimer = new javax.swing.Timer(50, null);
-                    retryTimer.addActionListener(evt -> {
-                        attempts[0]++;
-                        try {
-                            java.util.List<Integer> indices = new java.util.ArrayList<>();
-                            for (Task t : tasks) {
-                                for (int i = 0; i < listModel.getSize(); i++) {
-                                    Task modelTask = listModel.get(i);
-                                    if (modelTask != null && modelTask.getId().equals(t.getId())) {
-                                        indices.add(i);
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!indices.isEmpty()) {
-                                retryTimer.stop();
-                                int[] idxArr = indices.stream().mapToInt(Integer::intValue).toArray();
-                                list.setSelectedIndices(idxArr);
-                                list.ensureIndexIsVisible(idxArr[0]);
-                                list.requestFocusInWindow();
-                                try {
-                                    DailyChecklist app = DailyChecklist.getInstance();
-                                    if (app != null && !tasks.isEmpty()) {
-                                        app.showCustomChecklist(checklistName);
-                                        app.jumpToTask(tasks.get(0));
-                                    }
-                                } catch (Exception ignore) {}
-                            } else if (attempts[0] >= maxAttempts) {
-                                retryTimer.stop();
-                                list.requestFocusInWindow();
-                            }
-                        } catch (Exception ignore) {
-                            if (attempts[0] >= maxAttempts) retryTimer.stop();
-                        }
-                    });
-                    retryTimer.setRepeats(true);
-                    retryTimer.start();
-                } else {
-                    java.util.List<Integer> indices = new java.util.ArrayList<>();
-                    for (Task t : tasks) {
-                        for (int i = 0; i < listModel.getSize(); i++) {
-                            Task modelTask = listModel.get(i);
-                            if (modelTask != null && modelTask.getId().equals(t.getId())) {
-                                indices.add(i);
-                                break;
-                            }
-                        }
-                    }
-                    if (!indices.isEmpty()) {
-                        int[] idxArr = indices.stream().mapToInt(Integer::intValue).toArray();
-                        list.setSelectedIndices(idxArr);
-                        list.ensureIndexIsVisible(idxArr[0]);
-                        list.requestFocusInWindow();
-                        try {
-                            DailyChecklist app = DailyChecklist.getInstance();
-                            if (app != null && !tasks.isEmpty()) {
-                                app.jumpToTask(tasks.get(0));
-                            }
-                        } catch (Exception ignore) {}
-                    } else {
-                        list.requestFocusInWindow();
-                    }
-                }
-            } catch (Exception ignore) {}
+            // and scrolled into view. Delegate to helper to keep performMove concise.
+            handlePostMoveSelection(list, listModel, checklistName, tasks, isTargetDaily);
         });
 
         return true;
+    }
+
+    private static void handlePostMoveSelection(JList<Task> list, DefaultListModel<Task> listModel, String checklistName, List<Task> tasks, boolean isTargetDaily) {
+        try {
+            if (!isTargetDaily) {
+                final int[] attempts = {0};
+                final int maxAttempts = 10;
+                javax.swing.Timer retryTimer = new javax.swing.Timer(50, null);
+                retryTimer.addActionListener(evt -> {
+                    attempts[0]++;
+                    try {
+                        java.util.List<Integer> indices = new java.util.ArrayList<>();
+                        for (Task t : tasks) {
+                            for (int i = 0; i < listModel.getSize(); i++) {
+                                Task modelTask = listModel.get(i);
+                                if (modelTask != null && modelTask.getId().equals(t.getId())) {
+                                    indices.add(i);
+                                    break;
+                                }
+                            }
+                        }
+                        if (!indices.isEmpty()) {
+                            retryTimer.stop();
+                            int[] idxArr = indices.stream().mapToInt(Integer::intValue).toArray();
+                            list.setSelectedIndices(idxArr);
+                            list.ensureIndexIsVisible(idxArr[0]);
+                            list.requestFocusInWindow();
+                            try {
+                                DailyChecklist app = DailyChecklist.getInstance();
+                                if (app != null && !tasks.isEmpty()) {
+                                    app.showCustomChecklist(checklistName);
+                                    app.jumpToTask(tasks.get(0));
+                                }
+                            } catch (Exception ignore) {}
+                        } else if (attempts[0] >= maxAttempts) {
+                            retryTimer.stop();
+                            list.requestFocusInWindow();
+                        }
+                    } catch (Exception ignore) {
+                        if (attempts[0] >= maxAttempts) retryTimer.stop();
+                    }
+                });
+                retryTimer.setRepeats(true);
+                retryTimer.start();
+            } else {
+                java.util.List<Integer> indices = new java.util.ArrayList<>();
+                for (Task t : tasks) {
+                    for (int i = 0; i < listModel.getSize(); i++) {
+                        Task modelTask = listModel.get(i);
+                        if (modelTask != null && modelTask.getId().equals(t.getId())) {
+                            indices.add(i);
+                            break;
+                        }
+                    }
+                }
+                if (!indices.isEmpty()) {
+                    int[] idxArr = indices.stream().mapToInt(Integer::intValue).toArray();
+                    list.setSelectedIndices(idxArr);
+                    list.ensureIndexIsVisible(idxArr[0]);
+                    list.requestFocusInWindow();
+                    try {
+                        DailyChecklist app = DailyChecklist.getInstance();
+                        if (app != null && !tasks.isEmpty()) {
+                            app.jumpToTask(tasks.get(0));
+                        }
+                    } catch (Exception ignore) {}
+                } else {
+                    list.requestFocusInWindow();
+                }
+            }
+        } catch (Exception ignore) {}
     }
 
     private static void updateTaskPropertiesForMove(Task task, String sourceChecklistName, String targetChecklistName, TaskManager taskManager) {

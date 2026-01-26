@@ -78,16 +78,15 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         WEEKDAY_COLORS.put("saturday", new Color(255, 69, 0));   // Dark Orange
         WEEKDAY_COLORS.put("sunday", new Color(199, 21, 133));   // Dark Pink
         
-        // Pre-render checkmark image for performance (use smaller image to avoid spilling over)
-        // Use a slightly smaller checkmark image to avoid overflow and leave padding
-        checkmarkImage = new BufferedImage(14, 14, BufferedImage.TYPE_INT_ARGB);
+        // Pre-render checkmark image for performance and ensure it fits the checkbox
+        checkmarkImage = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = checkmarkImage.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setColor(new Color(76, 175, 80)); // Material green checkmark
-        g2.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        // Draw a slightly smaller checkmark centered in the 14x14 image
-        g2.drawLine(3, 8, 6, 11);
-        g2.drawLine(6, 11, 12, 4);
+        g2.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        // Draw a clearer checkmark centered in the 16x16 image
+        g2.drawLine(3, 9, 7, 13);
+        g2.drawLine(7, 13, 13, 5);
         g2.dispose();
     }
 
@@ -184,8 +183,8 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
         int textStartX = 40; // Adjusted text position to make space for checkbox
 
-        // Define checkbox dimensions
-        int checkboxX = 10, checkboxY = getHeight() / 2 - 10, checkboxSize = 20;
+        // Define checkbox dimensions (slightly increased to better fit checkmark)
+        int checkboxX = 10, checkboxY = getHeight() / 2 - 11, checkboxSize = 22;
 
         // Draw subtle shadow behind checkbox
         g2.setColor(new Color(200, 200, 200, 100)); // Light gray shadow with transparency
@@ -199,9 +198,13 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         g2.setColor(Color.WHITE);
         g2.fillRoundRect(checkboxX + 1, checkboxY + 1, checkboxSize - 2, checkboxSize - 2, 8, 8);
 
-        // Draw checkmark if selected (small offset to center within the checkbox)
+        // Draw checkmark if selected (center it within the checkbox)
         if (isChecked) {
-            g2.drawImage(checkmarkImage, checkboxX + 2, checkboxY + 2, null);
+            int imgW = checkmarkImage.getWidth();
+            int imgH = checkmarkImage.getHeight();
+            int imgX = checkboxX + (checkboxSize - imgW) / 2;
+            int imgY = checkboxY + (checkboxSize - imgH) / 2;
+            g2.drawImage(checkmarkImage, imgX, imgY, null);
         }
 
         // Draw the task text next to the checkbox. Reserve space on the right for weekday/reminder icons.
