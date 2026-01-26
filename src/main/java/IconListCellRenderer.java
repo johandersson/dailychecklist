@@ -36,6 +36,9 @@ public abstract class IconListCellRenderer<T> extends JPanel implements ListCell
     protected boolean isSelected;
     protected T value;
     protected Icon icon;
+    protected Icon rightIcon;
+    // Reserve a fixed space on the right so rows align whether or not a right-side icon is present
+    protected static final int RIGHT_ICON_SPACE = 46;
 
     @SuppressWarnings("this-escape")
     public IconListCellRenderer() {
@@ -63,8 +66,16 @@ public abstract class IconListCellRenderer<T> extends JPanel implements ListCell
 
         // Update icon based on the value
         this.icon = getIconForValue(value);
+        this.rightIcon = getRightIconForValue(value);
 
         return this;
+    }
+
+    /**
+     * Subclasses may override to provide an icon drawn at the right end of the row.
+     */
+    protected Icon getRightIconForValue(T value) {
+        return null;
     }
 
     /**
@@ -87,7 +98,7 @@ public abstract class IconListCellRenderer<T> extends JPanel implements ListCell
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         int iconX = 5;
-        int textX = 42; // Default space for icon (align with task lists, slightly reduced to fit title/timestamp)
+        int textX = 42; // Default space for icon (align with task lists)
 
         // Draw icon if present
         if (icon != null) {
@@ -95,14 +106,30 @@ public abstract class IconListCellRenderer<T> extends JPanel implements ListCell
             textX = iconX + icon.getIconWidth() + 10;
         }
 
-        // Draw text
+        // Draw text, truncating if needed to avoid overlapping the reserved right icon space
         g2.setColor(getForeground());
         g2.setFont(getFont());
         String text = getTextForValue(value);
         if (text != null) {
             java.awt.FontMetrics fm = g2.getFontMetrics();
             int textY = getHeight() / 2 + (fm.getAscent() - fm.getDescent()) / 2;
-            g2.drawString(text, textX, textY);
+            int availableWidth = getWidth() - textX - RIGHT_ICON_SPACE - 6;
+            String drawText = text;
+            if (fm.stringWidth(drawText) > availableWidth && availableWidth > 12) {
+                // Truncate with ellipsis
+                while (fm.stringWidth(drawText + "…") > availableWidth && drawText.length() > 0) {
+                    drawText = drawText.substring(0, drawText.length() - 1);
+                }
+                drawText = drawText + "…";
+            }
+            g2.drawString(drawText, textX, textY);
+        }
+
+        // Draw right-side icon (aligned across rows)
+        if (rightIcon != null) {
+            int iconXRight = getWidth() - rightIcon.getIconWidth() - 6;
+            int iconYRight = getHeight() / 2 - rightIcon.getIconHeight() / 2;
+            rightIcon.paintIcon(this, g2, iconXRight, iconYRight);
         }
     }
 }
