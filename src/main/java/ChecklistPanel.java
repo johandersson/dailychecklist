@@ -403,7 +403,7 @@ public class ChecklistPanel extends JPanel {
         }
 
         Reminder display = selectReminderForType(title);
-        return buildReminderPanelForType(title, display);
+        return buildReminderPanelForType(display);
     }
 
     // Helper: select the most relevant reminder for a Morning/Evening type
@@ -454,31 +454,35 @@ public class ChecklistPanel extends JPanel {
     }
 
     // Helper: build the UI panel given a selected reminder (or null)
-    private JPanel buildReminderPanelForType(String title, Reminder display) {
+    private JPanel buildReminderPanelForType(Reminder display) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 5, 2, 5));
 
-        if (display != null) {
-            java.time.LocalDateTime now = java.time.LocalDateTime.now();
-            java.time.LocalDateTime remTime = java.time.LocalDateTime.of(display.getYear(), display.getMonth(), display.getDay(), display.getHour(), display.getMinute());
-            ReminderClockIcon.State state = remTime.isBefore(now) ? (java.time.Duration.between(remTime, now).toHours() > 1 ? ReminderClockIcon.State.VERY_OVERDUE : ReminderClockIcon.State.OVERDUE) : (remTime.isBefore(now.plusMinutes(60)) ? ReminderClockIcon.State.DUE_SOON : ReminderClockIcon.State.FUTURE);
-            javax.swing.Icon icon = IconCache.getReminderClockIcon(display.getHour(), display.getMinute(), state, false);
-            String dateText = String.format("%04d-%02d-%02d", display.getYear(), display.getMonth(), display.getDay());
-            String timeText = String.format("%02d:%02d", display.getHour(), display.getMinute());
-            javax.swing.JPanel small = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 0));
-            small.setOpaque(false);
-            javax.swing.JLabel iconLabel = new javax.swing.JLabel(icon);
-            javax.swing.JLabel textLabel = new javax.swing.JLabel(dateText + " " + timeText);
-            textLabel.setFont(FontManager.getSmallMediumFont());
-            small.add(iconLabel);
-            small.add(textLabel);
-            panel.add(small, BorderLayout.WEST);
-        } else {
+        if (display == null) {
             javax.swing.JLabel noReminderLabel = new javax.swing.JLabel("No reminder set");
             noReminderLabel.setFont(FontManager.getSmallFont());
             noReminderLabel.setForeground(java.awt.Color.GRAY);
             panel.add(noReminderLabel, BorderLayout.WEST);
+            return panel;
         }
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime remTime = reminderDateTime(display);
+        ReminderClockIcon.State state = remTime.isBefore(now)
+                ? (java.time.Duration.between(remTime, now).toHours() > 1 ? ReminderClockIcon.State.VERY_OVERDUE : ReminderClockIcon.State.OVERDUE)
+                : (remTime.isBefore(now.plusMinutes(60)) ? ReminderClockIcon.State.DUE_SOON : ReminderClockIcon.State.FUTURE);
+
+        javax.swing.Icon icon = IconCache.getReminderClockIcon(display.getHour(), display.getMinute(), state, false);
+        String text = String.format("%04d-%02d-%02d %02d:%02d", display.getYear(), display.getMonth(), display.getDay(), display.getHour(), display.getMinute());
+
+        javax.swing.JPanel small = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 0));
+        small.setOpaque(false);
+        javax.swing.JLabel iconLabel = new javax.swing.JLabel(icon);
+        javax.swing.JLabel textLabel = new javax.swing.JLabel(text);
+        textLabel.setFont(FontManager.getSmallMediumFont());
+        small.add(iconLabel);
+        small.add(textLabel);
+        panel.add(small, BorderLayout.WEST);
 
         return panel;
     }
