@@ -10,10 +10,10 @@
 		<li>Main interface: a split layout shows Daily tasks (left) and Custom checklists (right).</li>
 	</ol>
 
-	<h2>What's New</h2>
+	<h2>Notes</h2>
 	<ul>
-		<li>Application icon is now centralized and cached to reduce repeated rendering cost. (See: <code>AppIcon.getAppIcon()</code>.)</li>
-		<li>Reminder and navigation code has been refactored to reduce scattered UI side-effects — navigation ("jump to task") and reminder handlers now use smaller helpers making the app more testable and predictable.</li>
+		<li>Icons and visuals have been improved for smoother performance and a more consistent look.</li>
+		<li>When you move a task between checklists the app will switch to the target checklist and show the moved task; use drag-and-drop to move tasks.</li>
 	</ul>
 
 	<h2>Managing Daily Tasks</h2>
