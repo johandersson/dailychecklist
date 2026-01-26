@@ -146,9 +146,32 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         setLayout(new BorderLayout());
         add(splitPane, BorderLayout.CENTER);
         
-        // Initialize with existing checklists
-        allChecklists.addAll(taskManager.getCustomChecklists());
-        updateChecklistList();
+        // Initialize with existing checklists (load off EDT)
+        loadChecklistsInBackground();
+    }
+
+    private void loadChecklistsInBackground() {
+        javax.swing.SwingWorker<java.util.Set<Checklist>, Void> worker = new javax.swing.SwingWorker<>() {
+            @Override
+            protected java.util.Set<Checklist> doInBackground() throws Exception {
+                return taskManager.getCustomChecklists();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    java.util.Set<Checklist> checklists = get();
+                    if (checklists != null) {
+                        allChecklists.clear();
+                        allChecklists.addAll(checklists);
+                    }
+                    updateChecklistList();
+                } catch (Exception e) {
+                    java.util.logging.Logger.getLogger(CustomChecklistsOverviewPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading checklists", e);
+                }
+            }
+        };
+        worker.execute();
     }
 
     private void createNewChecklist() {
@@ -241,6 +264,24 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     }
 
     public void updateTasks() {
+        scheduleUpdate();
+    }
+
+    private volatile boolean updateScheduled = false;
+
+    private void scheduleUpdate() {
+        if (updateScheduled) return;
+        updateScheduled = true;
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            try {
+                doUpdateTasks();
+            } finally {
+                updateScheduled = false;
+            }
+        });
+    }
+
+    private void doUpdateTasks() {
         // Preserve selection
         Checklist previousSelection = checklistList.getSelectedValue();
 
@@ -264,13 +305,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     }
 
     private void updateChecklistList() {
-        listModel.clear();
-        Set<Checklist> checklists = taskManager.getCustomChecklists();
-        // Add all checklists
-        for (Checklist checklist : checklists) {
-            listModel.addElement(checklist);
-            allChecklists.add(checklist);  // Ensure we track all existing checklists
-        }
+        java.util.List<Checklist> desired = new java.util.ArrayList<>(allChecklists);
+        TaskUpdater.syncModel(listModel, desired);
 
         // Clean up panelMap - remove panels for checklists that no longer exist
         panelMap.keySet().removeIf(checklistId -> allChecklists.stream().noneMatch(c -> checklistId.equals(c.getId())));

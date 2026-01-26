@@ -126,7 +126,8 @@ public class ReminderClockIcon implements Icon {
     @Override
     public int getIconWidth() {
         if (showTimeText) {
-            return ICON_SIZE + 28;
+            // Reserve extra width so HH:MM (two-digit hours) always fits
+            return ICON_SIZE + 40;
         } else {
             return ICON_SIZE + 6;
         }

@@ -1,6 +1,7 @@
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -16,6 +17,8 @@ public final class IconCache {
 
     // Key format: hour-minute-state-showTime
     private static final ConcurrentMap<String, Icon> reminderClockCache = new ConcurrentHashMap<>();
+    private static final ConcurrentLinkedQueue<String> reminderClockKeys = new ConcurrentLinkedQueue<>();
+    private static final int MAX_REMINDER_ICONS = 200;
 
     public static Icon getChecklistDocumentIcon() {
         return CHECKLIST_DOC;
@@ -44,7 +47,14 @@ public final class IconCache {
             } finally {
                 g.dispose();
             }
-            return new ImageIcon(img);
+            ImageIcon icon = new ImageIcon(img);
+            // Track insertion order and prune if necessary
+            reminderClockKeys.add(k);
+            while (reminderClockKeys.size() > MAX_REMINDER_ICONS) {
+                String old = reminderClockKeys.poll();
+                if (old != null) reminderClockCache.remove(old);
+            }
+            return icon;
         });
     }
 }

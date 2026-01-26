@@ -22,7 +22,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import javax.swing.DefaultListModel;
-import javax.swing.DropMode;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenuItem;
@@ -76,16 +75,7 @@ public class CustomChecklistPanel extends JPanel {
     }
 
     private JList<Task> createTaskList(DefaultListModel<Task> listModel) {
-        JList<Task> taskList = new JList<>(listModel);
-        taskList.setCellRenderer(new CheckboxListCellRenderer());
-        taskList.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        taskList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Same as checklist list
-        taskList.setSelectionForeground(java.awt.Color.BLACK);
-        if (!java.awt.GraphicsEnvironment.isHeadless()) {
-            taskList.setDragEnabled(true);
-            taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklist.getName(), updateAllPanels, null, null));
-            taskList.setDropMode(DropMode.INSERT);
-        }
+        JList<Task> taskList = TaskListFactory.createTaskList(listModel, taskManager, checklist.getName(), updateAllPanels, null, null);
         taskList.addMouseListener(new MouseAdapter() {
             @Override
             @SuppressWarnings("unchecked")
@@ -276,28 +266,61 @@ public class CustomChecklistPanel extends JPanel {
     }
 
     public void updateTasks() {
+        scheduleUpdate();
+    }
+
+    private volatile boolean updateScheduled = false;
+
+    private void scheduleUpdate() {
+        if (updateScheduled) return;
+        updateScheduled = true;
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            try {
+                doUpdateTasks();
+            } finally {
+                updateScheduled = false;
+            }
+        });
+    }
+
+    private void doUpdateTasks() {
         // Preserve selections before updating
         java.util.List<Task> selectedTasks = customTaskList.getSelectedValuesList();
-        
-        customListModel.clear();
-        List<Task> tasks = taskManager.getTasks(TaskType.CUSTOM, checklist);
-        for (Task task : tasks) {
-            customListModel.addElement(task);
-        }
-        
-        // Restore selections after updating
-        for (Task selectedTask : selectedTasks) {
-            for (int i = 0; i < customListModel.getSize(); i++) {
-                if (customListModel.getElementAt(i).equals(selectedTask)) {
-                    customTaskList.addSelectionInterval(i, i);
-                    break;
+
+        // Load checklist tasks off the EDT and sync model incrementally
+        javax.swing.SwingWorker<List<Task>, Void> worker = new javax.swing.SwingWorker<>() {
+            @Override
+            protected List<Task> doInBackground() throws Exception {
+                return taskManager.getTasks(TaskType.CUSTOM, checklist);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    List<Task> tasks = get();
+                    TaskUpdater.syncModel(customListModel, tasks);
+
+                    // Restore selections after updating
+                    for (Task selectedTask : selectedTasks) {
+                        for (int i = 0; i < customListModel.getSize(); i++) {
+                            if (customListModel.getElementAt(i).equals(selectedTask)) {
+                                customTaskList.addSelectionInterval(i, i);
+                                break;
+                            }
+                        }
+                    }
+
+                    if (reminderStatusPanel != null) {
+                        populateReminderPanel(reminderStatusPanel);
+                    }
+                    customTaskList.revalidate();
+                    customTaskList.repaint();
+                } catch (Exception e) {
+                    java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading custom checklist tasks", e);
                 }
             }
-        }
-        
-        if (reminderStatusPanel != null) {
-            populateReminderPanel(reminderStatusPanel);
-        }
+        };
+        worker.execute();
     }
 
     /**

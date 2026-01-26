@@ -34,6 +34,23 @@ public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
+    public java.awt.Component getListCellRendererComponent(javax.swing.JList<? extends Checklist> list, Checklist value, int index, boolean isSelected, boolean cellHasFocus) {
+        // Use base behavior then normalize font and non-selected colors/size to match task lists
+        java.awt.Component c = super.getListCellRendererComponent((javax.swing.JList) list, value, index, isSelected, cellHasFocus);
+        setFont(FontManager.getTaskListFont());
+        setPreferredSize(new java.awt.Dimension(200, 50)); // match task list row height
+        if (!isSelected) {
+            setBackground(java.awt.Color.WHITE);
+            setForeground(java.awt.Color.BLACK);
+            putClientProperty("selected", Boolean.FALSE);
+        } else {
+            putClientProperty("selected", Boolean.TRUE);
+        }
+        return c;
+    }
+
+    @Override
     protected Icon getIconForValue(Checklist checklist) {
         if (checklist != null) {
             Reminder nearest = nearestReminderForChecklist(checklist.getName());

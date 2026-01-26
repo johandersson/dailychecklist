@@ -25,8 +25,7 @@ public class ApplicationLifecycleManager {
     private final Component parentComponent;
     private TaskRepository repository;
     private SettingsManager settingsManager;
-    private ReminderQueue reminderQueue;
-    private FocusTimer focusTimer;
+    
 
     /**
      * Creates a new ApplicationLifecycleManager.

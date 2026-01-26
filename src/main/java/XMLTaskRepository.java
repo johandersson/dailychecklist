@@ -163,7 +163,7 @@ public class XMLTaskRepository implements TaskRepository {
                 tasksByChecklist = new HashMap<>();
             }
         }
-        return new ArrayList<>(cachedTasks);
+        return java.util.Collections.unmodifiableList(cachedTasks);
     }
 
     @Override
