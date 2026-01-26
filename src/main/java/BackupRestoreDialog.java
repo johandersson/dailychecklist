@@ -144,27 +144,7 @@ public class BackupRestoreDialog {
         }
     }
 
-    private static class RestoreContext {
-        final Component parent;
-        final TaskManager taskManager;
-        final Runnable updateTasks;
-        final Map<String,String> checklistsCopy;
-        final List<Task> customTasks;
-        final List<Task> morningTasks;
-        final List<Task> eveningTasks;
-        final List<Task> currentTasks;
-
-        RestoreContext(Component parent, TaskManager taskManager, Runnable updateTasks, Map<String,String> checklistsCopy, List<Task> customTasks, List<Task> morningTasks, List<Task> eveningTasks, List<Task> currentTasks) {
-            this.parent = parent;
-            this.taskManager = taskManager;
-            this.updateTasks = updateTasks;
-            this.checklistsCopy = checklistsCopy;
-            this.customTasks = customTasks;
-            this.morningTasks = morningTasks;
-            this.eveningTasks = eveningTasks;
-            this.currentTasks = currentTasks;
-        }
-    }
+    
 
     private static Runnable createOnRestoreRunnable(RestoreContext ctx) {
         return () -> {
