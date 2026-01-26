@@ -27,14 +27,20 @@ public class Reminder {
     private final int day;
     private final int hour;
     private final int minute;
+    private final String taskId; // optional, may be null
 
     public Reminder(String checklistName, int year, int month, int day, int hour, int minute) {
+        this(checklistName, year, month, day, hour, minute, null);
+    }
+
+    public Reminder(String checklistName, int year, int month, int day, int hour, int minute, String taskId) {
         this.checklistName = checklistName;
         this.year = year;
         this.month = month;
         this.day = day;
         this.hour = hour;
         this.minute = minute;
+        this.taskId = (taskId == null || taskId.trim().isEmpty()) ? null : taskId;
     }
 
     // Getters
@@ -44,19 +50,21 @@ public class Reminder {
     public int getDay() { return day; }
     public int getHour() { return hour; }
     public int getMinute() { return minute; }
+    public String getTaskId() { return taskId; }
 
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
         Reminder reminder = (Reminder) obj;
-        return year == reminder.year && month == reminder.month && day == reminder.day &&
-               hour == reminder.hour && minute == reminder.minute &&
-               Objects.equals(checklistName, reminder.checklistName);
+         return year == reminder.year && month == reminder.month && day == reminder.day &&
+             hour == reminder.hour && minute == reminder.minute &&
+             Objects.equals(checklistName, reminder.checklistName) &&
+             Objects.equals(taskId, reminder.taskId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(checklistName) + year + month + day + hour + minute;
+        return Objects.hash(checklistName, taskId, year, month, day, hour, minute);
     }
 }

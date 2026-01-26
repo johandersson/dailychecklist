@@ -26,6 +26,7 @@ import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import javax.swing.JList;
 import javax.swing.JPanel;
@@ -45,6 +46,9 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     
     private boolean showChecklistInfo; // Whether to show checklist name in display
     private ChecklistNameManager checklistNameManager; // Manager to resolve checklist IDs to names
+    private transient TaskManager taskManager;
+    private String taskId;
+    private Reminder taskReminder;
     
     // Cached checkmark image for performance (smaller to avoid overflow)
     private static final BufferedImage checkmarkImage;
@@ -72,14 +76,15 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         WEEKDAY_COLORS.put("sunday", new Color(199, 21, 133));   // Dark Pink
         
         // Pre-render checkmark image for performance (use smaller image to avoid spilling over)
-        checkmarkImage = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+        // Use a slightly smaller checkmark image to avoid overflow and leave padding
+        checkmarkImage = new BufferedImage(14, 14, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = checkmarkImage.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setColor(new Color(76, 175, 80)); // Material green checkmark
-        g2.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        // Draw a slightly smaller checkmark centered in the 16x16 image
-        g2.drawLine(4, 9, 7, 12);
-        g2.drawLine(7, 12, 13, 5);
+        g2.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        // Draw a slightly smaller checkmark centered in the 14x14 image
+        g2.drawLine(3, 8, 6, 11);
+        g2.drawLine(6, 11, 12, 4);
         g2.dispose();
     }
 
@@ -99,6 +104,12 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.circleFont = getAvailableFont("Yu Gothic UI", Font.BOLD, 12); // Font for circle text
         this.showChecklistInfo = showChecklistInfo;
         this.checklistNameManager = checklistNameManager;
+        this.taskManager = null;
+    }
+
+    public CheckboxListCellRenderer(TaskManager taskManager) {
+        this(false, null);
+        this.taskManager = taskManager;
     }
 
     @Override
@@ -110,6 +121,19 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     public Component getListCellRendererComponent(JList<? extends Task> list, Task task, int index, boolean isSelected, boolean cellHasFocus) {
         this.isChecked = task.isDone();
         this.taskName = task.getName();
+        this.taskId = task.getId();
+        this.taskReminder = null;
+
+        // Find a reminder that targets this specific task (task-level reminder)
+        if (taskManager != null && this.taskId != null) {
+            List<Reminder> reminders = taskManager.getReminders();
+            for (Reminder r : reminders) {
+                if (this.taskId.equals(r.getTaskId())) {
+                    this.taskReminder = r;
+                    break;
+                }
+            }
+        }
 
         // Resolve checklist name from ID if showing checklist info
         String checklistName = null;
@@ -136,9 +160,11 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         if (isSelected) {
             setBackground(list.getSelectionBackground());
             setForeground(list.getSelectionForeground());
+            putClientProperty("selected", Boolean.TRUE);
         } else {
             setBackground(Color.WHITE);
             setForeground(Color.BLACK);
+            putClientProperty("selected", Boolean.FALSE);
         }
 
         return this;
@@ -222,6 +248,28 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             int textCenterY = circleY + circleSize / 2 + (fm.getAscent() - fm.getDescent()) / 2;
             g2.drawString(weekdayAbbreviation != null ? weekdayAbbreviation : "", textX, textCenterY);
         }
+
+        // Draw a reminder clock icon (and optional time text) to the far right for task-level reminders
+        if (taskReminder != null) {
+            ReminderClockIcon.State state = computeState(taskReminder);
+            javax.swing.Icon icon = IconCache.getReminderClockIcon(taskReminder.getHour(), taskReminder.getMinute(), state, true);
+            int iconX = getWidth() - RIGHT_ICON_SPACE + 4;
+            int iconY = getHeight() / 2 - icon.getIconHeight() / 2;
+            icon.paintIcon(this, g2, iconX, iconY);
+        }
+    }
+
+    private ReminderClockIcon.State computeState(Reminder r) {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime dt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+        if (dt.isBefore(now)) {
+            long minutesOverdue = java.time.Duration.between(dt, now).toMinutes();
+            if (minutesOverdue > 60) return ReminderClockIcon.State.VERY_OVERDUE;
+            return ReminderClockIcon.State.OVERDUE;
+        }
+        long minutes = java.time.Duration.between(now, dt).toMinutes();
+        if (minutes <= 60) return ReminderClockIcon.State.DUE_SOON;
+        return ReminderClockIcon.State.FUTURE;
     }
 
 

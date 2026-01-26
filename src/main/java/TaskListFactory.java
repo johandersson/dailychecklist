@@ -24,7 +24,7 @@ public class TaskListFactory {
 
     public static JList<Task> createTaskList(DefaultListModel<Task> listModel, TaskManager taskManager, String checklistName, Runnable updateCallback, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel) {
         JList<Task> taskList = new JList<>(listModel);
-        taskList.setCellRenderer(new CheckboxListCellRenderer());
+        taskList.setCellRenderer(new CheckboxListCellRenderer(taskManager));
         taskList.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         taskList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Consistent selection color
         taskList.setSelectionForeground(java.awt.Color.BLACK);
