@@ -313,49 +313,63 @@ public class XMLTaskRepository implements TaskRepository {
      */
     private void rebuildChecklistNamesRegistry(List<Task> tasks) {
         try {
-            Set<Checklist> foundChecklists = new HashSet<>();
-            for (Task task : tasks) {
-                if (task.getType() == TaskType.CUSTOM) {
-                    String checklistId = task.getChecklistId();
-
-                    if (checklistId != null && !checklistId.trim().isEmpty()) {
-                        // Determine whether the saved value is an ID (UUID-like) or an old-style name.
-                        String trimmed = checklistId.trim();
-                        boolean looksLikeUuid = trimmed.matches("[0-9a-fA-F\\-]{36}");
-
-                        if (looksLikeUuid) {
-                            Checklist checklist = checklistNameManager.getChecklistById(trimmed);
-                            if (checklist == null) {
-                                // No recorded name for this id — create a checklist with a neutral default name
-                                checklist = new Checklist(trimmed, "Untitled Checklist");
-                            }
-                            foundChecklists.add(checklist);
-                        } else {
-                            // Older backups stored the checklist name in this field — treat as name
-                            Checklist checklist = checklistNameManager.getChecklistByName(trimmed);
-                            if (checklist == null) {
-                                checklist = new Checklist(trimmed);
-                            }
-                            foundChecklists.add(checklist);
-                        }
-                    }
-                }
-            }
-
-            // Add or update registry entries for checklists referenced by tasks
-            for (Checklist checklist : foundChecklists) {
-                // If not present, add it. If present but name is empty, update the name.
-                Checklist existing = checklistNameManager.getChecklistById(checklist.getId());
-                if (existing == null) {
-                    checklistNameManager.addChecklist(checklist);
-                } else if ((existing.getName() == null || existing.getName().trim().isEmpty())
-                        && checklist.getName() != null && !checklist.getName().trim().isEmpty()) {
-                    checklistNameManager.updateChecklistName(existing, checklist.getName());
-                }
-            }
+            Set<Checklist> foundChecklists = collectChecklistsFromTasks(tasks);
+            updateChecklistRegistry(foundChecklists);
         } catch (Exception e) {
             System.err.println("Failed to rebuild checklist names registry: " + e.getMessage());
         }
+    }
+
+    /**
+     * Extracts checklist references from tasks. Handles both UUID-like ids and
+     * older backups where the checklist name was stored in the id field.
+     */
+    private Set<Checklist> collectChecklistsFromTasks(List<Task> tasks) {
+        Set<Checklist> found = new HashSet<>();
+        for (Task task : tasks) {
+            if (task.getType() != TaskType.CUSTOM) continue;
+            String checklistId = task.getChecklistId();
+            if (checklistId == null) continue;
+            String trimmed = checklistId.trim();
+            if (trimmed.isEmpty()) continue;
+
+            if (looksLikeUuid(trimmed)) {
+                Checklist c = checklistNameManager.getChecklistById(trimmed);
+                if (c == null) {
+                    c = new Checklist(trimmed, "Untitled Checklist");
+                }
+                found.add(c);
+            } else {
+                // Old-style: the field contains the name
+                Checklist c = checklistNameManager.getChecklistByName(trimmed);
+                if (c == null) {
+                    c = new Checklist(trimmed);
+                }
+                found.add(c);
+            }
+        }
+        return found;
+    }
+
+    /**
+     * Update the persistent checklist name registry with the discovered checklists.
+     * If an entry is missing it will be added; if an existing entry has an empty
+     * name, it will be updated.
+     */
+    private void updateChecklistRegistry(Set<Checklist> foundChecklists) {
+        for (Checklist checklist : foundChecklists) {
+            Checklist existing = checklistNameManager.getChecklistById(checklist.getId());
+            if (existing == null) {
+                checklistNameManager.addChecklist(checklist);
+            } else if ((existing.getName() == null || existing.getName().trim().isEmpty())
+                    && checklist.getName() != null && !checklist.getName().trim().isEmpty()) {
+                checklistNameManager.updateChecklistName(existing, checklist.getName());
+            }
+        }
+    }
+
+    private boolean looksLikeUuid(String s) {
+        return s.matches("[0-9a-fA-F\\-]{36}");
     }
 
     @Override

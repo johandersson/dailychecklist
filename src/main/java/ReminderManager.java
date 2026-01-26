@@ -90,15 +90,15 @@ public class ReminderManager {
 
                 String value = props.getProperty(key);
                 String[] parts = value.split(",");
-                if (parts.length == 6) {
-                    Reminder reminder = new Reminder(
-                            parts[0], // checklistName
-                            Integer.parseInt(parts[1]), // year
-                            Integer.parseInt(parts[2]), // month
-                            Integer.parseInt(parts[3]), // day
-                            Integer.parseInt(parts[4]), // hour
-                            Integer.parseInt(parts[5])  // minute
-                    );
+                if (parts.length >= 6) {
+                    String checklistName = parts[0];
+                    int year = Integer.parseInt(parts[1]);
+                    int month = Integer.parseInt(parts[2]);
+                    int day = Integer.parseInt(parts[3]);
+                    int hour = Integer.parseInt(parts[4]);
+                    int minute = Integer.parseInt(parts[5]);
+                    String taskId = (parts.length >= 7) ? parts[6] : null;
+                    Reminder reminder = new Reminder(checklistName, year, month, day, hour, minute, taskId);
                     reminders.add(reminder);
                     reminderCount++;
                 }
@@ -137,14 +137,17 @@ public class ReminderManager {
                 Node node = nodeList.item(i);
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                     Element element = (Element) node;
-                    Reminder reminder = new Reminder(
-                            element.getAttribute("checklistName"),
-                            Integer.parseInt(element.getAttribute("year")),
-                            Integer.parseInt(element.getAttribute("month")),
-                            Integer.parseInt(element.getAttribute("day")),
-                            Integer.parseInt(element.getAttribute("hour")),
-                            Integer.parseInt(element.getAttribute("minute"))
-                    );
+                    String checklistName = element.getAttribute("checklistName");
+                    int year = Integer.parseInt(element.getAttribute("year"));
+                    int month = Integer.parseInt(element.getAttribute("month"));
+                    int day = Integer.parseInt(element.getAttribute("day"));
+                    int hour = Integer.parseInt(element.getAttribute("hour"));
+                    int minute = Integer.parseInt(element.getAttribute("minute"));
+                    String taskId = null;
+                    if (element.hasAttribute("taskId")) {
+                        taskId = element.getAttribute("taskId");
+                    }
+                    Reminder reminder = new Reminder(checklistName, year, month, day, hour, minute, taskId);
                     reminders.add(reminder);
                 }
             }
@@ -167,8 +170,13 @@ public class ReminderManager {
         for (int i = 0; i < reminders.size(); i++) {
             Reminder r = reminders.get(i);
             String key = "reminder." + i;
-            String value = r.getChecklistName() + "," + r.getYear() + "," + r.getMonth() + "," +
-                          r.getDay() + "," + r.getHour() + "," + r.getMinute();
+                        StringBuilder sb = new StringBuilder();
+                        sb.append(r.getChecklistName()).append(',').append(r.getYear()).append(',').append(r.getMonth()).append(',')
+                            .append(r.getDay()).append(',').append(r.getHour()).append(',').append(r.getMinute());
+                        if (r.getTaskId() != null) {
+                                sb.append(',').append(r.getTaskId());
+                        }
+                        String value = sb.toString();
             props.setProperty(key, value);
         }
 
@@ -196,11 +204,12 @@ public class ReminderManager {
     public void removeReminder(Reminder reminder) {
         List<Reminder> reminders = getReminders();
         reminders.removeIf(r -> Objects.equals(r.getChecklistName(), reminder.getChecklistName()) &&
-                               r.getYear() == reminder.getYear() &&
-                               r.getMonth() == reminder.getMonth() &&
-                               r.getDay() == reminder.getDay() &&
-                               r.getHour() == reminder.getHour() &&
-                               r.getMinute() == reminder.getMinute());
+                       r.getYear() == reminder.getYear() &&
+                       r.getMonth() == reminder.getMonth() &&
+                       r.getDay() == reminder.getDay() &&
+                       r.getHour() == reminder.getHour() &&
+                       r.getMinute() == reminder.getMinute() &&
+                       Objects.equals(r.getTaskId(), reminder.getTaskId()));
         saveRemindersToProperties(reminders);
         cachedReminders = reminders;
         remindersDirty = false;

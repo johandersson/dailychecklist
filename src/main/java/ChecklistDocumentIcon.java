@@ -115,7 +115,8 @@ public class ChecklistDocumentIcon implements Icon {
         g2.setStroke(new BasicStroke(1.2f));
         int tx = startX + checkboxSize + 6;
         int ty = rowTop + checkboxSize / 2;
-        int txEnd = docX + ICON_WIDTH - 2; // extend line further to the right, light grey
+        // Keep the line inside the rounded document border by adding a small inset
+        int txEnd = docX + ICON_WIDTH - 6;
         g2.drawLine(tx, ty, txEnd, ty);
     }
 

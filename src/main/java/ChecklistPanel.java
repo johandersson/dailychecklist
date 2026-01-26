@@ -21,6 +21,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -164,7 +165,7 @@ public class ChecklistPanel extends JPanel {
 
         // List of tasks
         javax.swing.JList<Task> taskList = new javax.swing.JList<>(tasksToDelete.toArray(Task[]::new));
-        taskList.setCellRenderer(new CheckboxListCellRenderer());
+        taskList.setCellRenderer(new CheckboxListCellRenderer(taskManager));
         taskList.setEnabled(false); // Read-only
         javax.swing.JScrollPane scrollPane = new javax.swing.JScrollPane(taskList);
         scrollPane.setPreferredSize(new java.awt.Dimension(300, 150));
@@ -246,15 +247,43 @@ public class ChecklistPanel extends JPanel {
         JMenuItem removeItem = new JMenuItem("Remove task");
         //Start FocusTimer window item
         JMenuItem startFocusTimerItem = new JMenuItem("Start Focus Timer on task");
+        JMenuItem setTaskReminderItem = new JMenuItem("Set task reminder");
+        JMenuItem removeTaskReminderItem = new JMenuItem("Remove task reminder");
 
         removeItem.addActionListener(event -> removeTask(list, index));
         startFocusTimerItem.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
             FocusTimer.getInstance().startFocusTimer(task.getName(), "5 minutes");
         });
+        setTaskReminderItem.addActionListener(event -> {
+            Task task = list.getModel().getElementAt(index);
+            Reminder existing = taskManager.getReminders().stream()
+                .filter(r -> Objects.equals(r.getTaskId(), task.getId()))
+                .findFirst().orElse(null);
+            String checklistName = task.getType() == TaskType.MORNING ? "MORNING" : task.getType() == TaskType.EVENING ? "EVENING" : null;
+            ReminderEditDialog dialog = new ReminderEditDialog(taskManager, checklistName, existing, () -> updateTasks(), task.getId());
+            dialog.setVisible(true);
+        });
+        removeTaskReminderItem.addActionListener(event -> {
+            Task task = list.getModel().getElementAt(index);
+            Reminder existing = taskManager.getReminders().stream()
+                .filter(r -> Objects.equals(r.getTaskId(), task.getId()))
+                .findFirst().orElse(null);
+            if (existing != null) {
+                int res = javax.swing.JOptionPane.showConfirmDialog(this, "Remove reminder for task '" + task.getName() + "'?", "Confirm", javax.swing.JOptionPane.YES_NO_OPTION);
+                if (res == javax.swing.JOptionPane.YES_OPTION) {
+                    taskManager.removeReminder(existing);
+                    updateTasks();
+                }
+            } else {
+                javax.swing.JOptionPane.showMessageDialog(this, "No reminder set for this task.", "Info", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
         contextMenu.add(editItem);
         contextMenu.add(removeItem);
         contextMenu.add(startFocusTimerItem);
+        contextMenu.add(setTaskReminderItem);
+        contextMenu.add(removeTaskReminderItem);
         contextMenu.show(e.getComponent(), e.getX(), e.getY());
     }
 
@@ -330,7 +359,65 @@ public class ChecklistPanel extends JPanel {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+        // Add a reminder status panel similar to custom checklists
+        JPanel reminderPanel = createReminderStatusPanelForType(title);
+        panel.add(reminderPanel, BorderLayout.NORTH);
         panel.add(new JScrollPane(taskList), BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel createReminderStatusPanelForType(String title) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 5, 2, 5));
+
+        // Determine reminder info for this type (Morning/Evening)
+        java.util.List<Reminder> reminders = taskManager.getReminders();
+        Reminder display = null;
+        java.time.LocalDateTime best = null;
+
+        // For daily lists, checklistName in reminders may be null; match by task type
+        java.util.List<Task> allTasks = taskManager.getAllTasks();
+        for (Reminder r : reminders) {
+            // If reminder is checklist-level and matches the built-in name
+            if (r.getTaskId() == null && title.equalsIgnoreCase(r.getChecklistName())) {
+                display = r;
+                break;
+            }
+            // If task-level, find tasks of this type
+            if (r.getTaskId() != null) {
+                Task t = allTasks.stream().filter(x -> r.getTaskId().equals(x.getId())).findFirst().orElse(null);
+                if (t != null && ((title.equalsIgnoreCase("Morning") && t.getType() == TaskType.MORNING) || (title.equalsIgnoreCase("Evening") && t.getType() == TaskType.EVENING))) {
+                    java.time.LocalDateTime rt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+                    if (best == null || rt.isBefore(best)) {
+                        best = rt;
+                        display = r;
+                    }
+                }
+            }
+        }
+
+        if (display != null) {
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            java.time.LocalDateTime remTime = java.time.LocalDateTime.of(display.getYear(), display.getMonth(), display.getDay(), display.getHour(), display.getMinute());
+            ReminderClockIcon.State state = remTime.isBefore(now) ? (java.time.Duration.between(remTime, now).toHours() > 1 ? ReminderClockIcon.State.VERY_OVERDUE : ReminderClockIcon.State.OVERDUE) : (remTime.isBefore(now.plusMinutes(60)) ? ReminderClockIcon.State.DUE_SOON : ReminderClockIcon.State.FUTURE);
+            javax.swing.Icon icon = IconCache.getReminderClockIcon(display.getHour(), display.getMinute(), state, false);
+            String dateText = String.format("%04d-%02d-%02d", display.getYear(), display.getMonth(), display.getDay());
+            String timeText = String.format("%02d:%02d", display.getHour(), display.getMinute());
+            javax.swing.JPanel small = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 0));
+            small.setOpaque(false);
+            javax.swing.JLabel iconLabel = new javax.swing.JLabel(icon);
+            javax.swing.JLabel textLabel = new javax.swing.JLabel(dateText + " " + timeText);
+            textLabel.setFont(FontManager.getSmallMediumFont());
+            small.add(iconLabel);
+            small.add(textLabel);
+            panel.add(small, BorderLayout.WEST);
+        } else {
+            javax.swing.JLabel noReminderLabel = new javax.swing.JLabel("No reminder set");
+            noReminderLabel.setFont(FontManager.getSmallFont());
+            noReminderLabel.setForeground(java.awt.Color.GRAY);
+            panel.add(noReminderLabel, BorderLayout.WEST);
+        }
+
         return panel;
     }
 

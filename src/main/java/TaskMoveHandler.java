@@ -65,7 +65,14 @@ public class TaskMoveHandler {
                     try {
                         DailyChecklist app = DailyChecklist.getInstance();
                         if (app != null && !tasks.isEmpty()) {
-                            app.jumpToTask(tasks.get(0));
+                            // If the target is a custom checklist, prefer the search/Open-style
+                            // behavior: show the checklist (switch tab) then jump to the task.
+                            if (!isTargetDaily) {
+                                app.showCustomChecklist(checklistName);
+                                app.jumpToTask(tasks.get(0));
+                            } else {
+                                app.jumpToTask(tasks.get(0));
+                            }
                         }
                     } catch (Exception ignore) {}
                 } else {

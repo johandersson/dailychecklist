@@ -186,7 +186,14 @@ public class DailyChecklist {
      */
     private void showReminderDialog(Reminder reminder) {
         SwingUtilities.invokeLater(() -> {
-            ReminderDialog dialog = new ReminderDialog(frame, reminder,
+            // Compute a friendly display title: prefer task name when reminder targets a task
+            String displayTitle = null;
+            if (reminder.getTaskId() != null) {
+                Task t = checklistManager.getTaskById(reminder.getTaskId());
+                if (t != null) displayTitle = t.getName();
+            }
+
+            ReminderDialog dialog = new ReminderDialog(frame, reminder, displayTitle,
                 // On Open action
                 () -> {
                     // Switch to custom checklists tab
@@ -197,7 +204,16 @@ public class DailyChecklist {
                     }
                     // Mark this checklist as opened for this session
                     openedChecklists.add(name);
-                    customChecklistsOverviewPanel.selectChecklistByName(name);
+                        customChecklistsOverviewPanel.selectChecklistByName(name);
+                        // If the reminder references a specific task, try to open that task
+                        if (reminder.getTaskId() != null) {
+                            Task task = checklistManager.getAllTasks().stream()
+                                .filter(t -> reminder.getTaskId().equals(t.getId()))
+                                .findFirst().orElse(null);
+                            if (task != null) {
+                                jumpToTask(task);
+                            }
+                        }
                     frame.setVisible(true);
                     frame.toFront();
                     frame.requestFocus();
@@ -205,10 +221,15 @@ public class DailyChecklist {
                 // On Dismiss action (old Done action)
                 () -> {
                     // Remove all reminders for this checklist
-                    List<Reminder> allReminders = checklistManager.getReminders();
-                    allReminders.stream()
-                        .filter(r -> Objects.equals(r.getChecklistName(), reminder.getChecklistName()))
-                        .forEach(checklistManager::removeReminder);
+                        if (reminder.getTaskId() != null) {
+                            // Remove only this task-level reminder
+                            checklistManager.removeReminder(reminder);
+                        } else {
+                            List<Reminder> allReminders = checklistManager.getReminders();
+                            allReminders.stream()
+                                .filter(r -> Objects.equals(r.getChecklistName(), reminder.getChecklistName()))
+                                .forEach(checklistManager::removeReminder);
+                        }
                 },
                 // On Remind Later (15 minutes)
                 () -> {
@@ -241,6 +262,15 @@ public class DailyChecklist {
                     if (checklist != null) {
                         openedChecklists.add(checklist.getName());
                         customChecklistsOverviewPanel.selectChecklistByName(checklist.getName());
+                        // If the reminder targets a specific task, jump to it
+                        if (reminder.getTaskId() != null) {
+                            Task t = checklistManager.getAllTasks().stream()
+                                .filter(x -> reminder.getTaskId().equals(x.getId()))
+                                .findFirst().orElse(null);
+                            if (t != null) {
+                                jumpToTask(t);
+                            }
+                        }
                         
                         // Mark all tasks in this checklist as done
                         List<Task> tasks = checklistManager.getTasks(TaskType.CUSTOM, checklist);
@@ -485,10 +515,27 @@ public class DailyChecklist {
                 tabbedPane.setSelectedIndex(1);
                 openedChecklists.add(checklist.getName());
                 customChecklistsOverviewPanel.selectChecklistByName(checklist.getName());
-                // Get the panel and scroll
-                CustomChecklistPanel panel = customChecklistsOverviewPanel.getPanelMap().get(checklist.getId());
+                // Get the panel and scroll. If panel isn't ready yet, retry a few times (EDT-friendly).
+                final String targetId = checklist.getId();
+                CustomChecklistPanel panel = customChecklistsOverviewPanel.getPanelMap().get(targetId);
                 if (panel != null) {
                     panel.scrollToTask(task);
+                } else {
+                    final int[] attempts = {0};
+                    final int maxAttempts = 5;
+                    javax.swing.Timer retryTimer = new javax.swing.Timer(50, null);
+                    retryTimer.addActionListener(evt -> {
+                        attempts[0]++;
+                        CustomChecklistPanel p = customChecklistsOverviewPanel.getPanelMap().get(targetId);
+                        if (p != null) {
+                            p.scrollToTask(task);
+                            retryTimer.stop();
+                        } else if (attempts[0] >= maxAttempts) {
+                            retryTimer.stop();
+                        }
+                    });
+                    retryTimer.setRepeats(true);
+                    retryTimer.start();
                 }
             }
         }

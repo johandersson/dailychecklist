@@ -22,6 +22,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.stream.IntStream;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -41,6 +42,7 @@ public class ReminderEditDialog extends JDialog {
     private final String checklistName;
     private final Reminder existingReminder;
     private transient final Runnable onSave;
+    private final String taskIdParam; // optional; if set, operate on task-level reminders
 
     
 
@@ -49,11 +51,16 @@ public class ReminderEditDialog extends JDialog {
     private JButton saveButton;
 
     public ReminderEditDialog(TaskManager taskManager, String checklistName, Reminder existingReminder, Runnable onSave) {
+        this(taskManager, checklistName, existingReminder, onSave, null);
+    }
+
+    public ReminderEditDialog(TaskManager taskManager, String checklistName, Reminder existingReminder, Runnable onSave, String taskIdParam) {
         super();
         this.taskManager = taskManager;
         this.checklistName = checklistName;
         this.existingReminder = existingReminder;
         this.onSave = onSave;
+        this.taskIdParam = taskIdParam;
 
         initializeDialog();
         initializeUI();
@@ -312,32 +319,33 @@ public class ReminderEditDialog extends JDialog {
     }
 
     private void handleNewReminder(int year, int month, int day, int hour, int minute) {
-        // Check for existing reminders
+        // Determine which existing reminders to consider based on taskIdParam
         java.util.List<Reminder> existingReminders = taskManager.getReminders().stream()
             .filter(r -> r.getChecklistName().equals(checklistName))
+            .filter(r -> taskIdParam == null ? r.getTaskId() == null : Objects.equals(r.getTaskId(), taskIdParam))
             .toList();
 
         if (!existingReminders.isEmpty()) {
             int choice = JOptionPane.showConfirmDialog(this,
-                "A reminder already exists for this checklist. Replace it?",
+                taskIdParam == null ? "A reminder already exists for this checklist. Replace it?" : "A reminder already exists for this task. Replace it?",
                 "Replace Reminder", JOptionPane.YES_NO_OPTION);
             if (choice != JOptionPane.YES_OPTION) {
                 return; // Don't add the new reminder
             }
-            // Remove existing reminders for this checklist
+            // Remove matched existing reminders
             for (Reminder existing : existingReminders) {
                 taskManager.removeReminder(existing);
             }
         }
 
-        Reminder newReminder = new Reminder(checklistName, year, month, day, hour, minute);
+        Reminder newReminder = new Reminder(checklistName, year, month, day, hour, minute, taskIdParam);
         taskManager.addReminder(newReminder);
         // Reminder added; panels will show the update directly
     }
 
     private void handleEditReminder(int year, int month, int day, int hour, int minute) {
         taskManager.removeReminder(existingReminder);
-        Reminder newReminder = new Reminder(checklistName, year, month, day, hour, minute);
+        Reminder newReminder = new Reminder(checklistName, year, month, day, hour, minute, taskIdParam != null ? taskIdParam : existingReminder.getTaskId());
         taskManager.addReminder(newReminder);
         // Reminder changed; panels will show the update directly
     }

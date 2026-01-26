@@ -39,6 +39,11 @@ public class ReminderDialog extends JDialog {
 
     @SuppressWarnings("this-escape")
     public ReminderDialog(JFrame parent, Reminder reminder, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow, Runnable onMarkAsDone) {
+        this(parent, reminder, null, onOpen, onDone, onRemindLater, onRemindTomorrow, onMarkAsDone);
+    }
+
+    @SuppressWarnings("this-escape")
+    public ReminderDialog(JFrame parent, Reminder reminder, String displayTitle, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow, Runnable onMarkAsDone) {
         super(parent, "Reminder", true);
         this.onOpen = onOpen;
         this.onDone = onDone;
@@ -50,7 +55,7 @@ public class ReminderDialog extends JDialog {
         setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
         setResizable(false);
 
-        String checklistName = reminder.getChecklistName();
+        String checklistName = displayTitle != null ? displayTitle : reminder.getChecklistName();
         if (checklistName == null || checklistName.trim().isEmpty()) {
             checklistName = "Unknown Checklist";
         }

@@ -18,9 +18,9 @@
 import java.awt.BorderLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import javax.swing.DefaultListModel;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -39,7 +39,7 @@ public class CustomChecklistPanel extends JPanel {
     private transient TaskManager taskManager;
     private Checklist checklist;
     private transient Runnable updateAllPanels;
-    private JPanel reminderStatusPanel;
+    
 
     public CustomChecklistPanel(TaskManager taskManager, Checklist checklist) {
         this(taskManager, checklist, null);
@@ -85,46 +85,68 @@ public class CustomChecklistPanel extends JPanel {
             public void mouseClicked(MouseEvent e) {
                 JList<Task> list = (JList<Task>) e.getSource();
                 int index = list.locationToIndex(e.getPoint());
-                if (index >= 0) {
-                    java.awt.Rectangle cellBounds = list.getCellBounds(index, index);
-                    int checkboxX = cellBounds.x + 10;
-                    int checkboxY = cellBounds.y + cellBounds.height / 2 - 10;
-                    int checkboxSize = 20;
-                    boolean onCheckbox = e.getPoint().x >= checkboxX && e.getPoint().x <= checkboxX + checkboxSize &&
-                                         e.getPoint().y >= checkboxY && e.getPoint().y <= checkboxY + checkboxSize;
+                if (index < 0) return;
 
-                    if (SwingUtilities.isRightMouseButton(e)) {
-                        if (!list.isSelectedIndex(index)) {
-                            list.setSelectedIndex(index);
-                        }
-                        showContextMenu(e, list, index);
-                    } else if (onCheckbox && e.getClickCount() == 1) {
-                        Task task = list.getModel().getElementAt(index);
-                        task.setDone(!task.isDone());
-                        if (task.isDone()) {
-                            task.setDoneDate(new Date(System.currentTimeMillis()));
-                        } else {
-                            task.setDoneDate(null);
-                        }
-                        taskManager.updateTask(task);
-                        list.repaint(cellBounds);
-                    } else if (e.getClickCount() == 2) {
-                        Task task = list.getModel().getElementAt(index);
-                        String rawNewName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for task:", task.getName());
-                        String newName = TaskManager.validateInputWithError(rawNewName, "Task name");
-                        if (newName != null) {
-                            task.setName(newName);
-                            taskManager.updateTask(task);
-                            list.repaint(cellBounds);
-                        }
-                    }
+                java.awt.Rectangle cellBounds = list.getCellBounds(index, index);
+                int checkboxX = cellBounds.x + 10;
+                int checkboxY = cellBounds.y + cellBounds.height / 2 - 10;
+                int checkboxSize = 20;
+                boolean onCheckbox = e.getPoint().x >= checkboxX && e.getPoint().x <= checkboxX + checkboxSize &&
+                                     e.getPoint().y >= checkboxY && e.getPoint().y <= checkboxY + checkboxSize;
+
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    ensureSelection(list, index);
+                    showContextMenu(e, list, index);
+                } else if (onCheckbox && e.getClickCount() == 1) {
+                    toggleTaskDone(list, index, cellBounds);
+                } else if (e.getClickCount() == 2) {
+                    renameTaskInline(list, index, cellBounds);
                 }
             }
         });
     }
 
+    // Helper: ensure the clicked index is selected before showing context menu
+    private void ensureSelection(JList<Task> list, int index) {
+        if (!list.isSelectedIndex(index)) list.setSelectedIndex(index);
+    }
+
+    // Helper: toggle done state for a task at the given index
+    private void toggleTaskDone(JList<Task> list, int index, java.awt.Rectangle cellBounds) {
+        Task task = list.getModel().getElementAt(index);
+        task.setDone(!task.isDone());
+        if (task.isDone()) {
+            task.setDoneDate(new Date(System.currentTimeMillis()));
+        } else {
+            task.setDoneDate(null);
+        }
+        taskManager.updateTask(task);
+        list.repaint(cellBounds);
+    }
+
+    // Helper: rename a task using the existing inline prompt
+    private void renameTaskInline(JList<Task> list, int index, java.awt.Rectangle cellBounds) {
+        Task task = list.getModel().getElementAt(index);
+        String rawNewName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for task:", task.getName());
+        String newName = TaskManager.validateInputWithError(rawNewName, "Task name");
+        if (newName != null) {
+            task.setName(newName);
+            taskManager.updateTask(task);
+            list.repaint(cellBounds);
+        }
+    }
+
     private void showContextMenu(MouseEvent e, JList<Task> list, int index) {
         JPopupMenu contextMenu = new JPopupMenu();
+        contextMenu.add(createEditMenuItem(list, index));
+        contextMenu.add(createRemoveMenuItem(list, index));
+        contextMenu.add(createStartFocusTimerItem(list, index));
+        contextMenu.add(createSetTaskReminderItem(list, index));
+        contextMenu.add(createRemoveTaskReminderItem(list, index));
+        contextMenu.show(list, e.getX(), e.getY());
+    }
+
+    private JMenuItem createEditMenuItem(JList<Task> list, int index) {
         JMenuItem editItem = new JMenuItem("Rename task");
         editItem.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
@@ -136,19 +158,61 @@ public class CustomChecklistPanel extends JPanel {
                 list.repaint(list.getCellBounds(index, index));
             }
         });
-        JMenuItem removeItem = new JMenuItem("Remove task");
-        //Start FocusTimer window item
-        JMenuItem startFocusTimerItem = new JMenuItem("Start Focus Timer on task");
+        return editItem;
+    }
 
+    private JMenuItem createRemoveMenuItem(JList<Task> list, int index) {
+        JMenuItem removeItem = new JMenuItem("Remove task");
         removeItem.addActionListener(event -> removeTask(list, index));
-        startFocusTimerItem.addActionListener(event -> {
+        return removeItem;
+    }
+
+    private JMenuItem createStartFocusTimerItem(JList<Task> list, int index) {
+        JMenuItem item = new JMenuItem("Start Focus Timer on task");
+        item.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
             FocusTimer.getInstance().startFocusTimer(task.getName(), "5 minutes");
         });
-        contextMenu.add(editItem);
-        contextMenu.add(removeItem);
-        contextMenu.add(startFocusTimerItem);
-        contextMenu.show(list, e.getX(), e.getY());
+        return item;
+    }
+
+    private JMenuItem createSetTaskReminderItem(JList<Task> list, int index) {
+        JMenuItem item = new JMenuItem("Set task reminder");
+        item.addActionListener(event -> {
+            Task task = list.getModel().getElementAt(index);
+            Reminder existing = taskManager.getReminders().stream()
+                .filter(r -> Objects.equals(r.getChecklistName(), checklist.getName()))
+                .filter(r -> Objects.equals(r.getTaskId(), task.getId()))
+                .findFirst().orElse(null);
+            ReminderEditDialog dialog = new ReminderEditDialog(taskManager, checklist.getName(), existing, () -> {
+                if (updateAllPanels != null) updateAllPanels.run();
+                updateTasks();
+            }, task.getId());
+            dialog.setVisible(true);
+        });
+        return item;
+    }
+
+    private JMenuItem createRemoveTaskReminderItem(JList<Task> list, int index) {
+        JMenuItem item = new JMenuItem("Remove task reminder");
+        item.addActionListener(event -> {
+            Task task = list.getModel().getElementAt(index);
+            Reminder existing = taskManager.getReminders().stream()
+                .filter(r -> Objects.equals(r.getChecklistName(), checklist.getName()))
+                .filter(r -> Objects.equals(r.getTaskId(), task.getId()))
+                .findFirst().orElse(null);
+            if (existing != null) {
+                int res = JOptionPane.showConfirmDialog(this, "Remove reminder for task '" + task.getName() + "'?", "Confirm", JOptionPane.YES_NO_OPTION);
+                if (res == JOptionPane.YES_OPTION) {
+                    taskManager.removeReminder(existing);
+                    if (updateAllPanels != null) updateAllPanels.run();
+                    updateTasks();
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "No reminder set for this task.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+        return item;
     }
 
     private void removeTask(JList<Task> list, int index) {
@@ -163,89 +227,119 @@ public class CustomChecklistPanel extends JPanel {
     private JPanel createPanel(JList<Task> taskList) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 6, 6));
-
-        // Add reminder status panel at the top
-        reminderStatusPanel = createReminderStatusPanel();
-        panel.add(reminderStatusPanel, BorderLayout.NORTH);
-
+        
         JScrollPane scrollPane = new JScrollPane(taskList);
         panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
     }
 
-    private JPanel createReminderStatusPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 5, 2, 5));
-        populateReminderPanel(panel);
-        return panel;
-    }
+    
 
     private void populateReminderPanel(JPanel panel) {
         panel.removeAll();
 
-        // Check if there's a reminder for this checklist
-        boolean hasReminder = taskManager.getReminders().stream()
-                .anyMatch(r -> r.getChecklistName().equals(checklist.getName()));
+        // Separate data selection from UI building for improved SOC
+        ReminderDisplay display = findReminderToDisplay();
+        buildReminderPanelUI(panel, display);
+        panel.revalidate();
+        panel.repaint();
+    }
 
-        if (hasReminder) {
-            Reminder reminder = taskManager.getReminders().stream()
-                    .filter(r -> r.getChecklistName().equals(checklist.getName()))
-                    .findFirst()
-                    .orElse(null);
+    /**
+     * Holds the reminder and optional extra info (e.g., task name) to display.
+     */
+    private static final class ReminderDisplay {
+        final Reminder reminder;
+        final String extraInfo;
+        ReminderDisplay(Reminder r, String info) { this.reminder = r; this.extraInfo = info; }
+    }
 
-            // Compute reminder state (overdue, due soon within 60 minutes, or future)
-            Calendar now = Calendar.getInstance();
-            Calendar remCal = Calendar.getInstance();
-            remCal.set(reminder.getYear(), reminder.getMonth() - 1, reminder.getDay(), reminder.getHour(), reminder.getMinute(), 0);
-            long diff = remCal.getTimeInMillis() - now.getTimeInMillis();
-            ReminderClockIcon.State state = diff < 0
-                ? (Math.abs(diff) > 60L * 60L * 1000L ? ReminderClockIcon.State.VERY_OVERDUE : ReminderClockIcon.State.OVERDUE)
-                : (diff <= 60L * 60L * 1000L ? ReminderClockIcon.State.DUE_SOON : ReminderClockIcon.State.FUTURE);
+    /**
+     * Decide which reminder to show for this checklist: prefer checklist-level reminder,
+     * otherwise pick the earliest task-level reminder belonging to tasks in this checklist.
+     */
+    private ReminderDisplay findReminderToDisplay() {
+        java.util.List<Reminder> reminders = taskManager.getReminders();
+        // Checklist-level reminder
+        Reminder checklistReminder = reminders.stream()
+                .filter(r -> Objects.equals(r.getChecklistName(), checklist.getName()) && r.getTaskId() == null)
+                .findFirst().orElse(null);
+        if (checklistReminder != null) return new ReminderDisplay(checklistReminder, null);
 
-            // Create icon without its own time text; use cached instance
-            javax.swing.Icon icon = IconCache.getReminderClockIcon(reminder.getHour(), reminder.getMinute(), state, false);
-            String dateText = String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
-            String timeText = String.format("%02d:%02d", reminder.getHour(), reminder.getMinute());
+        // Task-level: find earliest upcoming/reminder for tasks in this checklist
+        java.util.List<Task> tasks = taskManager.getTasks(TaskType.CUSTOM, checklist);
+        java.util.Set<String> taskIds = new java.util.HashSet<>();
+        for (Task t : tasks) taskIds.add(t.getId());
 
-            javax.swing.JPanel small = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 0));
-            small.setOpaque(false);
-            javax.swing.JLabel iconLabel = new javax.swing.JLabel(icon);
-            javax.swing.JLabel textLabel = new javax.swing.JLabel(dateText + " " + timeText);
-            textLabel.setFont(FontManager.getSmallMediumFont());
-
-            // Choose a darker orange for readability
-            java.awt.Color dueSoonColor = new java.awt.Color(204, 102, 0);
-            switch (state) {
-                case OVERDUE -> textLabel.setForeground(java.awt.Color.RED);
-                case DUE_SOON -> textLabel.setForeground(dueSoonColor);
-                default -> textLabel.setForeground(java.awt.Color.BLUE);
+        Reminder best = null;
+        java.time.LocalDateTime bestTime = null;
+        String extraInfo = null;
+        for (Reminder r : reminders) {
+            if (r.getTaskId() == null) continue;
+            if (!taskIds.contains(r.getTaskId())) continue;
+            java.time.LocalDateTime rt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+            if (bestTime == null || rt.isBefore(bestTime)) {
+                bestTime = rt;
+                best = r;
+                Task t = tasks.stream().filter(x -> x.getId().equals(r.getTaskId())).findFirst().orElse(null);
+                extraInfo = t == null ? null : t.getName();
             }
+        }
+        if (best == null) return null;
+        return new ReminderDisplay(best, extraInfo);
+    }
 
-            // Add right-click menu to remove the reminder on the whole small panel
-            MouseAdapter ma = new MouseAdapter() {
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    if (SwingUtilities.isRightMouseButton(e)) showReminderPopup(e, reminder);
-                }
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    if (SwingUtilities.isRightMouseButton(e)) showReminderPopup(e, reminder);
-                }
-            };
-            iconLabel.addMouseListener(ma);
-            textLabel.addMouseListener(ma);
-            small.add(iconLabel);
-            small.add(textLabel);
-            panel.add(small, BorderLayout.WEST);
-        } else {
+    /**
+     * Build the UI for the reminder panel from the prepared display object.
+     */
+    private void buildReminderPanelUI(JPanel panel, ReminderDisplay display) {
+        if (display == null || display.reminder == null) {
             JLabel noReminderLabel = new JLabel("No reminder set");
             noReminderLabel.setFont(FontManager.getSmallFont());
             noReminderLabel.setForeground(java.awt.Color.GRAY);
             panel.add(noReminderLabel, BorderLayout.WEST);
+            return;
         }
 
-        panel.revalidate();
-        panel.repaint();
+        Reminder r = display.reminder;
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime remTime = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+        ReminderClockIcon.State state;
+        if (remTime.isBefore(now)) {
+            state = java.time.Duration.between(remTime, now).toHours() > 1 ? ReminderClockIcon.State.VERY_OVERDUE : ReminderClockIcon.State.OVERDUE;
+        } else if (remTime.isBefore(now.plusMinutes(60))) {
+            state = ReminderClockIcon.State.DUE_SOON;
+        } else {
+            state = ReminderClockIcon.State.FUTURE;
+        }
+
+        String labelText = (display.extraInfo != null) ? ("Reminder for: " + display.extraInfo) : "Reminder set";
+        javax.swing.JLabel textLabel = new javax.swing.JLabel(labelText);
+        textLabel.setFont(FontManager.getSmallMediumFont());
+
+        java.awt.Color dueSoonColor = new java.awt.Color(204, 102, 0);
+        switch (state) {
+            case OVERDUE -> textLabel.setForeground(java.awt.Color.RED);
+            case DUE_SOON -> textLabel.setForeground(dueSoonColor);
+            default -> textLabel.setForeground(java.awt.Color.BLUE);
+        }
+
+        final Reminder rem = r;
+        MouseAdapter ma = new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) showReminderPopup(e, rem);
+            }
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) showReminderPopup(e, rem);
+            }
+        };
+        textLabel.addMouseListener(ma);
+        javax.swing.JPanel small = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 0));
+        small.setOpaque(false);
+        small.add(textLabel);
+        panel.add(small, BorderLayout.WEST);
     }
 
     private void showReminderPopup(MouseEvent e, Reminder reminder) {
@@ -308,9 +402,7 @@ public class CustomChecklistPanel extends JPanel {
                         }
                     }
 
-                    if (reminderStatusPanel != null) {
-                        populateReminderPanel(reminderStatusPanel);
-                    }
+                    // Reminder status panel was removed; nothing to populate here
                     customTaskList.revalidate();
                     customTaskList.repaint();
                 } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
