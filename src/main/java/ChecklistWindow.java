@@ -38,7 +38,7 @@ public class ChecklistWindow extends JFrame {
 
     private void initialize() {
         setTitle("Checklist: " + checklist.getName());
-        setIconImage(createAppIcon());
+        setIconImage(IconCache.getAppIcon());
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(400, 700); // Increased height for split
         setLocationRelativeTo(null);

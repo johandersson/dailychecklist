@@ -16,6 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -37,9 +38,21 @@ public final class IconCache {
     private static final ConcurrentMap<String, Icon> reminderClockCache = new ConcurrentHashMap<>();
     private static final ConcurrentLinkedQueue<String> reminderClockKeys = new ConcurrentLinkedQueue<>();
     private static final int MAX_REMINDER_ICONS = 200;
+    // Cached application icon (32x32)
+    private static volatile Image APP_ICON;
 
     public static Icon getChecklistDocumentIcon() {
         return CHECKLIST_DOC;
+    }
+
+    public static Image getAppIcon() {
+        Image img = APP_ICON;
+        if (img != null) return img;
+        synchronized (IconCache.class) {
+            if (APP_ICON != null) return APP_ICON;
+            APP_ICON = createAppIcon();
+            return APP_ICON;
+        }
     }
 
     public static Icon getZzzIcon() {
@@ -88,5 +101,47 @@ public final class IconCache {
             g.dispose();
         }
         CHECKLIST_DOC = new javax.swing.ImageIcon(img);
+    }
+
+    private static Image createAppIcon() {
+        int size = 32;
+        BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D g2 = image.createGraphics();
+
+        // Enable anti-aliasing
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Clear background to transparent
+        g2.setComposite(java.awt.AlphaComposite.Clear);
+        g2.fillRect(0, 0, size, size);
+        g2.setComposite(java.awt.AlphaComposite.SrcOver);
+
+        // Define checkbox dimensions (centered)
+        int checkboxSize = 24;
+        int checkboxX = (size - checkboxSize) / 2;
+        int checkboxY = (size - checkboxSize) / 2;
+
+        // Draw subtle shadow
+        g2.setColor(new java.awt.Color(200, 200, 200, 100));
+        g2.fillRoundRect(checkboxX + 1, checkboxY + 1, checkboxSize, checkboxSize, 6, 6);
+
+        // Draw checkbox outline
+        g2.setColor(new java.awt.Color(120, 120, 120));
+        g2.drawRoundRect(checkboxX, checkboxY, checkboxSize, checkboxSize, 6, 6);
+
+        // Fill checkbox with white
+        g2.setColor(java.awt.Color.WHITE);
+        g2.fillRoundRect(checkboxX + 1, checkboxY + 1, checkboxSize - 2, checkboxSize - 2, 6, 6);
+
+        // Draw checkmark
+        g2.setColor(new java.awt.Color(76, 175, 80)); // Material green
+        g2.setStroke(new java.awt.BasicStroke(2, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+        int offsetX = checkboxX + 3;
+        int offsetY = checkboxY + 6;
+        g2.drawLine(offsetX + 2, offsetY + 6, offsetX + 7, offsetY + 11);
+        g2.drawLine(offsetX + 7, offsetY + 11, offsetX + 15, offsetY + 1);
+
+        g2.dispose();
+        return image;
     }
 }

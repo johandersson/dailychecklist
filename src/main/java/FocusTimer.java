@@ -43,7 +43,7 @@ import javax.swing.Timer;
             private FocusTimer() {
                 if (!java.awt.GraphicsEnvironment.isHeadless()) {
                     frame = new JFrame("Focus Timer");
-                    frame.setIconImage(createAppIcon());
+                    frame.setIconImage(IconCache.getAppIcon());
                     frame.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
                     frame.setSize(400, 300);
                     frame.setAlwaysOnTop(true);

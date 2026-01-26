@@ -33,7 +33,7 @@ import javax.swing.ListSelectionModel;
 public class SearchDialog {
     public static void showSearchDialog(java.awt.Component parent, TaskManager taskManager, DailyChecklist dailyChecklist) {
         JDialog dialog = new JDialog((java.awt.Frame) null, "Search", true);
-        dialog.setIconImage(DailyChecklist.createAppIcon());
+        dialog.setIconImage(IconCache.getAppIcon());
         dialog.setLayout(new BorderLayout());
 
         JPanel searchPanel = new JPanel(new FlowLayout());

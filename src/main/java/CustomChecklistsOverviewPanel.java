@@ -397,11 +397,29 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private void deleteChecklist() {
         if (selectedChecklist == null) return;
         String name = selectedChecklist.getName();
-        Object[] options = {"Delete list", "Move to morning", "Move to evening", "Cancel"};
-        int choice = JOptionPane.showOptionDialog(this, "What to do with the tasks in '" + name + "'?", "Delete Checklist", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[3]);
-        switch (choice) {
-            case 0 -> {
-                // Delete list
+
+        // Determine if checklist contains any tasks. Only offer "Move to" options when there are tasks.
+        boolean hasTasks = taskManager.getAllTasks().stream().anyMatch(t -> selectedChecklist.getId().equals(t.getChecklistId()));
+
+        Object[] options;
+        if (hasTasks) {
+            options = new Object[]{"Delete list", "Move to morning", "Move to evening", "Cancel"};
+        } else {
+            options = new Object[]{"Delete list", "Cancel"};
+        }
+
+        int defaultOption = options.length - 1; // Cancel index
+        int choice = JOptionPane.showOptionDialog(this, "What to do with the tasks in '" + name + "'?", "Delete Checklist", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[defaultOption]);
+
+        if (choice < 0 || choice == defaultOption) {
+            // User closed dialog or chose Cancel
+            return;
+        }
+
+        if (!hasTasks) {
+            // Only possible choice is Delete list (index 0)
+            if (choice == 0) {
+                // Delete list: remove any tasks (none expected) defensively
                 List<Task> allTasks = taskManager.getAllTasks();
                 for (Task task : allTasks) {
                     if (task.getChecklistId() != null && task.getChecklistId().equals(selectedChecklist.getId())) {
@@ -409,18 +427,25 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                     }
                 }
             }
-            case 1 -> // Move to morning
-                moveTasksToType(selectedChecklist.getId(), TaskType.MORNING);
-            case 2 -> // Move to evening
-                moveTasksToType(selectedChecklist.getId(), TaskType.EVENING);
-            case 3 -> // Cancel - do nothing
-                {
+        } else {
+            switch (choice) {
+                case 0 -> {
+                    // Delete list
+                    List<Task> allTasks = taskManager.getAllTasks();
+                    for (Task task : allTasks) {
+                        if (task.getChecklistId() != null && task.getChecklistId().equals(selectedChecklist.getId())) {
+                            taskManager.removeTask(task);
+                        }
+                    }
+                }
+                case 1 -> // Move to morning
+                    moveTasksToType(selectedChecklist.getId(), TaskType.MORNING);
+                case 2 -> // Move to evening
+                    moveTasksToType(selectedChecklist.getId(), TaskType.EVENING);
+                default -> {
                     return;
                 }
-            default -> // closed dialog or unexpected value - treat as cancel
-                {
-                    return;
-                }
+            }
         }
 
         // Remove all reminders for this checklist
