@@ -80,10 +80,17 @@ public class BackupRestoreDialog {
         FileNameExtensionFilter zipFilter = new FileNameExtensionFilter("Daily Checklist backups (*.zip)", "zip");
         chooser.addChoosableFileFilter(zipFilter);
         chooser.setFileFilter(zipFilter);
-        chooser.setAcceptAllFileFilterUsed(true);
+        chooser.setAcceptAllFileFilterUsed(false);
         int res = chooser.showOpenDialog(parent);
         if (res != JFileChooser.APPROVE_OPTION) return null;
         File chosen = chooser.getSelectedFile();
+        // Require .zip extension to make it explicit that backups must be ZIP files
+        if (chosen == null || !chosen.getName().toLowerCase().endsWith(".zip")) {
+            JOptionPane.showMessageDialog(parent,
+                "Please select a .zip backup file.",
+                "Select ZIP Backup", JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
         try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(chosen)) {
             boolean hasTasks = zf.getEntry("tasks.xml") != null;
             boolean hasNames = zf.getEntry("checklist-names.properties") != null;
