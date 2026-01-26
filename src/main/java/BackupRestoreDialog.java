@@ -42,22 +42,48 @@ public class BackupRestoreDialog {
      * Shows the restore from backup dialog.
      */
     public static void showRestoreDialog(Component parent, TaskManager taskManager, Runnable updateTasks) {
-        // Let the user pick a backup ZIP file instead of auto-selecting the latest.
+        File chosen = chooseBackupFile(parent);
+        if (chosen == null) return;
+
+        Map<String,String> checklists = readChecklistsFromZip(chosen);
+        List<Task> backupTasks = loadBackupTasks(chosen);
+        if (backupTasks == null) {
+            ErrorDialog.showError(parent, "Failed to load backup tasks.");
+            return;
+        }
+
+        List<Task> morningTasks = backupTasks.stream().filter(t -> t.getType() == TaskType.MORNING).collect(Collectors.toList());
+        List<Task> eveningTasks = backupTasks.stream().filter(t -> t.getType() == TaskType.EVENING).collect(Collectors.toList());
+        List<Task> customTasks = backupTasks.stream().filter(t -> t.getType() == TaskType.CUSTOM).collect(Collectors.toList());
+
+        List<Task> currentTasks = taskManager.getAllTasks();
+        java.util.Set<String> existingIds = currentTasks.stream().map(Task::getId).collect(java.util.stream.Collectors.toSet());
+
+        Map<String,Integer> checklistTaskCounts = computeChecklistTaskCounts(checklists, customTasks, existingIds);
+        int newChecklistCount = computeNewChecklistCount(checklists);
+
+        List<Task> backupTasksCopy = new ArrayList<>(backupTasks);
+        Map<String,String> checklistsCopy = new LinkedHashMap<>(checklists);
+
+        Runnable onRestore = createOnRestoreRunnable(parent, taskManager, updateTasks, checklistsCopy, customTasks, morningTasks, eveningTasks, currentTasks);
+
+        int morningImportCount = (int) morningTasks.stream().filter(t -> !existingIds.contains(t.getId())).count();
+        int eveningImportCount = (int) eveningTasks.stream().filter(t -> !existingIds.contains(t.getId())).count();
+        RestorePreview preview = new RestorePreview(checklistsCopy, checklistTaskCounts, newChecklistCount, morningImportCount, eveningImportCount);
+        RestorePreviewDialog.showDialog(parent, currentTasks, backupTasksCopy, chosen, onRestore, preview);
+    }
+
+    private static File chooseBackupFile(Component parent) {
         JFileChooser chooser = new JFileChooser(ApplicationConfiguration.BACKUP_DIRECTORY);
         chooser.setDialogTitle("Select backup ZIP to restore from");
         chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-        // Allow all files but offer a ZIP filter so users can easily pick backups
         FileNameExtensionFilter zipFilter = new FileNameExtensionFilter("Daily Checklist backups (*.zip)", "zip");
         chooser.addChoosableFileFilter(zipFilter);
         chooser.setFileFilter(zipFilter);
         chooser.setAcceptAllFileFilterUsed(true);
         int res = chooser.showOpenDialog(parent);
-        if (res != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
+        if (res != JFileChooser.APPROVE_OPTION) return null;
         File chosen = chooser.getSelectedFile();
-
-        // Quick validation: ensure the file is a readable ZIP and looks like a program backup
         try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(chosen)) {
             boolean hasTasks = zf.getEntry("tasks.xml") != null;
             boolean hasNames = zf.getEntry("checklist-names.properties") != null;
@@ -65,36 +91,33 @@ public class BackupRestoreDialog {
                 JOptionPane.showMessageDialog(parent,
                     "The selected file does not look like a Daily Checklist backup (missing tasks.xml and checklist-names.properties).",
                     "Invalid Backup", JOptionPane.ERROR_MESSAGE);
-                return;
+                return null;
             }
         } catch (java.util.zip.ZipException ze) {
-            // Not a valid zip archive
             JOptionPane.showMessageDialog(parent,
                 "The selected file is not a valid ZIP archive or is corrupted.",
                 "Invalid ZIP File", JOptionPane.ERROR_MESSAGE);
-            return;
+            return null;
         } catch (java.io.IOException ioe) {
             ApplicationErrorHandler.showBackupError(parent, ioe instanceof Exception ? (Exception)ioe : new Exception(ioe));
-            return;
+            return null;
         }
+        return chosen;
+    }
 
-        // Read available checklists from the selected ZIP
-        Map<String,String> checklists = readChecklistsFromZip(chosen);
-
-        // Load all tasks from the ZIP and filter for MORNING and EVENING tasks
-        List<Task> backupTasks = loadBackupTasks(chosen);
-        if (backupTasks == null) {
-            ErrorDialog.showError(parent, "Failed to load backup tasks.");
-            return;
+    private static Map<String,Integer> computeChecklistTaskCounts(Map<String,String> checklists, List<Task> customTasks, java.util.Set<String> existingIds) {
+        Map<String,Integer> counts = new LinkedHashMap<>();
+        for (String id : checklists.keySet()) counts.put(id, 0);
+        for (Task t : customTasks) {
+            String id = t.getChecklistId();
+            if (id == null) continue;
+            if (existingIds.contains(t.getId())) continue;
+            counts.put(id, counts.getOrDefault(id, 0) + 1);
         }
+        return counts;
+    }
 
-        // Compute task breakdown from the backup
-        List<Task> morningTasks = backupTasks.stream().filter(t -> t.getType() == TaskType.MORNING).collect(Collectors.toList());
-        List<Task> eveningTasks = backupTasks.stream().filter(t -> t.getType() == TaskType.EVENING).collect(Collectors.toList());
-        List<Task> customTasks = backupTasks.stream().filter(t -> t.getType() == TaskType.CUSTOM).collect(Collectors.toList());
-
-        // Compute how many checklists would be added
-        int newChecklistCount = 0;
+    private static int computeNewChecklistCount(Map<String,String> checklists) {
         try {
             File liveFile = new File(ApplicationConfiguration.CHECKLIST_NAMES_FILE_PATH);
             java.util.Set<String> liveKeys = new java.util.HashSet<>();
@@ -105,49 +128,23 @@ public class BackupRestoreDialog {
                 }
                 for (String k : p.stringPropertyNames()) liveKeys.add(k);
             }
+            int newChecklistCount = 0;
             for (String k : checklists.keySet()) if (!liveKeys.contains(k)) newChecklistCount++;
+            return newChecklistCount;
         } catch (java.io.IOException ex) {
-            newChecklistCount = checklists.size();
+            return checklists.size();
         }
+    }
 
-        // Prepare current and backup task lists and compute per-checklist task counts for stats.
-        List<Task> currentTasks = taskManager.getAllTasks();
-        java.util.Set<String> existingIds = currentTasks.stream().map(Task::getId).collect(java.util.stream.Collectors.toSet());
-        List<Task> backupTasksCopy = new ArrayList<>(backupTasks);
-        Map<String,String> checklistsCopy = new LinkedHashMap<>(checklists);
-
-        // Count custom tasks per checklist id (preserve insertion order from checklists)
-        // Only count tasks that would actually be imported (i.e., whose UUID is not already present)
-        Map<String,Integer> checklistTaskCounts = new LinkedHashMap<>();
-        for (String id : checklistsCopy.keySet()) checklistTaskCounts.put(id, 0);
-        for (Task t : customTasks) {
-            String id = t.getChecklistId();
-            if (id == null) continue;
-            if (existingIds.contains(t.getId())) continue; // skip tasks already present
-            checklistTaskCounts.put(id, checklistTaskCounts.getOrDefault(id, 0) + 1);
-        }
-
-        Runnable onRestore = () -> {
-            // Backup current data file before merging
+    private static Runnable createOnRestoreRunnable(Component parent, TaskManager taskManager, Runnable updateTasks, Map<String,String> checklistsCopy, List<Task> customTasks, List<Task> morningTasks, List<Task> eveningTasks, List<Task> currentTasks) {
+        return () -> {
             File liveBackup = backupLiveData();
-
-            // Merge all checklist names from backup into live properties
             if (!checklistsCopy.isEmpty()) mergeChecklistsToLive(checklistsCopy);
-
-            // Merge imported tasks into current tasks (avoid duplicates)
             List<Task> merged = new ArrayList<>(currentTasks);
             java.util.Set<String> mergedIds = merged.stream().map(Task::getId).collect(Collectors.toSet());
-            for (Task t : customTasks) {
-                if (!mergedIds.contains(t.getId())) merged.add(t);
-            }
-            for (Task t : morningTasks) {
-                if (!mergedIds.contains(t.getId())) merged.add(t);
-            }
-            for (Task t : eveningTasks) {
-                if (!mergedIds.contains(t.getId())) merged.add(t);
-            }
-
-            // Apply merged tasks
+            for (Task t : customTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
+            for (Task t : morningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
+            for (Task t : eveningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
             try {
                 taskManager.setTasks(merged);
                 updateTasks.run();
@@ -156,14 +153,6 @@ public class BackupRestoreDialog {
                 ErrorDialog.showError(parent, "Failed to import tasks", e);
             }
         };
-
-        // Build preview object and show the diff/preview dialog (single confirmation)
-        // Morning/evening counts should also only count tasks that would be imported (skip existing UUIDs)
-        int morningImportCount = (int) morningTasks.stream().filter(t -> !existingIds.contains(t.getId())).count();
-        int eveningImportCount = (int) eveningTasks.stream().filter(t -> !existingIds.contains(t.getId())).count();
-        RestorePreview preview = new RestorePreview(checklistsCopy, checklistTaskCounts, newChecklistCount, morningImportCount, eveningImportCount);
-        // Show the diff/preview dialog (delegates to RestorePreviewDialog)
-        RestorePreviewDialog.showDialog(parent, currentTasks, backupTasksCopy, chosen, onRestore, preview);
     }
 
     private static void mergeChecklistsToLive(Map<String,String> checklists) {
