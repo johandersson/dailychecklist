@@ -53,8 +53,9 @@ public class ChecklistWindow extends JFrame {
         }, checklist.getName());
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, checklistScroll, addPanel);
-        splitPane.setDividerLocation(400); // Adjust as needed
-        splitPane.setResizeWeight(0.7); // More space for checklist
+        // Favor the add panel to occupy most of the window so adding tasks uses most space.
+        splitPane.setResizeWeight(0.15); // top gets 15%, bottom (add area) gets ~85%
+        splitPane.setDividerLocation(0.15); // proportional initial divider location
         splitPane.setDividerSize(4);
         splitPane.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
 

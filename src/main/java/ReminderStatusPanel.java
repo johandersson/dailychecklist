@@ -43,6 +43,10 @@ public class ReminderStatusPanel extends JPanel {
         javax.swing.JLabel iconLabel = new javax.swing.JLabel(icon);
         javax.swing.JLabel textLabel = new javax.swing.JLabel(text);
         textLabel.setFont(FontManager.getSmallMediumFont());
+        // Tooltip to explain the reminder timestamp when hovering the icon or text
+        String tooltip = "Reminder: " + text;
+        iconLabel.setToolTipText(tooltip);
+        textLabel.setToolTipText(tooltip);
         small.add(iconLabel);
         small.add(textLabel);
         add(small, BorderLayout.WEST);

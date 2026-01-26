@@ -26,7 +26,55 @@ public class TaskListFactory {
     private TaskListFactory() {}
 
     public static JList<Task> createTaskList(DefaultListModel<Task> listModel, TaskManager taskManager, String checklistName, Runnable updateCallback, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel) {
-        JList<Task> taskList = new JList<>(listModel);
+        JList<Task> taskList = new JList<>(listModel) {
+            private static final long serialVersionUID = 1L;
+            // Match the renderer's reserved areas so tooltips align with painted icons
+            private final int REMINDER_ICON_AREA = 80;
+            private final int WEEKDAY_ICON_AREA = 40;
+
+            @Override
+            public String getToolTipText(MouseEvent e) {
+                int idx = locationToIndex(e.getPoint());
+                if (idx < 0) return super.getToolTipText(e);
+                java.awt.Rectangle cb = getCellBounds(idx, idx);
+                if (cb == null) return super.getToolTipText(e);
+                int relX = e.getX() - cb.x;
+                int cellW = cb.width;
+
+                int reminderStart = cellW - WEEKDAY_ICON_AREA - REMINDER_ICON_AREA;
+                int weekdayStart = cellW - WEEKDAY_ICON_AREA;
+
+                Task t = getModel().getElementAt(idx);
+
+                // Weekday tooltip (far right circle)
+                if (relX >= weekdayStart) {
+                    String wd = t.getWeekday();
+                    if (wd != null && !wd.isEmpty()) {
+                        String nice = wd.substring(0,1).toUpperCase() + wd.substring(1).toLowerCase();
+                        return "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + nice + " daily task</p></html>";
+                    }
+                    return super.getToolTipText(e);
+                }
+
+                // Reminder tooltip (left of weekday area)
+                if (relX >= reminderStart && relX < weekdayStart) {
+                    // find a reminder for this task if any
+                    Reminder found = null;
+                    if (taskManager != null && t != null && t.getId() != null) {
+                        for (Reminder r : taskManager.getReminders()) {
+                            if (t.getId().equals(r.getTaskId())) { found = r; break; }
+                        }
+                    }
+                    if (found != null) {
+                        String txt = String.format("Reminder: %04d-%02d-%02d %02d:%02d", found.getYear(), found.getMonth(), found.getDay(), found.getHour(), found.getMinute());
+                        return "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + txt + "</p></html>";
+                    }
+                    return super.getToolTipText(e);
+                }
+
+                return super.getToolTipText(e);
+            }
+        };
         taskList.setCellRenderer(new CheckboxListCellRenderer(taskManager));
         taskList.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         taskList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Consistent selection color

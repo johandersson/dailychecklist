@@ -336,8 +336,18 @@ public class CustomChecklistPanel extends JPanel {
             }
         };
         textLabel.addMouseListener(ma);
+        // Add a clock icon with its own tooltip alongside the text label
         javax.swing.JPanel small = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 0));
         small.setOpaque(false);
+        javax.swing.Icon icon = IconCache.getReminderClockIcon(r.getHour(), r.getMinute(), state, false);
+        javax.swing.JLabel iconLabel = new javax.swing.JLabel(icon);
+        // Small HTML tooltip matching help dialog paragraph text size
+        String tip = String.format("Reminder: %04d-%02d-%02d %02d:%02d", r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+        iconLabel.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + tip + "</p></html>");
+        // Ensure right-clicks on the icon open same popup
+        iconLabel.addMouseListener(ma);
+        textLabel.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + tip + "</p></html>");
+        small.add(iconLabel);
         small.add(textLabel);
         panel.add(small, BorderLayout.WEST);
     }
