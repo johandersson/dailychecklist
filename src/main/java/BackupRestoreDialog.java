@@ -65,7 +65,8 @@ public class BackupRestoreDialog {
         List<Task> backupTasksCopy = new ArrayList<>(backupTasks);
         Map<String,String> checklistsCopy = new LinkedHashMap<>(checklists);
 
-        Runnable onRestore = createOnRestoreRunnable(parent, taskManager, updateTasks, checklistsCopy, customTasks, morningTasks, eveningTasks, currentTasks);
+        RestoreContext restoreCtx = new RestoreContext(parent, taskManager, updateTasks, checklistsCopy, customTasks, morningTasks, eveningTasks, currentTasks);
+        Runnable onRestore = createOnRestoreRunnable(restoreCtx);
 
         int morningImportCount = (int) morningTasks.stream().filter(t -> !existingIds.contains(t.getId())).count();
         int eveningImportCount = (int) eveningTasks.stream().filter(t -> !existingIds.contains(t.getId())).count();
@@ -143,21 +144,43 @@ public class BackupRestoreDialog {
         }
     }
 
-    private static Runnable createOnRestoreRunnable(Component parent, TaskManager taskManager, Runnable updateTasks, Map<String,String> checklistsCopy, List<Task> customTasks, List<Task> morningTasks, List<Task> eveningTasks, List<Task> currentTasks) {
+    private static class RestoreContext {
+        final Component parent;
+        final TaskManager taskManager;
+        final Runnable updateTasks;
+        final Map<String,String> checklistsCopy;
+        final List<Task> customTasks;
+        final List<Task> morningTasks;
+        final List<Task> eveningTasks;
+        final List<Task> currentTasks;
+
+        RestoreContext(Component parent, TaskManager taskManager, Runnable updateTasks, Map<String,String> checklistsCopy, List<Task> customTasks, List<Task> morningTasks, List<Task> eveningTasks, List<Task> currentTasks) {
+            this.parent = parent;
+            this.taskManager = taskManager;
+            this.updateTasks = updateTasks;
+            this.checklistsCopy = checklistsCopy;
+            this.customTasks = customTasks;
+            this.morningTasks = morningTasks;
+            this.eveningTasks = eveningTasks;
+            this.currentTasks = currentTasks;
+        }
+    }
+
+    private static Runnable createOnRestoreRunnable(RestoreContext ctx) {
         return () -> {
             File liveBackup = backupLiveData();
-            if (!checklistsCopy.isEmpty()) mergeChecklistsToLive(checklistsCopy);
-            List<Task> merged = new ArrayList<>(currentTasks);
+            if (!ctx.checklistsCopy.isEmpty()) mergeChecklistsToLive(ctx.checklistsCopy);
+            List<Task> merged = new ArrayList<>(ctx.currentTasks);
             java.util.Set<String> mergedIds = merged.stream().map(Task::getId).collect(Collectors.toSet());
-            for (Task t : customTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
-            for (Task t : morningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
-            for (Task t : eveningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
+            for (Task t : ctx.customTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
+            for (Task t : ctx.morningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
+            for (Task t : ctx.eveningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
             try {
-                taskManager.setTasks(merged);
-                updateTasks.run();
-                JOptionPane.showMessageDialog(parent, "Imported tasks and merged checklists." + (liveBackup!=null?" (backup created)":""), "Import Complete", JOptionPane.INFORMATION_MESSAGE);
+                ctx.taskManager.setTasks(merged);
+                ctx.updateTasks.run();
+                JOptionPane.showMessageDialog(ctx.parent, "Imported tasks and merged checklists." + (liveBackup!=null?" (backup created)":""), "Import Complete", JOptionPane.INFORMATION_MESSAGE);
             } catch (RuntimeException e) {
-                ErrorDialog.showError(parent, "Failed to import tasks", e);
+                ErrorDialog.showError(ctx.parent, "Failed to import tasks", e);
             }
         };
     }
