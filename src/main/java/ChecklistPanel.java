@@ -392,100 +392,11 @@ public class ChecklistPanel extends JPanel {
     }
 
     private JPanel createReminderStatusPanelForType(String title) {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 5, 2, 5));
-        // Remove timestamp/clock icon above the Morning list (not needed)
-        if (title.equalsIgnoreCase("Morning")) {
-            JPanel empty = new JPanel();
-            empty.setOpaque(false);
-            empty.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 5, 2, 5));
-            return empty;
-        }
-
-        Reminder display = selectReminderForType(title);
-        return buildReminderPanelForType(display);
+        // Delegate reminder UI to ReminderStatusPanel to reduce ChecklistPanel responsibilities
+        return new ReminderStatusPanel(taskManager, title);
     }
 
-    // Helper: select the most relevant reminder for a Morning/Evening type
-    private Reminder selectReminderForType(String title) {
-        java.util.List<Reminder> reminders = taskManager.getReminders();
-        Reminder checklistLevel = findChecklistLevelReminder(reminders, title);
-        if (checklistLevel != null) return checklistLevel;
-        return findEarliestTaskReminderForType(reminders, title);
-    }
-
-    private Reminder findChecklistLevelReminder(java.util.List<Reminder> reminders, String title) {
-        for (Reminder r : reminders) {
-            if (r.getTaskId() == null && title.equalsIgnoreCase(r.getChecklistName())) {
-                return r;
-            }
-        }
-        return null;
-    }
-
-    private Reminder findEarliestTaskReminderForType(java.util.List<Reminder> reminders, String title) {
-        java.time.LocalDateTime best = null;
-        Reminder display = null;
-        java.util.List<Task> allTasks = taskManager.getAllTasks();
-        for (Reminder r : reminders) {
-            Task t = taskForReminder(r, allTasks);
-            if (t == null) continue;
-            if (!reminderMatchesType(t, title)) continue;
-            java.time.LocalDateTime rt = reminderDateTime(r);
-            if (best == null || rt.isBefore(best)) {
-                best = rt;
-                display = r;
-            }
-        }
-        return display;
-    }
-
-    private Task taskForReminder(Reminder r, java.util.List<Task> allTasks) {
-        if (r.getTaskId() == null) return null;
-        return allTasks.stream().filter(x -> r.getTaskId().equals(x.getId())).findFirst().orElse(null);
-    }
-
-    private boolean reminderMatchesType(Task t, String title) {
-        return (title.equalsIgnoreCase("Morning") && t.getType() == TaskType.MORNING) || (title.equalsIgnoreCase("Evening") && t.getType() == TaskType.EVENING);
-    }
-
-    private java.time.LocalDateTime reminderDateTime(Reminder r) {
-        return java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-    }
-
-    // Helper: build the UI panel given a selected reminder (or null)
-    private JPanel buildReminderPanelForType(Reminder display) {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 5, 2, 5));
-
-        if (display == null) {
-            javax.swing.JLabel noReminderLabel = new javax.swing.JLabel("No reminder set");
-            noReminderLabel.setFont(FontManager.getSmallFont());
-            noReminderLabel.setForeground(java.awt.Color.GRAY);
-            panel.add(noReminderLabel, BorderLayout.WEST);
-            return panel;
-        }
-
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        java.time.LocalDateTime remTime = reminderDateTime(display);
-        ReminderClockIcon.State state = remTime.isBefore(now)
-                ? (java.time.Duration.between(remTime, now).toHours() > 1 ? ReminderClockIcon.State.VERY_OVERDUE : ReminderClockIcon.State.OVERDUE)
-                : (remTime.isBefore(now.plusMinutes(60)) ? ReminderClockIcon.State.DUE_SOON : ReminderClockIcon.State.FUTURE);
-
-        javax.swing.Icon icon = IconCache.getReminderClockIcon(display.getHour(), display.getMinute(), state, false);
-        String text = String.format("%04d-%02d-%02d %02d:%02d", display.getYear(), display.getMonth(), display.getDay(), display.getHour(), display.getMinute());
-
-        javax.swing.JPanel small = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 0));
-        small.setOpaque(false);
-        javax.swing.JLabel iconLabel = new javax.swing.JLabel(icon);
-        javax.swing.JLabel textLabel = new javax.swing.JLabel(text);
-        textLabel.setFont(FontManager.getSmallMediumFont());
-        small.add(iconLabel);
-        small.add(textLabel);
-        panel.add(small, BorderLayout.WEST);
-
-        return panel;
-    }
+    // Reminder UI responsibilities have been moved to ReminderStatusPanel and ReminderSelector
 
     public void updateTasks() {
         scheduleUpdate();
