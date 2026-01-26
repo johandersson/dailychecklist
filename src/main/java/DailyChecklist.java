@@ -34,6 +34,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
+@SuppressWarnings("this-escape")
 public class DailyChecklist {
     private static volatile DailyChecklist instance;
     private JFrame frame;
@@ -48,6 +49,7 @@ public class DailyChecklist {
     private final java.util.Set<String> openedChecklists = new java.util.HashSet<>();
     private final java.util.Set<Reminder> shownReminders = new java.util.HashSet<>();
     private TaskRepository repository;
+    private transient java.util.concurrent.ScheduledExecutorService reminderScheduler;
 
     public DailyChecklist() {
         initializeComponents(null);
@@ -133,20 +135,19 @@ public class DailyChecklist {
         // Initialize reminder queue
         reminderQueue = new ReminderQueue(reminder -> showReminderDialog(reminder));
 
-        // Start reminder check thread
-        new Thread(() -> {
-            while (true) {
-                try {
-                    Thread.sleep(10000); // Check every 10 seconds
-                    checkReminders();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (Exception e) {
-                    java.util.logging.Logger.getLogger(DailyChecklist.class.getName()).log(java.util.logging.Level.SEVERE, "Error in background thread", e);
-                }
+        // Start reminder check task using a scheduled executor
+        reminderScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "ReminderChecker");
+            t.setDaemon(true);
+            return t;
+        });
+        reminderScheduler.scheduleAtFixedRate(() -> {
+            try {
+                checkReminders();
+            } catch (Exception e) {
+                java.util.logging.Logger.getLogger(DailyChecklist.class.getName()).log(java.util.logging.Level.SEVERE, "Error in reminder task", e);
             }
-        }).start();
+        }, 10, 10, java.util.concurrent.TimeUnit.SECONDS);
 
         // Initial check for due reminders at startup
         checkReminders();
@@ -312,8 +313,8 @@ public class DailyChecklist {
         
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-                    java.util.logging.Logger.getLogger(DailyChecklist.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating reminders", e);
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException e) {
+            java.util.logging.Logger.getLogger(DailyChecklist.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating look and feel", e);
         }
 
         setUIFonts(FontManager.FONT_NAME, FontManager.SIZE_DEFAULT);
@@ -345,10 +346,7 @@ public class DailyChecklist {
         });
     }
 
-    private void initializeTaskManager() {
-        repository = new XMLTaskRepository(frame);
-        checklistManager = new TaskManager(repository);
-    }
+    
 
     private void addTabbedPane() {
         tabbedPane = new JTabbedPane();
@@ -405,6 +403,13 @@ public class DailyChecklist {
             frame.toFront();
             frame.requestFocus();
         }
+    }
+
+    /**
+     * Returns the singleton application instance, or null if not initialized.
+     */
+    public static DailyChecklist getInstance() {
+        return instance;
     }
 
     public JFrame getFrame() {
@@ -481,7 +486,7 @@ public class DailyChecklist {
                 openedChecklists.add(checklist.getName());
                 customChecklistsOverviewPanel.selectChecklistByName(checklist.getName());
                 // Get the panel and scroll
-                CustomChecklistPanel panel = (CustomChecklistPanel) customChecklistsOverviewPanel.getPanelMap().get(checklist.getId());
+                CustomChecklistPanel panel = customChecklistsOverviewPanel.getPanelMap().get(checklist.getId());
                 if (panel != null) {
                     panel.scrollToTask(task);
                 }
@@ -504,6 +509,11 @@ public class DailyChecklist {
     public void shutdown() {
         if (repository != null) {
             repository.shutdown();
+        }
+        if (reminderScheduler != null) {
+            try {
+                reminderScheduler.shutdownNow();
+            } catch (Exception ignore) {}
         }
     }
 }

@@ -1,3 +1,20 @@
+/*
+ * Daily Checklist
+ * Copyright (C) 2025 Johan Andersson
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
@@ -13,7 +30,7 @@ public class ChecklistDocumentIcon implements Icon {
     private static final int ICON_WIDTH = 24;
     private static final int ICON_HEIGHT = 24;
 
-    private static final Color LINE_COLOR = new Color(120, 120, 120);
+    private static final Color LINE_COLOR = new Color(200, 200, 200);
     private static final Color DOC_BG = new Color(250, 250, 250);
     private static final Color DOC_BORDER = new Color(180, 180, 180);
     private static final Color CHECKBOX_BORDER = new Color(140, 140, 140);
@@ -47,10 +64,11 @@ public class ChecklistDocumentIcon implements Icon {
     }
 
     private void drawChecklistRows(Graphics2D g2, int x, int y) {
-        final int startX = x + 3;
-        final int startY = y + 5;
-        final int checkboxSize = 8; // larger boxes for clearer checkmarks
-        final int rowSpacing = 9;
+        // increase internal padding so contents don't touch the rounded corners
+        final int startX = x + 4;
+        final int startY = y + 6;
+        final int checkboxSize = 7; // slightly smaller boxes to avoid spillover
+        final int rowSpacing = 12;
         final int rows = 2; // keep two rows
 
         for (int row = 0; row < rows; row++) {
@@ -74,19 +92,19 @@ public class ChecklistDocumentIcon implements Icon {
         g2.setStroke(new BasicStroke(1.2f));
         g2.drawRoundRect(bx, by, size, size, 4, 4);
 
-        // checkmark - larger, slightly overlapping square and drawn without antialiasing for crisper pixels
+        // checkmark - keep it nicely inside the box and avoid overlap between rows
         Object prevAA = g2.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setColor(CHECKMARK_COLOR);
-        g2.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        int cx = bx - 1; // extend a bit left so check covers more of box
-        int cy = by - 1; // nudge up to overlap more
+        g2.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        int cx = bx; // center relative to box
+        int cy = by;
         int x1 = cx + 2;
-        int y1 = cy + size / 2 - 1;
-        int x2 = cx + size / 2 + 2;
-        int y2 = cy + size - 1;
-        int x3 = cx + size;
-        int y3 = cy + 2;
+        int y1 = cy + size / 2;
+        int x2 = cx + size / 2;
+        int y2 = cy + size - 3;
+        int x3 = cx + size - 2;
+        int y3 = cy + 3;
         g2.drawLine(x1, y1, x2, y2);
         g2.drawLine(x2, y2, x3, y3);
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, prevAA);
@@ -94,10 +112,10 @@ public class ChecklistDocumentIcon implements Icon {
 
     private void drawLineForRow(Graphics2D g2, int docX, int startX, int checkboxSize, int rowTop) {
         g2.setColor(LINE_COLOR);
-        g2.setStroke(new BasicStroke(1f));
+        g2.setStroke(new BasicStroke(1.2f));
         int tx = startX + checkboxSize + 6;
         int ty = rowTop + checkboxSize / 2;
-        int txEnd = Math.min(docX + ICON_WIDTH - 6, tx + 10);
+        int txEnd = docX + ICON_WIDTH - 2; // extend line further to the right, light grey
         g2.drawLine(tx, ty, txEnd, ty);
     }
 

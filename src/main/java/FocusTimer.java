@@ -20,7 +20,6 @@ import java.awt.Color;
         import java.awt.Font;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -35,10 +34,9 @@ import javax.swing.Timer;
             private int timeRemaining; // Time in seconds
             private JPanel circlePanel;
             private static final int CHUNK_SIZE = 5 * 60; // 5 minutes in seconds
-            private JLabel[] circles = new JLabel[4]; // 4 chunks of 5 minutes
+            private final JLabel[] circles = new JLabel[4]; // 4 chunks of 5 minutes
             private JFrame frame;
-            private String lastTask = ""; // Remember the last task
-            private String lastAmountOfMinutesForTask = "";
+            // removed unused 'lastTask' and 'lastAmountOfMinutesForTask' fields
 
             private static FocusTimer instance;
 
@@ -61,8 +59,7 @@ import javax.swing.Timer;
             }
 
             public void startFocusTimer(String taskName, String duration) {
-                lastTask = taskName;
-                lastAmountOfMinutesForTask = duration;
+                        // remember strings removed; not used elsewhere
 
                 //popup ask for time
                 String[] timeOptions = {"20 minutes", "15 minutes", "10 minutes", "5 minutes"};

@@ -41,12 +41,12 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private boolean isWeekdayTask;
     private Font circleFont; // Font for the text inside the circle
     private String doneDate; // Timestamp when task was completed
-    private static final int RIGHT_ICON_SPACE = 46; // reserved space on right for weekday/reminder icons
+    private static final int RIGHT_ICON_SPACE = 40; // reserved space on right for weekday/reminder icons (tightened)
     
     private boolean showChecklistInfo; // Whether to show checklist name in display
     private ChecklistNameManager checklistNameManager; // Manager to resolve checklist IDs to names
     
-    // Cached checkmark image for performance
+    // Cached checkmark image for performance (smaller to avoid overflow)
     private static final BufferedImage checkmarkImage;
 
     // Mapping of weekdays to abbreviations and WCAG-compliant colors
@@ -71,16 +71,19 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         WEEKDAY_COLORS.put("saturday", new Color(255, 69, 0));   // Dark Orange
         WEEKDAY_COLORS.put("sunday", new Color(199, 21, 133));   // Dark Pink
         
-        // Pre-render checkmark image for performance
-        checkmarkImage = new BufferedImage(20, 20, BufferedImage.TYPE_INT_ARGB);
+        // Pre-render checkmark image for performance (use smaller image to avoid spilling over)
+        checkmarkImage = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = checkmarkImage.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setColor(new Color(76, 175, 80)); // Material green checkmark
-        g2.setStroke(new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.drawLine(5, 10, 10, 15);
-        g2.drawLine(10, 15, 17, 5);
+        g2.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        // Draw a slightly smaller checkmark centered in the 16x16 image
+        g2.drawLine(4, 9, 7, 12);
+        g2.drawLine(7, 12, 13, 5);
         g2.dispose();
     }
+
+    private final Dimension preferredSize = new Dimension(200, 50);
 
     @SuppressWarnings("this-escape")
     public CheckboxListCellRenderer() {
@@ -93,10 +96,14 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     }
 
     public CheckboxListCellRenderer(boolean showChecklistInfo, ChecklistNameManager checklistNameManager) {
-        setPreferredSize(new Dimension(200, 50)); // Increased height for timestamp display
         this.circleFont = getAvailableFont("Yu Gothic UI", Font.BOLD, 12); // Font for circle text
         this.showChecklistInfo = showChecklistInfo;
         this.checklistNameManager = checklistNameManager;
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+        return preferredSize;
     }
 
     @Override
@@ -163,9 +170,9 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         g2.setColor(Color.WHITE);
         g2.fillRoundRect(checkboxX + 1, checkboxY + 1, checkboxSize - 2, checkboxSize - 2, 8, 8);
 
-        // Draw checkmark if selected
+        // Draw checkmark if selected (small offset to center within the checkbox)
         if (isChecked) {
-            g2.drawImage(checkmarkImage, checkboxX, checkboxY, null);
+            g2.drawImage(checkmarkImage, checkboxX + 2, checkboxY + 2, null);
         }
 
         // Draw the task text next to the checkbox. Reserve space on the right for weekday/reminder icons.

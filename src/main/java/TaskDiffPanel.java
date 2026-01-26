@@ -24,6 +24,7 @@ import javax.swing.JScrollPane;
 /**
  * Panel that displays differences between current and backup task lists.
  */
+@SuppressWarnings("this-escape")
 public class TaskDiffPanel extends JPanel {
     private static final long serialVersionUID = 1L;
 
