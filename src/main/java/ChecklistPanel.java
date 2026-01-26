@@ -381,12 +381,23 @@ public class ChecklistPanel extends JPanel {
     }
 
     private JPanel createPanel(String title, JList<Task> taskList) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout());
+        JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
-        // Add a reminder status panel similar to custom checklists
+
+        // Header: styled title consistent with app
+        javax.swing.JLabel header = new javax.swing.JLabel(title);
+        header.setFont(FontManager.getHeader2Font());
+        header.setBorder(BorderFactory.createEmptyBorder(2, 2, 6, 2));
+
+        // Reminder/status panel (kept below the heading)
         JPanel reminderPanel = createReminderStatusPanelForType(title);
-        panel.add(reminderPanel, BorderLayout.NORTH);
+
+        JPanel north = new JPanel(new BorderLayout());
+        north.setOpaque(false);
+        north.add(header, BorderLayout.NORTH);
+        north.add(reminderPanel, BorderLayout.SOUTH);
+
+        panel.add(north, BorderLayout.NORTH);
         panel.add(new JScrollPane(taskList), BorderLayout.CENTER);
         return panel;
     }

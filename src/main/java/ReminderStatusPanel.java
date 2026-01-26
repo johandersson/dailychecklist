@@ -11,8 +11,8 @@ public class ReminderStatusPanel extends JPanel {
         super(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
 
-        // Preserve previous behavior: no header content above Morning
-        if (title.equalsIgnoreCase("Morning")) {
+        // Preserve previous behavior: no header content above Morning or Evening
+        if (title.equalsIgnoreCase("Morning") || title.equalsIgnoreCase("Evening")) {
             JPanel empty = new JPanel();
             empty.setOpaque(false);
             empty.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
