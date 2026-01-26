@@ -87,7 +87,7 @@ public abstract class IconListCellRenderer<T> extends JPanel implements ListCell
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         int iconX = 5;
-        int textX = 30; // Default space for icon
+        int textX = 42; // Default space for icon (align with task lists, slightly reduced to fit title/timestamp)
 
         // Draw icon if present
         if (icon != null) {

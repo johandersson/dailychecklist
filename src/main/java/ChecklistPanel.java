@@ -24,7 +24,6 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
-import javax.swing.DropMode;
 import javax.swing.JCheckBox;
 import javax.swing.JList;
 import javax.swing.JMenu;
@@ -82,19 +81,11 @@ public class ChecklistPanel extends JPanel {
     }
 
     private JList<Task> createTaskList(DefaultListModel<Task> listModel, String checklistName) {
-        JList<Task> taskList = new JList<>(listModel);
-        taskList.setCellRenderer(new CheckboxListCellRenderer());
-        taskList.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        taskList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Consistent selection color
-        taskList.setSelectionForeground(java.awt.Color.BLACK);
-        if (!java.awt.GraphicsEnvironment.isHeadless()) {
-            taskList.setDragEnabled(true);
-            taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklistName, () -> {
-                List<Task> allTasks = taskManager.getAllTasks();
-                taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected());
-            }, morningListModel, eveningListModel));
-            taskList.setDropMode(DropMode.INSERT);
-        }
+        Runnable updateCallback = () -> {
+            List<Task> allTasks = taskManager.getAllTasks();
+            taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected());
+        };
+        JList<Task> taskList = TaskListFactory.createTaskList(listModel, taskManager, checklistName, updateCallback, morningListModel, eveningListModel);
         taskList.addMouseListener(new MouseAdapter() {
             @Override
             @SuppressWarnings("unchecked")
@@ -344,21 +335,55 @@ public class ChecklistPanel extends JPanel {
     }
 
     public void updateTasks() {
+        scheduleUpdate();
+    }
+
+    private volatile boolean updateScheduled = false;
+
+    private void scheduleUpdate() {
+        if (updateScheduled) return;
+        updateScheduled = true;
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            try {
+                doUpdateTasks();
+            } finally {
+                updateScheduled = false;
+            }
+        });
+    }
+
+    private void doUpdateTasks() {
         // Preserve selections before updating
         java.util.List<Task> selectedMorningTasks = morningTaskList.getSelectedValuesList();
         java.util.List<Task> selectedEveningTasks = eveningTaskList.getSelectedValuesList();
-        
-        List<Task> allTasks = taskManager.getAllTasks();
-        taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected());
-        
-        // Restore selections after updating
-        restoreSelections(morningTaskList, morningListModel, selectedMorningTasks);
-        restoreSelections(eveningTaskList, eveningListModel, selectedEveningTasks);
-        
-        morningTaskList.revalidate();
-        morningTaskList.repaint();
-        eveningTaskList.revalidate();
-        eveningTaskList.repaint();
+
+        // Load tasks off the EDT to avoid blocking UI; update models on EDT when ready
+        javax.swing.SwingWorker<List<Task>, Void> worker = new javax.swing.SwingWorker<>() {
+            @Override
+            protected List<Task> doInBackground() throws Exception {
+                return taskManager.getAllTasks();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    List<Task> allTasks = get();
+                    taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected());
+
+                    // Restore selections after updating
+                    restoreSelections(morningTaskList, morningListModel, selectedMorningTasks);
+                    restoreSelections(eveningTaskList, eveningListModel, selectedEveningTasks);
+
+                    morningTaskList.revalidate();
+                    morningTaskList.repaint();
+                    eveningTaskList.revalidate();
+                    eveningTaskList.repaint();
+                } catch (Exception e) {
+                    java.util.logging.Logger.getLogger(ChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading tasks in background", e);
+                }
+            }
+        };
+        worker.execute();
     }
 
     private void restoreSelections(JList<Task> taskList, DefaultListModel<Task> listModel, java.util.List<Task> selectedTasks) {
