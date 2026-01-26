@@ -195,15 +195,7 @@ public class TaskTransferHandler extends TransferHandler {
         }
     }
 
-    private static class TransferData {
-        final String sourceChecklistName;
-        final List<Task> tasks;
-
-        TransferData(String sourceChecklistName, List<Task> tasks) {
-            this.sourceChecklistName = sourceChecklistName;
-            this.tasks = tasks;
-        }
-    }
+    
 
     private TransferData extractTransferData(TransferHandler.TransferSupport support)
             throws UnsupportedFlavorException, IOException {
