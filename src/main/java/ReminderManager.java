@@ -238,6 +238,11 @@ public class ReminderManager {
                 if (checklistName == null) continue;
                 if (!checklistExists(checklistName)) continue;
 
+                // Do not show checklist-level reminders for built-in daily lists (Morning/Evening)
+                if (r.getTaskId() == null && ("MORNING".equalsIgnoreCase(checklistName) || "EVENING".equalsIgnoreCase(checklistName))) {
+                    continue;
+                }
+
                 // Skip reminders for checklists that have been opened in this session, but not for recently overdue
                 if (isRecentlyOverdue || (openedChecklists == null || !openedChecklists.contains(checklistName))) {
                     dueReminders.add(r);
@@ -259,6 +264,11 @@ public class ReminderManager {
             // Skip reminders for checklists that don't exist anymore
             String checklistName = reminder.getChecklistName();
             if (checklistName == null || !checklistExists(checklistName)) {
+                continue;
+            }
+
+            // Ignore checklist-level reminders for built-in daily lists
+            if (reminder.getTaskId() == null && ("MORNING".equalsIgnoreCase(checklistName) || "EVENING".equalsIgnoreCase(checklistName))) {
                 continue;
             }
 
@@ -292,7 +302,15 @@ public class ReminderManager {
         List<Reminder> reminders = getReminders();
         if (checklistName == null) return false;
         if (!checklistExists(checklistName)) return false;
-        return reminders.stream().anyMatch(reminder -> Objects.equals(reminder.getChecklistName(), checklistName));
+        return reminders.stream()
+                .filter(reminder -> Objects.equals(reminder.getChecklistName(), checklistName))
+                .anyMatch(reminder -> {
+                    // For built-in daily lists, only count task-level reminders
+                    if ("MORNING".equalsIgnoreCase(checklistName) || "EVENING".equalsIgnoreCase(checklistName)) {
+                        return reminder.getTaskId() != null;
+                    }
+                    return true;
+                });
     }
 
     /**
