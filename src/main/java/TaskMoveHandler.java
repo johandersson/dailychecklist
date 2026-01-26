@@ -42,6 +42,14 @@ public class TaskMoveHandler {
                 updateAllPanels.run();
             }
 
+            // Ensure the custom checklist is visible in the UI so jump/scroll can occur
+            try {
+                if (!isTargetDaily) {
+                    DailyChecklist app = DailyChecklist.getInstance();
+                    if (app != null) app.showCustomChecklist(checklistName);
+                }
+            } catch (Exception ignore) {}
+
             // After panels are updated, ensure the moved tasks are selected in the target list
             // and scrolled into view. Delegate to helper to keep performMove concise.
             handlePostMoveSelection(list, listModel, checklistName, tasks, isTargetDaily);

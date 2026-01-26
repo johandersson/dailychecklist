@@ -73,7 +73,8 @@ public class AddTaskPanel extends JPanel {
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        // Allow components (task area) to expand to fill available space
+        gbc.fill = GridBagConstraints.BOTH;
 
         JTextArea taskField = new JTextArea(25, 40);
         taskField.setLineWrap(true);
@@ -83,7 +84,9 @@ public class AddTaskPanel extends JPanel {
         taskScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         taskScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         taskScrollPane.setPreferredSize(new Dimension(300, 200));
-        taskScrollPane.setMinimumSize(new Dimension(300, 200));
+        taskScrollPane.setMinimumSize(new Dimension(200, 120));
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
         taskField.setFont(new Font("Yu Gothic UI", Font.PLAIN, 16));
         taskField.setForeground(Color.BLACK);
         taskField.setBackground(Color.WHITE);
@@ -91,6 +94,10 @@ public class AddTaskPanel extends JPanel {
         gbc.gridy = 0;
         gbc.gridwidth = 2;
         add(taskScrollPane, gbc);
+
+        // Restore fill and weights for the following controls so they keep normal heights
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weighty = 0.0;
 
         if (checklistName == null) {
             addMorningRadioButton = new JRadioButton("Morning");
@@ -174,6 +181,8 @@ public class AddTaskPanel extends JPanel {
         gbc.gridy = buttonRow;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
+        // Button row should not take extra vertical space
+        gbc.weighty = 0.0;
         add(addButton, gbc);
     }
 

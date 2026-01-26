@@ -111,6 +111,8 @@ public class TaskListFactory {
                     taskList.setDragEnabled(priorDragEnabled);
                 }
             });
+            // Ensure ToolTipManager will query our getToolTipText override
+            javax.swing.ToolTipManager.sharedInstance().registerComponent(taskList);
         }
         return taskList;
     }

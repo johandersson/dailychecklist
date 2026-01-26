@@ -227,6 +227,22 @@ public class MenuBarBuilder {
         });
         fileMenu.add(helpItem);
 
+        // Exit
+        JMenuItem exitItem = new JMenuItem("Exit");
+        exitItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_Q, java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        exitItem.addActionListener(e -> {
+            int confirmed = JOptionPane.showConfirmDialog(parent, "Are you sure you want to exit?", "Exit", JOptionPane.YES_NO_OPTION);
+            if (confirmed == JOptionPane.YES_OPTION) {
+                try {
+                    if (dailyChecklist != null) dailyChecklist.shutdown();
+                } catch (Exception ex) {
+                    // ignore shutdown errors
+                }
+                System.exit(0);
+            }
+        });
+        fileMenu.add(exitItem);
+
         fileMenu.addSeparator();
 
         // Ensure the File menu is added to the menu bar
