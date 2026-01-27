@@ -21,6 +21,7 @@ import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.geom.QuadCurve2D;
 import javax.swing.Icon;
 
 /**
@@ -76,7 +77,7 @@ public class ChecklistDocumentIcon implements Icon {
         for (int row = 0; row < rows; row++) {
             int rowTop = startY + row * rowSpacing;
             drawCheckboxWithShadow(g2, startX, rowTop, checkboxSize);
-            drawLineForRow(g2, x, y, startX, checkboxSize, rowTop);
+            drawLineForRow(g2, x, y, startX, checkboxSize, rowTop, row);
         }
     }
 
@@ -123,34 +124,81 @@ public class ChecklistDocumentIcon implements Icon {
             int x3 = imgX + (int) Math.round(t3x * scale);
             int y3 = imgY + (int) Math.round(t3y * scale);
 
-            // clamp endpoints to box interior
-            x1 = Math.min(bx + size - 1, Math.max(bx, x1));
-            y1 = Math.min(by + size - 1, Math.max(by, y1));
-            x2 = Math.min(bx + size - 1, Math.max(bx, x2));
-            y2 = Math.min(by + size - 1, Math.max(by, y2));
-            x3 = Math.min(bx + size - 1, Math.max(bx, x3));
-            y3 = Math.min(by + size - 1, Math.max(by, y3));
+            // allow the checkmark to be slightly bigger (extend a couple px outside the checkbox)
+            // by scaling the template a little and permitting a small overflow when clamping
+            double markExtraScale = 1.12; // make the mark a bit larger than the template
+            // recompute center with extra scale
+            int imgW2 = Math.max(1, (int) Math.round(templateSize * scale * markExtraScale));
+            int imgH2 = imgW2;
+            int imgX2 = bx + (size - imgW2) / 2;
+            int imgY2 = by + (size - imgH2) / 2;
 
-            g2.drawLine(x1, y1, x2, y2);
-            g2.drawLine(x2, y2, x3, y3);
+            x1 = imgX2 + (int) Math.round(t1x * scale * markExtraScale);
+            y1 = imgY2 + (int) Math.round(t1y * scale * markExtraScale);
+            x2 = imgX2 + (int) Math.round(t2x * scale * markExtraScale);
+            y2 = imgY2 + (int) Math.round(t2y * scale * markExtraScale);
+            x3 = imgX2 + (int) Math.round(t3x * scale * markExtraScale);
+            y3 = imgY2 + (int) Math.round(t3y * scale * markExtraScale);
+
+            // move the whole mark a bit upward so it sits higher in the checkbox
+            y1 -= 2;
+            y2 -= 2;
+            y3 -= 2;
+
+            // permit a small overflow beyond the checkbox bounds so the mark visibly protrudes
+            int clampMinX = bx - 2;
+            int clampMinY = by - 2;
+            int clampMaxX = bx + size + 2;
+            int clampMaxY = by + size + 2;
+
+            x1 = Math.min(clampMaxX, Math.max(clampMinX, x1));
+            y1 = Math.min(clampMaxY, Math.max(clampMinY, y1));
+            x2 = Math.min(clampMaxX, Math.max(clampMinX, x2));
+            y2 = Math.min(clampMaxY, Math.max(clampMinY, y2));
+            x3 = Math.min(clampMaxX, Math.max(clampMinX, x3));
+            y3 = Math.min(clampMaxY, Math.max(clampMinY, y3));
+
+            // draw the check as two gentle quad curves to create a slightly wavy look
+            QuadCurve2D.Float q1 = new QuadCurve2D.Float();
+            QuadCurve2D.Float q2 = new QuadCurve2D.Float();
+
+            // control points: nudge them to create a soft wave
+            int c1x = (x1 + x2) / 2 - 1;
+            // increase control offsets to produce a more noticeable wave
+            int c1y = (y1 + y2) / 2 + 4;
+            int c2x = (x2 + x3) / 2 + 1;
+            int c2y = (y2 + y3) / 2 - 4;
+
+            q1.setCurve(x1, y1, c1x, c1y, x2, y2);
+            q2.setCurve(x2, y2, c2x, c2y, x3, y3);
+
+            g2.draw(q1);
+            g2.draw(q2);
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, prevAA);
     }
 
-    private void drawLineForRow(Graphics2D g2, int docX, int docY, int startX, int checkboxSize, int rowTop) {
-        // make the visible grey line longer by reducing the gap after the checkbox
-        // but ensure it never spills outside the rounded document by clipping to an inset
+    private void drawLineForRow(Graphics2D g2, int docX, int docY, int startX, int checkboxSize, int rowTop, int row) {
+        // draw a gentle curved grey line (small wave) and keep it inside rounded doc
         g2.setColor(LINE_COLOR);
         g2.setStroke(new BasicStroke(1.2f));
-        // smaller gap between checkbox and text line for a more compact appearance
         int tx = startX + checkboxSize + 3;
         int ty = rowTop + checkboxSize / 2;
         int txEnd = docX + ICON_WIDTH - 3; // extend a little further but stay within border
+
+        // control point creates the curve; alternate direction per row for a subtle wave
+        int midX = (tx + txEnd) / 2;
+        int amplitude = 2; // px offset for wave
+        int ctrlY = ty + ((row % 2 == 0) ? -amplitude : amplitude);
 
         // save and apply a gentle clip so strokes do not draw outside rounded corners
         java.awt.Shape prevClip = g2.getClip();
         int clipInset = 1; // 1px inset keeps content inside rounded border without clipping strokes
         g2.setClip(docX + clipInset, docY + clipInset, ICON_WIDTH - clipInset * 2, ICON_HEIGHT - clipInset * 2);
-        g2.drawLine(tx, ty, txEnd, ty);
+
+        java.awt.geom.QuadCurve2D.Float q = new java.awt.geom.QuadCurve2D.Float();
+        q.setCurve(tx, ty, midX, ctrlY, txEnd, ty);
+        g2.draw(q);
+
         g2.setClip(prevClip);
     }
 
