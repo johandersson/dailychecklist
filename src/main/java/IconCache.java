@@ -31,7 +31,7 @@ public final class IconCache {
     private IconCache() {}
 
     private static final ChecklistDocumentIcon CHECKLIST_DOC_RAW = new ChecklistDocumentIcon();
-    private static final ZzzIcon ZZZ = new ZzzIcon();
+    private static final javax.swing.Icon ZZZ;
     private static final javax.swing.Icon CHECKLIST_DOC;
 
     // Key format: hour-minute-state-showTime
@@ -90,6 +90,20 @@ public final class IconCache {
     }
 
     static {
+        // Pre-render ZzzIcon into an ImageIcon to avoid repeated painting work
+        ZzzIcon rawZzz = new ZzzIcon();
+        int zw = rawZzz.getIconWidth();
+        int zh = rawZzz.getIconHeight();
+        java.awt.image.BufferedImage zimg = new java.awt.image.BufferedImage(Math.max(1, zw), Math.max(1, zh), java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D zg = zimg.createGraphics();
+        try {
+            zg.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            rawZzz.paintIcon(null, zg, 0, 0);
+        } finally {
+            zg.dispose();
+        }
+        ZZZ = new javax.swing.ImageIcon(zimg);
+
         // Pre-render the checklist document icon into an ImageIcon for consistent painting
         int w = CHECKLIST_DOC_RAW.getIconWidth();
         int h = CHECKLIST_DOC_RAW.getIconHeight();
