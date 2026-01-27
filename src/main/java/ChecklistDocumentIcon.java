@@ -66,15 +66,17 @@ public class ChecklistDocumentIcon implements Icon {
     private void drawChecklistRows(Graphics2D g2, int x, int y) {
         // increase internal padding so contents don't touch the rounded corners
         final int startX = x + 4;
-        final int startY = y + 6;
+        // move the whole checklist slightly up to avoid the lower checkmark touching the rounded bottom
+        final int startY = y + 4;
         final int checkboxSize = 6; // slightly smaller boxes to avoid spillover
-        final int rowSpacing = 12;
+        // reduce spacing so icons and grey lines sit a bit closer together
+        final int rowSpacing = 9;
         final int rows = 2; // keep two rows
 
         for (int row = 0; row < rows; row++) {
             int rowTop = startY + row * rowSpacing;
             drawCheckboxWithShadow(g2, startX, rowTop, checkboxSize);
-            drawLineForRow(g2, x, startX, checkboxSize, rowTop);
+            drawLineForRow(g2, x, y, startX, checkboxSize, rowTop);
         }
     }
 
@@ -92,32 +94,64 @@ public class ChecklistDocumentIcon implements Icon {
         g2.setStroke(new BasicStroke(1.0f));
         g2.drawRoundRect(bx, by, size, size, 3, 3);
 
-        // checkmark - smaller and thinner but still distinguishable
-        Object prevAA = g2.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(CHECKMARK_COLOR);
-        g2.setStroke(new BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        int cx = bx;
-        int cy = by;
-        int x1 = cx + 1;
-        int y1 = cy + size / 2;
-        int x2 = cx + size / 2;
-        int y2 = cy + size - 2;
-        int x3 = cx + size - 2;
-        int y3 = cy + 2;
-        g2.drawLine(x1, y1, x2, y2);
-        g2.drawLine(x2, y2, x3, y3);
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, prevAA);
+        // checkmark - reuse `AppIcon` proportions scaled to checkbox size, with round caps
+            // checkmark - reuse the same style as CheckboxListCellRenderer but scaled to this checkbox
+            Object prevAA = g2.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(CHECKMARK_COLOR);
+            // original template was a 16x16 image with stroke 2.5f
+            double templateSize = 16.0;
+            double scale = (double) size / templateSize;
+            float strokeWidth = (float) Math.max(1.0, 2.5 * scale);
+            g2.setStroke(new BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+            // center the scaled 16x16 template inside the checkbox
+            int imgW = Math.max(1, (int) Math.round(templateSize * scale));
+            int imgH = Math.max(1, (int) Math.round(templateSize * scale));
+            int imgX = bx + (size - imgW) / 2;
+            int imgY = by + (size - imgH) / 2;
+
+            // template check coordinates
+            int t1x = 3, t1y = 9;
+            int t2x = 7, t2y = 13;
+            int t3x = 13, t3y = 5;
+
+            int x1 = imgX + (int) Math.round(t1x * scale);
+            int y1 = imgY + (int) Math.round(t1y * scale);
+            int x2 = imgX + (int) Math.round(t2x * scale);
+            int y2 = imgY + (int) Math.round(t2y * scale);
+            int x3 = imgX + (int) Math.round(t3x * scale);
+            int y3 = imgY + (int) Math.round(t3y * scale);
+
+            // clamp endpoints to box interior
+            x1 = Math.min(bx + size - 1, Math.max(bx, x1));
+            y1 = Math.min(by + size - 1, Math.max(by, y1));
+            x2 = Math.min(bx + size - 1, Math.max(bx, x2));
+            y2 = Math.min(by + size - 1, Math.max(by, y2));
+            x3 = Math.min(bx + size - 1, Math.max(bx, x3));
+            y3 = Math.min(by + size - 1, Math.max(by, y3));
+
+            g2.drawLine(x1, y1, x2, y2);
+            g2.drawLine(x2, y2, x3, y3);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, prevAA);
     }
 
-    private void drawLineForRow(Graphics2D g2, int docX, int startX, int checkboxSize, int rowTop) {
+    private void drawLineForRow(Graphics2D g2, int docX, int docY, int startX, int checkboxSize, int rowTop) {
+        // make the visible grey line longer by reducing the gap after the checkbox
+        // but ensure it never spills outside the rounded document by clipping to an inset
         g2.setColor(LINE_COLOR);
         g2.setStroke(new BasicStroke(1.2f));
-        int tx = startX + checkboxSize + 6;
+        // smaller gap between checkbox and text line for a more compact appearance
+        int tx = startX + checkboxSize + 3;
         int ty = rowTop + checkboxSize / 2;
-        // Keep the line inside the rounded document border by adding a small inset
-        int txEnd = docX + ICON_WIDTH - 6;
+        int txEnd = docX + ICON_WIDTH - 3; // extend a little further but stay within border
+
+        // save and apply a gentle clip so strokes do not draw outside rounded corners
+        java.awt.Shape prevClip = g2.getClip();
+        int clipInset = 1; // 1px inset keeps content inside rounded border without clipping strokes
+        g2.setClip(docX + clipInset, docY + clipInset, ICON_WIDTH - clipInset * 2, ICON_HEIGHT - clipInset * 2);
         g2.drawLine(tx, ty, txEnd, ty);
+        g2.setClip(prevClip);
     }
 
     @Override
