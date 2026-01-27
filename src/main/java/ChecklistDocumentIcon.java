@@ -178,27 +178,18 @@ public class ChecklistDocumentIcon implements Icon {
     }
 
     private void drawLineForRow(Graphics2D g2, int docX, int docY, int startX, int checkboxSize, int rowTop, int row) {
-        // draw a gentle curved grey line (small wave) and keep it inside rounded doc
+        // draw a straight grey line and keep it inside the rounded document
         g2.setColor(LINE_COLOR);
         g2.setStroke(new BasicStroke(1.2f));
         int tx = startX + checkboxSize + 3;
         int ty = rowTop + checkboxSize / 2;
         int txEnd = docX + ICON_WIDTH - 3; // extend a little further but stay within border
 
-        // control point creates the curve; alternate direction per row for a subtle wave
-        int midX = (tx + txEnd) / 2;
-        int amplitude = 2; // px offset for wave
-        int ctrlY = ty + ((row % 2 == 0) ? -amplitude : amplitude);
-
         // save and apply a gentle clip so strokes do not draw outside rounded corners
         java.awt.Shape prevClip = g2.getClip();
         int clipInset = 1; // 1px inset keeps content inside rounded border without clipping strokes
         g2.setClip(docX + clipInset, docY + clipInset, ICON_WIDTH - clipInset * 2, ICON_HEIGHT - clipInset * 2);
-
-        java.awt.geom.QuadCurve2D.Float q = new java.awt.geom.QuadCurve2D.Float();
-        q.setCurve(tx, ty, midX, ctrlY, txEnd, ty);
-        g2.draw(q);
-
+        g2.drawLine(tx, ty, txEnd, ty);
         g2.setClip(prevClip);
     }
 
