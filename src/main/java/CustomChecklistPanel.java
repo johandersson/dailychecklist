@@ -227,14 +227,18 @@ public class CustomChecklistPanel extends JPanel {
     // Place at the end of the class, before the final closing brace
     private JMenuItem createAddSubtaskMenuItem(JList<Task> list, int index) {
         JMenuItem addSubtaskItem = new JMenuItem("Add Subtask");
-        Task parent = list.getModel().getElementAt(index);
+        // Use authoritative task instance from TaskManager to avoid stale model objects
+        Task modelParent = list.getModel().getElementAt(index);
+        Task parent = taskManager.getTaskById(modelParent.getId());
+        if (parent == null) parent = modelParent;
         if (parent.getParentId() != null) {
             // Disable adding a subtask to a subtask (only one level supported)
             addSubtaskItem.setEnabled(false);
             addSubtaskItem.setToolTipText("Cannot add a subtask to a subtask");
         } else {
             addSubtaskItem.addActionListener(event -> {
-                Task p = list.getModel().getElementAt(index);
+                Task p = taskManager.getTaskById(modelParent.getId());
+                if (p == null) p = modelParent;
                 String subtaskName = JOptionPane.showInputDialog(this, "Enter subtask name:");
                 if (subtaskName != null && !subtaskName.trim().isEmpty()) {
                     Task subtask = new Task(subtaskName.trim(), p.getType(), p.getWeekday(), p.getChecklistId(), p.getId());
