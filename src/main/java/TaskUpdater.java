@@ -23,7 +23,7 @@ import javax.swing.DefaultListModel;
 
 public class TaskUpdater {
     public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel) {
-        updateTasks(allTasks, morningListModel, eveningListModel, true);
+        updateTasks(allTasks, morningListModel, eveningListModel, true, null);
     }
 
     public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showAllWeekdaySpecificTasks, TaskManager taskManager) {
