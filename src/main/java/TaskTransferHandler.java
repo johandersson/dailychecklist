@@ -198,25 +198,13 @@ public class TaskTransferHandler extends TransferHandler {
                     }
                 }
 
-                // If user dropped *between* items immediately after a top-level parent,
-                // treat that as an intent to drop onto the parent (common UX expectation).
-                if (isInsert && dropIndex > 0 && dropIndex <= targetList.getModel().getSize()) {
-                    int potentialParentIndex = dropIndex - 1;
-                    if (potentialParentIndex >= 0 && potentialParentIndex < targetList.getModel().getSize()) {
-                        Task potentialParent = targetList.getModel().getElementAt(potentialParentIndex);
-                        if (potentialParent != null && potentialParent.getParentId() == null) {
-                            if (TaskDropHandler.handleDropOnItem(transferData, targetList, potentialParentIndex, taskManager, checklistName, updateAllPanels)) {
-                                return true;
-                            }
-                        }
-                    }
-                }
-                // If dropped at the very top (insert at index 0) but the first item is a top-level
-                // parent, treat this as a drop-on-parent onto that first item (user intent can be ambiguous).
-                if (isInsert && dropIndex == 0 && targetList.getModel().getSize() > 0) {
-                    Task first = targetList.getModel().getElementAt(0);
-                    if (first != null && first.getParentId() == null) {
-                        if (TaskDropHandler.handleDropOnItem(transferData, targetList, 0, taskManager, checklistName, updateAllPanels)) {
+                // If user dropped between items, try to interpret the drop as targeting the nearest
+                // top-level parent (preceding in the list). This lets users drop anywhere inside a
+                // parent's subtask block and have the item become a subtask of that parent.
+                if (isInsert) {
+                    int parentIndex = findNearestTopLevelParentIndex(targetList, dropIndex);
+                    if (parentIndex != -1) {
+                        if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndex, taskManager, checklistName, updateAllPanels)) {
                             return true;
                         }
                     }
@@ -283,6 +271,29 @@ public class TaskTransferHandler extends TransferHandler {
 
     private Task findTaskById(String taskId) {
         return taskManager.getTaskById(taskId);
+    }
+
+    /**
+     * Find nearest top-level parent index for a given insert drop index.
+     * Search backwards from dropIndex-1; if none found, search forward from dropIndex.
+     */
+    private int findNearestTopLevelParentIndex(JList<Task> list, int dropIndex) {
+        int size = list.getModel().getSize();
+        // Clamp dropIndex into [0, size]
+        if (dropIndex < 0) dropIndex = 0;
+        if (dropIndex > size) dropIndex = size;
+
+        // Search backward from dropIndex-1
+        for (int i = dropIndex - 1; i >= 0; i--) {
+            Task t = list.getModel().getElementAt(i);
+            if (t != null && t.getParentId() == null) return i;
+        }
+        // If not found, search forward from dropIndex
+        for (int i = dropIndex; i < size; i++) {
+            Task t = list.getModel().getElementAt(i);
+            if (t != null && t.getParentId() == null) return i;
+        }
+        return -1;
     }
 
     private static int getDropIndex(TransferSupport support) {
