@@ -18,8 +18,6 @@
 import java.awt.BorderLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.List;
-import java.util.stream.Collectors;
 import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.ListSelectionModel;
@@ -35,6 +33,7 @@ public class SearchDialog {
 class SearchDialogUI {
     private final java.awt.Component parent;
     private final TaskManager taskManager;
+    private final SearchController searchController;
     private final DailyChecklist dailyChecklist;
     private JDialog dialog;
     private SearchPanel searchPanel;
@@ -45,6 +44,7 @@ class SearchDialogUI {
         this.parent = parent;
         this.taskManager = taskManager;
         this.dailyChecklist = dailyChecklist;
+        this.searchController = new SearchController(taskManager);
         buildUI();
     }
 
@@ -191,26 +191,9 @@ class SearchDialogUI {
     }
 
     private void performSearch() {
-        String query = searchPanel.searchField.getText().toLowerCase();
+        String query = searchPanel.searchField.getText();
         boolean includeAllWeekday = searchPanel.searchAllWeekdayBox.isSelected();
-        String currentWeekday = java.time.LocalDateTime.now().getDayOfWeek().toString().toLowerCase();
-        List<Task> allTasks = taskManager.getAllTasks();
-        List<Task> results = allTasks.stream()
-            .filter(task -> task.getName().toLowerCase().contains(query))
-            .filter(task -> {
-                if (task.getWeekday() == null) return true;
-                if (includeAllWeekday) return true;
-                return task.getWeekday().toLowerCase().equals(currentWeekday);
-            })
-            .collect(Collectors.toList());
-
-        List<Checklist> allLists = taskManager.getCustomChecklists().stream()
-            .filter(c -> c.getName().toLowerCase().contains(query))
-            .collect(Collectors.toList());
-
-        listPanel.unifiedModel.clear();
-        for (Checklist c : allLists) listPanel.unifiedModel.addElement(c);
-        for (Task t : results) listPanel.unifiedModel.addElement(t);
+        searchController.updateModel(query, includeAllWeekday, listPanel.unifiedModel);
     }
 
     public void show() {
