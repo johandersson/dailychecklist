@@ -30,7 +30,10 @@ Daily Checklist is built as a **pure Java application with zero external depende
 
 ## Requirements
 
-- **Java**: JDK 11 or higher (for compilation and runtime). The codebase uses `var` and lambda parameter `var` in places which require Java 10+ and lambda `var` requires Java 11; set your build JDK to 11+.
+- **Java**: JDK 16 or higher (for compilation and runtime). The codebase uses several language features that require newer Java releases:
+  - `var` (local-variable type inference) and `var` in lambda parameters require Java 10/11.
+  - Pattern matching for `instanceof` (e.g., `if (x instanceof T t)`) is used in several places and requires Java 16 or later.
+  Set your build JDK to 16+ to compile and run the project without source-level errors.
 - **Operating System**: Windows, macOS, or Linux.
 
 ## Installation
