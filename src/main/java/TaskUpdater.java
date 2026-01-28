@@ -26,7 +26,7 @@ public class TaskUpdater {
         updateTasks(allTasks, morningListModel, eveningListModel, true);
     }
 
-    public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showAllWeekdaySpecificTasks) {
+    public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showAllWeekdaySpecificTasks, TaskManager taskManager) {
         String currentWeekday = LocalDateTime.now().getDayOfWeek().toString().toLowerCase();
 
         // Group tasks by id and parentId
@@ -58,22 +58,15 @@ public class TaskUpdater {
         List<Task> desiredMorning = new ArrayList<>();
         for (Task parent : morningParents) {
             desiredMorning.add(parent);
-            List<Task> subs = subtasksByParent.get(parent.getId());
-            if (subs != null) {
-                // Sort subtasks by name for consistency
-                subs.sort(java.util.Comparator.comparing(Task::getName, String.CASE_INSENSITIVE_ORDER));
-                desiredMorning.addAll(subs);
-            }
+            java.util.List<Task> subs = taskManager.getSubtasksSorted(parent.getId());
+            if (subs != null && !subs.isEmpty()) desiredMorning.addAll(subs);
         }
 
         List<Task> desiredEvening = new ArrayList<>();
         for (Task parent : eveningParents) {
             desiredEvening.add(parent);
-            List<Task> subs = subtasksByParent.get(parent.getId());
-            if (subs != null) {
-                subs.sort(java.util.Comparator.comparing(Task::getName, String.CASE_INSENSITIVE_ORDER));
-                desiredEvening.addAll(subs);
-            }
+            java.util.List<Task> subs = taskManager.getSubtasksSorted(parent.getId());
+            if (subs != null && !subs.isEmpty()) desiredEvening.addAll(subs);
         }
 
         // Precompute display data for renderer (no checklist info for daily lists)

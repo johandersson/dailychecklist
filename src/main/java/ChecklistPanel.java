@@ -84,7 +84,7 @@ public class ChecklistPanel extends JPanel {
     private JList<Task> createTaskList(DefaultListModel<Task> listModel, String checklistName) {
         Runnable updateCallback = () -> {
             List<Task> allTasks = taskManager.getAllTasks();
-            taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected());
+            taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected(), taskManager);
         };
         JList<Task> taskList = TaskListFactory.createTaskList(listModel, taskManager, checklistName, updateCallback, morningListModel, eveningListModel);
         taskList.addMouseListener(new MouseAdapter() {
@@ -528,7 +528,7 @@ public class ChecklistPanel extends JPanel {
             protected void done() {
                 try {
                     List<Task> allTasks = get();
-                    taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected());
+                    taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected(), taskManager);
 
                     // Restore selections after updating
                     restoreSelections(morningTaskList, morningListModel, selectedMorningTasks);
