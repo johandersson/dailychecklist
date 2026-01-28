@@ -185,6 +185,42 @@ public class TaskTransferHandler extends TransferHandler {
             }
 
             int dropIndex = getDropIndex(support);
+            // Detect if the drop is onto an existing item (not an insert). If so, interpret as "make subtask of target".
+            JList.DropLocation dl = (JList.DropLocation) support.getDropLocation();
+            boolean isInsert = dl.isInsert();
+            Object comp = support.getComponent();
+            if (comp instanceof JList) {
+                @SuppressWarnings("unchecked")
+                JList<Task> targetList = (JList<Task>) comp;
+                if (!isInsert && dropIndex >= 0 && dropIndex < targetList.getModel().getSize()) {
+                    Task target = targetList.getModel().getElementAt(dropIndex);
+                    // Only allow making a task a subtask of a parent (parent must not itself be a subtask)
+                    if (target != null && target.getParentId() == null) {
+                        // Prevent making a task a subtask of itself or its descendants
+                        for (Task moved : transferData.tasks) {
+                            if (moved.getId().equals(target.getId())) {
+                                return false; // invalid
+                            }
+                        }
+                        // Update moved tasks: set parentId to target.id and adjust checklist/type if cross-checklist
+                        java.util.List<Task> toPersist = new java.util.ArrayList<>();
+                        for (Task t : transferData.tasks) {
+                            // Update checklist/type if moving across checklists
+                            if (!java.util.Objects.equals(transferData.sourceChecklistName, checklistName)) {
+                                // reuse TaskMoveHandler helper to set checklist/type
+                                TaskMoveHandler.updateTaskPropertiesForMove(t, transferData.sourceChecklistName, checklistName, taskManager);
+                            }
+                            t.setParentId(target.getId());
+                            toPersist.add(t);
+                        }
+                        // Persist atomically and refresh
+                        taskManager.updateTasks(toPersist);
+                        if (updateAllPanels != null) updateAllPanels.run();
+                        return true;
+                    }
+                }
+            }
+
             if (transferData.sourceChecklistName.equals(checklistName)) {
                 return handleSameChecklistReorder(transferData, dropIndex);
             } else {
