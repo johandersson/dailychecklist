@@ -198,6 +198,11 @@ public class TaskTransferHandler extends TransferHandler {
                     }
                 }
 
+                // Prioritize same-checklist reorders so users can reorder subtasks within a parent.
+                if (transferData.sourceChecklistName.equals(checklistName)) {
+                    if (handleSameChecklistReorder(transferData, dropIndex)) return true;
+                }
+
                 // If user dropped between items, try to interpret the drop as targeting the nearest
                 // top-level parent (preceding in the list). This lets users drop anywhere inside a
                 // parent's subtask block and have the item become a subtask of that parent.
@@ -209,16 +214,14 @@ public class TaskTransferHandler extends TransferHandler {
                         }
                     }
                 }
-            }
 
-            if (transferData.sourceChecklistName.equals(checklistName)) {
-                return handleSameChecklistReorder(transferData, dropIndex);
-            } else {
+                // If same-checklist reorder did not run or did not handle it, fall back to cross-checklist move
                 return handleCrossChecklistMove(transferData, dropIndex);
             }
         } catch (UnsupportedFlavorException | IOException e) {
             return false;
         }
+        return false;
     }
 
     

@@ -214,20 +214,60 @@ public class ChecklistPanel extends JPanel {
         }
 
         if (confirmDeleteTasks(tasksToDelete)) {
-            for (Task task : tasksToDelete) {
-                taskManager.removeTask(task);
+            // Also collect any subtasks of the selected parents that are not explicitly selected
+            java.util.Set<String> selectedIds = new java.util.HashSet<>();
+            for (Task t : tasksToDelete) selectedIds.add(t.getId());
+            java.util.List<Task> extraSubs = new java.util.ArrayList<>();
+            for (Task t : tasksToDelete) {
+                java.util.List<Task> subs = taskManager.getSubtasks(t.getId());
+                if (subs != null) {
+                    for (Task s : subs) {
+                        if (!selectedIds.contains(s.getId())) extraSubs.add(s);
+                    }
+                }
             }
+
+            // Remove extras first then the explicitly selected tasks
+            for (Task t : extraSubs) taskManager.removeTask(t);
+            for (Task task : tasksToDelete) taskManager.removeTask(task);
             updateTasks();
         }
     }
 
     // Extracted confirmation dialog for deletion to keep deleteSelectedTasks concise
     private boolean confirmDeleteTasks(java.util.List<Task> tasksToDelete) {
+        // Compute any subtasks that would also be affected but are not explicitly selected
+        java.util.Set<String> selectedIds = new java.util.HashSet<>();
+        for (Task t : tasksToDelete) selectedIds.add(t.getId());
+        java.util.List<Task> extraSubs = new java.util.ArrayList<>();
+        for (Task t : tasksToDelete) {
+            java.util.List<Task> subs = taskManager.getSubtasks(t.getId());
+            if (subs != null) {
+                for (Task s : subs) {
+                    if (!selectedIds.contains(s.getId())) extraSubs.add(s);
+                }
+            }
+        }
+
         javax.swing.JDialog dialog = new javax.swing.JDialog((java.awt.Frame) javax.swing.SwingUtilities.getWindowAncestor(this), "Confirm Deletion", true);
         dialog.setLayout(new java.awt.BorderLayout());
         dialog.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
 
-        javax.swing.JLabel label = new javax.swing.JLabel("Are you sure you want to delete the following tasks?");
+        javax.swing.JLabel label;
+        if (extraSubs.isEmpty()) {
+            label = new javax.swing.JLabel("Are you sure you want to delete the following tasks?");
+        } else {
+            StringBuilder sb = new StringBuilder();
+            sb.append("The selected tasks have ").append(extraSubs.size()).append(" additional subtask(s) that will also be deleted:\n");
+            int shown = 0;
+            for (Task s : extraSubs) {
+                if (shown++ >= 10) break;
+                sb.append(" - ").append(s.getName()).append("\n");
+            }
+            if (extraSubs.size() > 10) sb.append("... and ").append(extraSubs.size() - 10).append(" more\n");
+            sb.append("\nAre you sure you want to delete the following tasks?");
+            label = new javax.swing.JLabel("<html>" + sb.toString().replace("\n", "<br>") + "</html>");
+        }
         label.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 4, 6));
         dialog.add(label, java.awt.BorderLayout.NORTH);
 
@@ -450,19 +490,38 @@ public class ChecklistPanel extends JPanel {
 
     //remove task from list
     private void removeTask(JList<Task> list, int index) {
-        //ask user for confirmation, include name of task
         Task task = list.getModel().getElementAt(index);
-        int response = javax.swing.JOptionPane.showConfirmDialog(this,
-                "Are you sure you want to remove the task '" + task.getName() + "'?",
-                "Confirm Removal",
-                javax.swing.JOptionPane.YES_NO_OPTION);
-        if (response != javax.swing.JOptionPane.YES_OPTION) {
-            return;
+        java.util.List<Task> subs = taskManager.getSubtasks(task.getId());
+        if (subs != null && !subs.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("The task '").append(task.getName()).append("' has ").append(subs.size()).append(" subtask(s):\n\n");
+            int shown = 0;
+            for (Task s : subs) {
+                if (shown++ >= 10) break;
+                sb.append(" - ").append(s.getName()).append("\n");
+            }
+            if (subs.size() > 10) sb.append("... and ").append(subs.size() - 10).append(" more\n");
+            sb.append("\nDeleting the parent will also delete these subtasks. Continue?");
+            Object[] options = {"Delete task and subtasks", "Cancel"};
+            int res = javax.swing.JOptionPane.showOptionDialog(this, sb.toString(), "Confirm Deletion",
+                    javax.swing.JOptionPane.DEFAULT_OPTION, javax.swing.JOptionPane.WARNING_MESSAGE, null, options, options[1]);
+            if (res == 0) {
+                for (Task s : subs) taskManager.removeTask(s);
+                taskManager.removeTask(task);
+                updateTasks();
+            }
+        } else {
+            int response = javax.swing.JOptionPane.showConfirmDialog(this,
+                    "Are you sure you want to remove the task '" + task.getName() + "'?",
+                    "Confirm Removal",
+                    javax.swing.JOptionPane.YES_NO_OPTION);
+            if (response != javax.swing.JOptionPane.YES_OPTION) {
+                return;
+            }
+            //remove from checklist manager
+            taskManager.removeTask(task);
+            updateTasks();
         }
-        //remove from checklist manager and list
-        taskManager.removeTask(task);
-        DefaultListModel<Task> listModel = (DefaultListModel<Task>) list.getModel();
-        listModel.removeElementAt(index);
     }
 
     private JPanel createPanel(String title, JList<Task> taskList) {

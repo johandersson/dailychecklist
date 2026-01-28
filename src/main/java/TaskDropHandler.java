@@ -27,8 +27,41 @@ public final class TaskDropHandler {
         if (wouldCreateSelfParenting(transferData, target)) return false;
 
         List<Task> toPersist = prepareMovedTasks(transferData, checklistName, taskManager, target);
-        // Persist atomically and refresh UI
-        taskManager.updateTasks(toPersist);
+
+        // Persist field changes for moved tasks
+        // Additionally, update the global task order so the moved tasks appear
+        // directly after the target and its existing subtask block (append into parent's subtask block).
+        java.util.List<Task> all = new java.util.ArrayList<>(taskManager.getAllTasks());
+
+        // Remove moved tasks from the global list if present
+        for (Task t : toPersist) {
+            all.removeIf(x -> x.getId().equals(t.getId()));
+        }
+
+        // Find the authoritative target index
+        int targetIdx = -1;
+        for (int i = 0; i < all.size(); i++) {
+            if (all.get(i).getId().equals(target.getId())) { targetIdx = i; break; }
+        }
+
+        int insertAt;
+        if (targetIdx == -1) {
+            // If target not found, append at end
+            insertAt = all.size();
+        } else {
+            // Insert after the parent's existing subtask block
+            insertAt = targetIdx + 1;
+            while (insertAt < all.size() && target.getId().equals(all.get(insertAt).getParentId())) {
+                insertAt++;
+            }
+        }
+
+        // Insert moved tasks at computed position
+        all.addAll(insertAt, toPersist);
+
+        // Persist both structural (parentId) and order changes atomically
+        taskManager.setTasks(all);
+
         if (updateAllPanels != null) updateAllPanels.run();
         return true;
     }

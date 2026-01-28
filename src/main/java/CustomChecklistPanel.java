@@ -300,10 +300,32 @@ public class CustomChecklistPanel extends JPanel {
 
     private void removeTask(JList<Task> list, int index) {
         Task task = list.getModel().getElementAt(index);
-        int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to remove the task '" + task.getName() + "'?", "Confirm Removal", JOptionPane.YES_NO_OPTION);
-        if (result == JOptionPane.YES_OPTION) {
-            taskManager.removeTask(task);
-            updateTasks();
+        java.util.List<Task> subs = taskManager.getSubtasks(task.getId());
+        if (subs != null && !subs.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("The task '").append(task.getName()).append("' has ").append(subs.size()).append(" subtask(s):\n\n");
+            int shown = 0;
+            for (Task s : subs) {
+                if (shown++ >= 10) break;
+                sb.append(" - ").append(s.getName()).append("\n");
+            }
+            if (subs.size() > 10) sb.append("... and ").append(subs.size() - 10).append(" more\n");
+            sb.append("\nDeleting the parent will also delete these subtasks. Continue?");
+            Object[] options = {"Delete task and subtasks", "Cancel"};
+            int res = JOptionPane.showOptionDialog(this, sb.toString(), "Confirm Deletion",
+                    JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, options, options[1]);
+            if (res == 0) {
+                // delete subtasks first, then parent
+                for (Task s : subs) taskManager.removeTask(s);
+                taskManager.removeTask(task);
+                updateTasks();
+            }
+        } else {
+            int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to remove the task '" + task.getName() + "'?", "Confirm Removal", JOptionPane.YES_NO_OPTION);
+            if (result == JOptionPane.YES_OPTION) {
+                taskManager.removeTask(task);
+                updateTasks();
+            }
         }
     }
 
