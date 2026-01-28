@@ -102,16 +102,21 @@ public class TaskUpdater {
             T want = desired.get(i);
             if (i < model.getSize()) {
                 T have = model.getElementAt(i);
-                if (Objects.equals(have, want)) continue; // already correct
-                // If the desired element exists later in the model, remove it from there and insert here
+                if (Objects.equals(have, want)) {
+                    // Replace the instance with the freshly parsed one to avoid stale state
+                    if (have != want) {
+                        model.setElementAt(want, i);
+                    }
+                    continue;
+                }
+                // If the desired element exists later in the model, remove it from there and insert the fresh instance here
                 int foundIndex = -1;
                 for (int j = i + 1; j < model.getSize(); j++) {
                     if (Objects.equals(model.getElementAt(j), want)) { foundIndex = j; break; }
                 }
                 if (foundIndex != -1) {
-                    T moved = model.getElementAt(foundIndex);
                     model.removeElementAt(foundIndex);
-                    model.add(i, moved);
+                    model.add(i, want);
                 } else {
                     model.add(i, want);
                 }

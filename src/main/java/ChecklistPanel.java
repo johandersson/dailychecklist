@@ -158,15 +158,11 @@ public class ChecklistPanel extends JPanel {
             }
         }
 
-        // If parent, mark all subtasks done/undone (use quiet updates to avoid repeated UI refreshes)
-        if (subtasksByParent.containsKey(task.getId())) {
+        // If parent and being marked done, mark all subtasks done (do not unmark subtasks when parent is unchecked)
+        if (subtasksByParent.containsKey(task.getId()) && newDone) {
             for (Task sub : subtasksByParent.get(task.getId())) {
-                sub.setDone(newDone);
-                if (newDone) {
-                    sub.setDoneDate(new Date(System.currentTimeMillis()));
-                } else {
-                    sub.setDoneDate(null);
-                }
+                sub.setDone(true);
+                sub.setDoneDate(new Date(System.currentTimeMillis()));
                 taskManager.updateTaskQuiet(sub);
             }
         }
@@ -191,15 +187,13 @@ public class ChecklistPanel extends JPanel {
                 }
             }
             if (parent != null) {
+                // Only mark parent done when all siblings are done and the current subtask was just marked done.
                 if (allSiblingsDone && newDone) {
                     parent.setDone(true);
                     parent.setDoneDate(new Date(System.currentTimeMillis()));
                     taskManager.updateTaskQuiet(parent);
-                } else if (!newDone) {
-                    parent.setDone(false);
-                    parent.setDoneDate(null);
-                    taskManager.updateTaskQuiet(parent);
                 }
+                // Do NOT unmark parent when a single subtask is unchecked.
             }
         }
 
