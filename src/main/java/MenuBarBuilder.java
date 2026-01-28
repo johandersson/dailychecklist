@@ -77,8 +77,17 @@ public class MenuBarBuilder {
                 java.util.List<Task> allTasks = taskManager.getAllTasks();
                 java.util.List<Task> orphans = new java.util.ArrayList<>();
                 for (Task t : allTasks) {
+                    // Orphaned subtask: parentId references missing task
                     if (t.getParentId() != null && taskManager.getTaskById(t.getParentId()) == null) {
                         orphans.add(t);
+                        continue;
+                    }
+                    // Orphaned custom-task: checklistId references missing checklist
+                    if (t.getType() == TaskType.CUSTOM) {
+                        String cid = t.getChecklistId();
+                        if (cid != null && taskManager.getChecklistNameById(cid) == null) {
+                            orphans.add(t);
+                        }
                     }
                 }
                 if (orphans.isEmpty()) {
