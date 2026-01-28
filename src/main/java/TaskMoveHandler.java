@@ -21,11 +21,14 @@ public class TaskMoveHandler {
 
         final int finalDropIndex = dropIndex;
         javax.swing.SwingUtilities.invokeLater(() -> {
-            // Update the properties for all tasks
+            // Update the properties for all tasks and persist them in one batch
+            java.util.List<Task> toPersist = new java.util.ArrayList<>();
             for (Task task : tasks) {
                 updateTaskPropertiesForMove(task, task.getChecklistId(), checklistName, taskManager);
-                taskManager.updateTask(task);
+                toPersist.add(task);
             }
+            // Persist atomically so UI changes are not lost by the coalescer
+            taskManager.updateTasks(toPersist);
 
             // For daily checklists, reorder the tasks to place moved tasks at the correct position
             if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {

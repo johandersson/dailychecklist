@@ -55,6 +55,8 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private final SubtaskBreadcrumb breadcrumbComponent = new SubtaskBreadcrumb();
     private String taskId;
     private Reminder taskReminder;
+    private Font lastBaseFont = null;
+    private Font smallFont = null;
     
     // Cached checkmark image for performance (smaller to avoid overflow)
     private static final BufferedImage checkmarkImage;
@@ -282,7 +284,12 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
     private void drawTaskText(Graphics2D g2, int textStartX, int textY, int availableWidth) {
         g2.setColor(getForeground());
-        g2.setFont(getFont());
+        Font currentFont = getFont();
+        if (smallFont == null || !currentFont.equals(lastBaseFont)) {
+            lastBaseFont = currentFont;
+            smallFont = currentFont.deriveFont(Font.PLAIN, FontManager.SIZE_SMALL);
+        }
+        g2.setFont(currentFont);
         FontMetrics fmMain = g2.getFontMetrics();
         String drawTaskName = taskName != null ? taskName : "";
         if (availableWidth > 12 && fmMain.stringWidth(drawTaskName) > availableWidth) {

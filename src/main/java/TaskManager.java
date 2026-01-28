@@ -74,6 +74,21 @@ public class TaskManager {
     }
 
     /**
+     * Persist a single task immediately (non-coalesced) so the change is
+     * visible to other panels without waiting for the coalescer.
+     */
+    public void updateTaskImmediate(Task task) {
+        if (repository instanceof XMLTaskRepository xmlRepo) {
+            java.util.List<Task> single = new java.util.ArrayList<>();
+            single.add(task);
+            xmlRepo.updateTasks(single);
+        } else {
+            repository.updateTask(task);
+        }
+        notifyListeners();
+    }
+
+    /**
      * Updates a task without showing error dialogs.
      * Returns true if successful, false if failed.
      */

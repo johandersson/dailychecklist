@@ -145,7 +145,7 @@ class SearchDialogUI {
                         // Persist the change via TaskManager so all registered panels refresh
                         t.setDone(!t.isDone());
                         try {
-                            taskManager.updateTask(t);
+                            taskManager.updateTaskImmediate(t);
                         } catch (Exception ignore) {
                             // If persistence fails, still refresh search view to reflect optimistic change
                         }
@@ -193,7 +193,7 @@ class SearchDialogUI {
     private void performSearch() {
         String query = searchPanel.searchField.getText();
         boolean includeAllWeekday = searchPanel.searchAllWeekdayBox.isSelected();
-        searchController.updateModel(query, includeAllWeekday, listPanel.unifiedModel);
+        searchController.requestUpdateModel(query, includeAllWeekday, listPanel.unifiedModel);
     }
 
     public void show() {

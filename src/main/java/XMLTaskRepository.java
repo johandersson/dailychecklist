@@ -142,7 +142,11 @@ public class XMLTaskRepository implements TaskRepository {
             long backoff = 500; // ms
             while (true) {
                 try {
+                    long start = System.nanoTime();
                     op.run();
+                    long dur = System.nanoTime() - start;
+                    java.util.logging.Logger.getLogger(XMLTaskRepository.class.getName())
+                        .log(java.util.logging.Level.FINE, "Persist succeeded (" + desc + ") in " + (dur / 1_000_000.0) + " ms");
                     return;
                 } catch (Exception e) {
                     attempts++;
@@ -520,7 +524,13 @@ public class XMLTaskRepository implements TaskRepository {
             }
 
             // Persist asynchronously (with retries/backoff)
-            submitWithRetries("tasks-update", () -> taskXmlHandler.updateTasks(tasks));
+            submitWithRetries("tasks-update", () -> {
+                long start = System.nanoTime();
+                taskXmlHandler.updateTasks(tasks);
+                long dur = System.nanoTime() - start;
+                java.util.logging.Logger.getLogger(XMLTaskRepository.class.getName())
+                    .log(java.util.logging.Level.FINE, "updateTasks wrote " + tasks.size() + " tasks in " + (dur / 1_000_000.0) + " ms");
+            });
         } catch (Exception e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "tasks", e);
