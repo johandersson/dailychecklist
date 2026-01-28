@@ -122,27 +122,38 @@ public class CustomChecklistPanel extends JPanel {
             task.setDoneDate(null);
         }
 
-        // If parent, mark all subtasks done/undone
         List<Task> allTasks = taskManager.getAllTasks();
+        // Build parentId -> List<Task> map for O(1) subtask lookup
+        java.util.Map<String, java.util.List<Task>> subtasksByParent = new java.util.HashMap<>();
         for (Task t : allTasks) {
-            if (task.getId().equals(t.getParentId())) {
-                t.setDone(newDone);
-                if (newDone) {
-                    t.setDoneDate(new Date(System.currentTimeMillis()));
-                } else {
-                    t.setDoneDate(null);
-                }
-                taskManager.updateTask(t);
+            if (t.getParentId() != null) {
+                subtasksByParent.computeIfAbsent(t.getParentId(), k -> new java.util.ArrayList<>()).add(t);
             }
         }
 
-        // If subtask, check if all siblings are done, then mark parent done
+        // If parent, mark all subtasks done/undone
+        if (subtasksByParent.containsKey(task.getId())) {
+            for (Task sub : subtasksByParent.get(task.getId())) {
+                sub.setDone(newDone);
+                if (newDone) {
+                    sub.setDoneDate(new Date(System.currentTimeMillis()));
+                } else {
+                    sub.setDoneDate(null);
+                }
+                taskManager.updateTask(sub);
+            }
+        }
+
+        // If subtask, check if all siblings are done, then mark parent done/undone
         if (task.getParentId() != null) {
+            java.util.List<Task> siblings = subtasksByParent.get(task.getParentId());
             boolean allSiblingsDone = true;
-            for (Task t : allTasks) {
-                if (task.getParentId().equals(t.getParentId()) && !t.getId().equals(task.getId()) && !t.isDone()) {
-                    allSiblingsDone = false;
-                    break;
+            if (siblings != null) {
+                for (Task sib : siblings) {
+                    if (!sib.isDone()) {
+                        allSiblingsDone = false;
+                        break;
+                    }
                 }
             }
             Task parent = null;
