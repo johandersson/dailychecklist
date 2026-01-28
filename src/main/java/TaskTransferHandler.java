@@ -197,6 +197,20 @@ public class TaskTransferHandler extends TransferHandler {
                         return true;
                     }
                 }
+
+                // If user dropped *between* items immediately after a top-level parent,
+                // treat that as an intent to drop onto the parent (common UX expectation).
+                if (isInsert && dropIndex > 0 && dropIndex <= targetList.getModel().getSize()) {
+                    int potentialParentIndex = dropIndex - 1;
+                    if (potentialParentIndex >= 0 && potentialParentIndex < targetList.getModel().getSize()) {
+                        Task potentialParent = targetList.getModel().getElementAt(potentialParentIndex);
+                        if (potentialParent != null && potentialParent.getParentId() == null) {
+                            if (TaskDropHandler.handleDropOnItem(transferData, targetList, potentialParentIndex, taskManager, checklistName, updateAllPanels)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
             }
 
             if (transferData.sourceChecklistName.equals(checklistName)) {
