@@ -189,6 +189,15 @@ public class TaskXmlHandler {
             }
         }
 
+        String parentId = null;
+        NodeList parentIdNodes = element.getElementsByTagName("parentId");
+        if (parentIdNodes.getLength() > 0) {
+            String content = parentIdNodes.item(0).getTextContent();
+            if (content != null && !content.trim().isEmpty()) {
+                parentId = content.trim();
+            }
+        }
+
         String weekday = null;
         NodeList weekdayNodes = element.getElementsByTagName("weekday");
         if (weekdayNodes.getLength() > 0) {
@@ -204,7 +213,8 @@ public class TaskXmlHandler {
         NodeList doneDateNodes = element.getElementsByTagName("doneDate");
         String doneDate = doneDateNodes.getLength() > 0 ? doneDateNodes.item(0).getTextContent() : null;
 
-        return new Task(id, name, type, weekday, done, doneDate, checklistId);
+        // Use new constructor with parentId for backwards compatibility
+        return new Task(id, name, type, weekday, done, doneDate, checklistId, parentId);
     }
 
     /**
@@ -240,6 +250,12 @@ public class TaskXmlHandler {
             Element checklistIdElement = document.createElement("checklistId");
             checklistIdElement.setTextContent(task.getChecklistId().trim());
             taskElement.appendChild(checklistIdElement);
+        }
+
+        if (task.getParentId() != null && !task.getParentId().trim().isEmpty()) {
+            Element parentIdElement = document.createElement("parentId");
+            parentIdElement.setTextContent(task.getParentId().trim());
+            taskElement.appendChild(parentIdElement);
         }
 
         return taskElement;
@@ -281,6 +297,20 @@ public class TaskXmlHandler {
      * Updates an existing task XML element with new task data.
      */
     private void updateTaskElement(Element taskElement, Task task) {
+                // Update or create parentId element
+                NodeList parentIdNodes = taskElement.getElementsByTagName("parentId");
+                if (task.getParentId() != null && !task.getParentId().trim().isEmpty()) {
+                    Element parentIdElement;
+                    if (parentIdNodes.getLength() > 0) {
+                        parentIdElement = (Element) parentIdNodes.item(0);
+                    } else {
+                        parentIdElement = taskElement.getOwnerDocument().createElement("parentId");
+                        taskElement.appendChild(parentIdElement);
+                    }
+                    parentIdElement.setTextContent(task.getParentId().trim());
+                } else if (parentIdNodes.getLength() > 0) {
+                    taskElement.removeChild(parentIdNodes.item(0));
+                }
         Document document = taskElement.getOwnerDocument();
 
         // Update or create name element

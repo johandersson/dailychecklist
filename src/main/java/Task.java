@@ -14,7 +14,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */import java.util.Date;
+ */import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -26,8 +28,13 @@ public class Task {
     private String weekday;
     private boolean done;
     private String checklistId; // Changed from checklistName to checklistId
+
+    // Subtask support
+    private String parentId; // null if not a subtask
+    private List<Task> subtasks = new ArrayList<>(); // Only one level of subtasks
+
     // Constructor when loading from file (ID provided)
-    public Task(String id, String name, TaskType type, String weekday, boolean done, String doneDate, String checklistId) {
+    public Task(String id, String name, TaskType type, String weekday, boolean done, String doneDate, String checklistId, String parentId) {
         this.id = id;
         this.name = name;
         this.type = type;
@@ -35,10 +42,16 @@ public class Task {
         this.done = done;
         this.doneDate = doneDate;
         this.checklistId = checklistId != null ? checklistId.trim() : null;
+        this.parentId = parentId;
     }
 
     // Constructor when creating a new task (ID generated)
+
     public Task(String name, TaskType type, String weekday, String checklistId) {
+        this(name, type, weekday, checklistId, null);
+    }
+
+    public Task(String name, TaskType type, String weekday, String checklistId, String parentId) {
         this.id = UUID.randomUUID().toString();
         this.name = name;
         this.type = type;
@@ -46,16 +59,55 @@ public class Task {
         this.done = false;
         this.doneDate = null;
         this.checklistId = checklistId != null ? checklistId.trim() : null;
+        this.parentId = parentId;
     }
+
 
     // Constructor for backwards compatibility (checklistName = null)
     public Task(String name, TaskType type, String weekday) {
-        this(name, type, weekday, null);
+        this(name, type, weekday, null, null);
     }
+
 
     // Constructor for loading from file without checklistName (backwards compatibility)
     public Task(String id, String name, TaskType type, String weekday, boolean done, String doneDate) {
-        this(id, name, type, weekday, done, doneDate, null);
+        this(id, name, type, weekday, done, doneDate, null, null);
+    }
+    // Subtask support
+    public String getParentId() {
+        return parentId;
+    }
+
+    public void setParentId(String parentId) {
+        this.parentId = parentId;
+    }
+
+    public List<Task> getSubtasks() {
+        return subtasks;
+    }
+
+    public void setSubtasks(List<Task> subtasks) {
+        this.subtasks = subtasks;
+    }
+
+    public boolean hasSubtasks() {
+        return subtasks != null && !subtasks.isEmpty();
+    }
+
+    public boolean areAllSubtasksDone() {
+        if (!hasSubtasks()) return false;
+        for (Task t : subtasks) {
+            if (!t.isDone()) return false;
+        }
+        return true;
+    }
+
+    public void markAllSubtasksDone(boolean done) {
+        if (hasSubtasks()) {
+            for (Task t : subtasks) {
+                t.setDone(done);
+            }
+        }
     }
 
 
