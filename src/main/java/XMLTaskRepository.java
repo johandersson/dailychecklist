@@ -169,6 +169,43 @@ public class XMLTaskRepository implements TaskRepository {
         });
     }
 
+    /**
+     * Like {@link #submitWithRetries} but quiet: never shows a user-visible error dialog.
+     * Intended for coalesced (debounced) background flushes where we prefer silent
+     * logging and marking the cache dirty instead of interrupting the user.
+     */
+    private void submitWithRetriesQuiet(String desc, PersistOperation op) {
+        writeExecutor.submit(() -> {
+            int attempts = 0;
+            long backoff = 500; // ms
+            while (true) {
+                try {
+                    op.run();
+                    return;
+                } catch (Exception e) {
+                    attempts++;
+                    java.util.logging.Logger.getLogger(XMLTaskRepository.class.getName())
+                        .log(java.util.logging.Level.WARNING, "Quiet persist failed (" + desc + ") attempt " + attempts, e);
+                    rwLock.writeLock().lock();
+                    try { tasksCacheDirty = true; } finally { rwLock.writeLock().unlock(); }
+                    if (attempts >= 3) {
+                        // Quiet: do not show dialogs. Just log and give up.
+                        java.util.logging.Logger.getLogger(XMLTaskRepository.class.getName())
+                            .log(java.util.logging.Level.SEVERE, "Giving up quiet persist (" + desc + ") after " + attempts + " attempts");
+                        return;
+                    }
+                    try {
+                        Thread.sleep(backoff);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                    backoff *= 2;
+                }
+            }
+        });
+    }
+
     private void scheduleCoalescedFlushIfNeeded() {
         if (coalesceFuture != null && !coalesceFuture.isDone()) return;
         coalesceFuture = coalesceScheduler.schedule(this::flushPendingWrites, COALESCE_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
@@ -179,7 +216,9 @@ public class XMLTaskRepository implements TaskRepository {
             if (pendingWrites.isEmpty()) return;
             List<Task> batch = new ArrayList<>(pendingWrites.values());
             pendingWrites.clear();
-            submitWithRetries("tasks-update-coalesced", () -> taskXmlHandler.updateTasks(batch));
+            // Use the quiet retry path for coalesced flushes to avoid showing a dialog
+            // for transient background write failures.
+            submitWithRetriesQuiet("tasks-update-coalesced", () -> taskXmlHandler.updateTasks(batch));
         } catch (Exception e) {
             java.util.logging.Logger.getLogger(XMLTaskRepository.class.getName()).log(java.util.logging.Level.WARNING, "Failed to flush coalesced writes", e);
         }
