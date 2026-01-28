@@ -483,23 +483,27 @@ public class CustomChecklistPanel extends JPanel {
             protected void done() {
                 try {
                         List<Task> tasks = get();
-                        // For custom checklists we want parents followed by their direct subtasks
+                        // For custom checklists we want parents followed by their direct subtasks.
+                        // Use TaskManager's cached, pre-sorted subtasks to avoid per-update sorting.
                         java.util.List<Task> parents = new java.util.ArrayList<>();
-                        java.util.Map<String, java.util.List<Task>> subsByParent = new java.util.HashMap<>();
                         for (Task t : tasks) {
                             if (t.getParentId() == null) {
                                 parents.add(t);
-                            } else {
-                                subsByParent.computeIfAbsent(t.getParentId(), k -> new java.util.ArrayList<>()).add(t);
                             }
                         }
                         java.util.List<Task> desired = new java.util.ArrayList<>();
                         for (Task p : parents) {
                             desired.add(p);
-                            java.util.List<Task> subs = subsByParent.get(p.getId());
-                            if (subs != null) {
-                                subs.sort(java.util.Comparator.comparing(Task::getName, String.CASE_INSENSITIVE_ORDER));
-                                desired.addAll(subs);
+                            java.util.List<Task> subs = taskManager.getSubtasksSorted(p.getId());
+                            if (subs != null && !subs.isEmpty()) {
+                                // Filter to this checklist to be safe (subtasks should normally share checklist)
+                                for (Task s : subs) {
+                                    if (p.getChecklistId() == null) {
+                                        if (s.getChecklistId() == null) desired.add(s);
+                                    } else if (p.getChecklistId().equals(s.getChecklistId())) {
+                                        desired.add(s);
+                                    }
+                                }
                             }
                         }
                         // Precompute display strings (include checklist info for custom lists)
