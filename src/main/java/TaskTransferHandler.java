@@ -68,7 +68,9 @@ public class TaskTransferHandler extends TransferHandler {
     protected Transferable createTransferable(JComponent c) {
         int[] selectedIndices = list.getSelectedIndices();
         if (selectedIndices.length > 0) {
-            StringBuilder data = new StringBuilder(checklistName);
+            StringBuilder data = new StringBuilder();
+            // Represent null checklistName as empty string in the transfer payload
+            data.append(checklistName == null ? "" : checklistName);
             for (int index : selectedIndices) {
                 Task task = listModel.get(index);
                 data.append(";").append(task.getId());
@@ -193,13 +195,28 @@ public class TaskTransferHandler extends TransferHandler {
                 @SuppressWarnings("unchecked")
                 JList<Task> targetList = (JList<Task>) comp;
                 if (!isInsert && dropIndex >= 0 && dropIndex < targetList.getModel().getSize()) {
-                    if (TaskDropHandler.handleDropOnItem(transferData, targetList, dropIndex, taskManager, checklistName, updateAllPanels)) {
-                        return true;
+                    // If user dropped onto an item, attempt drop on that item. If that item is a subtask
+                    // we want to insert the moved tasks at that subtask's position within its parent.
+                    Task modelTarget = targetList.getModel().getElementAt(dropIndex);
+                    if (modelTarget != null && modelTarget.getParentId() == null) {
+                        // Dropped onto a top-level parent -> use default behavior (append to end of block)
+                        if (TaskDropHandler.handleDropOnItem(transferData, targetList, dropIndex, -1, taskManager, updateAllPanels)) {
+                            return true;
+                        }
+                    } else {
+                        // Dropped onto a subtask: find its parent and compute offset within block
+                        int parentIndexFallback = findNearestTopLevelParentIndex(targetList, dropIndex);
+                        if (parentIndexFallback != -1) {
+                            int offset = computeInsertOffsetWithinParent(targetList, parentIndexFallback, dropIndex);
+                            if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndexFallback, offset, taskManager, updateAllPanels)) {
+                                return true;
+                            }
+                        }
                     }
                 }
 
                 // Prioritize same-checklist reorders so users can reorder subtasks within a parent.
-                if (transferData.sourceChecklistName.equals(checklistName)) {
+                if (java.util.Objects.equals(transferData.sourceChecklistName, checklistName)) {
                     if (handleSameChecklistReorder(transferData, dropIndex)) return true;
                 }
 
@@ -209,7 +226,8 @@ public class TaskTransferHandler extends TransferHandler {
                 if (isInsert) {
                     int parentIndex = findNearestTopLevelParentIndex(targetList, dropIndex);
                     if (parentIndex != -1) {
-                        if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndex, taskManager, checklistName, updateAllPanels)) {
+                        int offset = computeInsertOffsetWithinParent(targetList, parentIndex, dropIndex);
+                        if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndex, offset, taskManager, updateAllPanels)) {
                             return true;
                         }
                     }
@@ -234,7 +252,7 @@ public class TaskTransferHandler extends TransferHandler {
             return null;
         }
 
-        String sourceChecklistName = parts[0];
+        String sourceChecklistName = parts[0].isEmpty() ? null : parts[0];
 
         // Extract all task IDs
         List<String> taskIds = new ArrayList<>();
@@ -297,6 +315,32 @@ public class TaskTransferHandler extends TransferHandler {
             if (t != null && t.getParentId() == null) return i;
         }
         return -1;
+    }
+
+    private int computeInsertOffsetWithinParent(JList<Task> list, int parentIndex, int dropIndex) {
+        int size = list.getModel().getSize();
+        if (parentIndex < 0 || parentIndex >= size) return 0;
+        Task parent = list.getModel().getElementAt(parentIndex);
+        if (parent == null) return 0;
+
+        // Count existing subtasks immediately following the parent
+        int subtaskCount = 0;
+        int idx = parentIndex + 1;
+        while (idx < size) {
+            Task t = list.getModel().getElementAt(idx);
+            if (t != null && parent.getId().equals(t.getParentId())) {
+                subtaskCount++;
+                idx++;
+            } else {
+                break;
+            }
+        }
+
+        // Compute raw offset relative to first subtask slot
+        int raw = dropIndex - (parentIndex + 1);
+        if (raw < 0) return 0;
+        if (raw > subtaskCount) return subtaskCount;
+        return raw;
     }
 
     private static int getDropIndex(TransferSupport support) {
