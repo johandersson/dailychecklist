@@ -74,7 +74,8 @@ class SearchDialogUI {
     }
 
     private javax.swing.ListCellRenderer<Object> createCellRenderer() {
-        CheckboxListCellRenderer taskRenderer = new CheckboxListCellRenderer(true);
+        CheckboxListCellRenderer taskRenderer = new CheckboxListCellRenderer(true, taskManager);
+        taskRenderer.setShowSubtaskBreadcrumb(true);
         final JList<Task> taskListTemplate = new JList<>();
         return (list, value, index, isSelected, cellHasFocus) -> {
             if (value instanceof Task) {

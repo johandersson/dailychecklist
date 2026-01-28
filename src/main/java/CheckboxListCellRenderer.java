@@ -51,6 +51,9 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private boolean isSubtask; // True if this task is a subtask (for indentation)
     private ChecklistNameManager checklistNameManager; // Manager to resolve checklist IDs to names
     private transient TaskManager taskManager;
+    private boolean showSubtaskBreadcrumb = false; // When true, subtasks are not indented and show breadcrumb text to the right
+    private String breadcrumbText = null;
+    private final SubtaskBreadcrumb breadcrumbComponent = new SubtaskBreadcrumb();
     private String taskId;
     private Reminder taskReminder;
     
@@ -100,7 +103,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
     @SuppressWarnings("this-escape")
     public CheckboxListCellRenderer(boolean showChecklistInfo) {
-        this(showChecklistInfo, null);
+        this(showChecklistInfo, (ChecklistNameManager) null);
     }
 
     public CheckboxListCellRenderer(boolean showChecklistInfo, ChecklistNameManager checklistNameManager) {
@@ -110,8 +113,17 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.taskManager = null;
     }
 
+    public CheckboxListCellRenderer(boolean showChecklistInfo, TaskManager taskManager) {
+        this(showChecklistInfo, (ChecklistNameManager) null);
+        this.taskManager = taskManager;
+    }
+
+    public void setShowSubtaskBreadcrumb(boolean show) {
+        this.showSubtaskBreadcrumb = show;
+    }
+
     public CheckboxListCellRenderer(TaskManager taskManager) {
-        this(false, null);
+        this(false, (ChecklistNameManager) null);
         this.taskManager = taskManager;
     }
 
@@ -122,13 +134,23 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
     @Override
     public Component getListCellRendererComponent(JList<? extends Task> list, Task task, int index, boolean isSelected, boolean cellHasFocus) {
+        populateFromTask(task);
+        buildToolTip(task);
+        applySelectionStyles(list, isSelected);
+        setFont(FontManager.getTaskListFont()); // Use consistent font for all task lists
+        setOpaque(true); // Ensure background is painted
+        return this;
+    }
+
+    // Populate renderer state fields from the given Task (keeps getListCellRendererComponent small)
+    private void populateFromTask(Task task) {
         this.isChecked = task.isDone();
         this.taskName = task.getName();
         this.taskId = task.getId();
         this.taskReminder = null;
 
-        // Indentation for subtasks (one level)
-        this.isSubtask = (task.getParentId() != null);
+        // Indentation for subtasks (one level) unless we're rendering breadcrumbs in search
+        this.isSubtask = (task.getParentId() != null) && !this.showSubtaskBreadcrumb;
 
         // Find a reminder that targets this specific task (task-level reminder)
         if (taskManager != null && this.taskId != null) {
@@ -142,26 +164,51 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         }
 
         // Resolve checklist name from ID if showing checklist info
-        String checklistName = null;
         if (showChecklistInfo && task.getChecklistId() != null && checklistNameManager != null) {
             Checklist checklist = checklistNameManager.getChecklistById(task.getChecklistId());
-            if (checklist != null) {
-                checklistName = checklist.getName();
+            if (checklist != null && checklist.getName() != null && !checklist.getName().trim().isEmpty()) {
+                this.taskName = task.getName() + " (" + checklist.getName() + ")";
             }
         }
 
-        // If showing checklist info, append checklist name to task name
-        if (showChecklistInfo && checklistName != null && !checklistName.trim().isEmpty()) {
-            this.taskName = task.getName() + " (" + checklistName + ")";
+        // If we are showing subtask breadcrumbs, compute breadcrumb text for subtasks
+        this.breadcrumbText = null;
+        if (this.showSubtaskBreadcrumb && task.getParentId() != null) {
+            String parentName = null;
+            if (taskManager != null) {
+                Task parent = taskManager.getTaskById(task.getParentId());
+                if (parent != null) parentName = parent.getName();
+            }
+            if (task.getType() == TaskType.CUSTOM) {
+                String checklistDisplay = null;
+                if (taskManager != null) {
+                    java.util.Set<Checklist> lists = taskManager.getCustomChecklists();
+                    for (Checklist c : lists) {
+                        if (c.getId() != null && c.getId().equals(task.getChecklistId())) {
+                            checklistDisplay = c.getName();
+                            break;
+                        }
+                    }
+                }
+                if (checklistDisplay != null && parentName != null) {
+                    breadcrumbText = checklistDisplay + " > " + parentName;
+                } else if (parentName != null) {
+                    breadcrumbText = parentName;
+                }
+            } else {
+                // Daily lists: only show parent task name
+                breadcrumbText = parentName;
+            }
         }
-        
+
         String weekdayKey = task.getWeekday() != null ? task.getWeekday().toLowerCase() : null;
         this.weekdayAbbreviation = WEEKDAY_ABBREVIATIONS.get(weekdayKey);
         this.weekdayColor = WEEKDAY_COLORS.get(weekdayKey);
         this.isWeekdayTask = task.getWeekday() != null && WEEKDAY_ABBREVIATIONS.containsKey(weekdayKey);
         this.doneDate = task.getDoneDate();
+    }
 
-        // Build informative tooltip for this task list cell.
+    private void buildToolTip(Task task) {
         StringBuilder tip = new StringBuilder();
         if (this.taskReminder != null) {
             tip.append(String.format("Reminder: %04d-%02d-%02d %02d:%02d", this.taskReminder.getYear(), this.taskReminder.getMonth(), this.taskReminder.getDay(), this.taskReminder.getHour(), this.taskReminder.getMinute()));
@@ -176,9 +223,9 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             }
         }
         setToolTipText(tip.length() > 0 ? tip.toString() : null);
+    }
 
-        setFont(FontManager.getTaskListFont()); // Use consistent font for all task lists
-        setOpaque(true); // Ensure background is painted
+    private void applySelectionStyles(JList<? extends Task> list, boolean isSelected) {
         if (isSelected) {
             setBackground(list.getSelectionBackground());
             setForeground(list.getSelectionForeground());
@@ -188,8 +235,6 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             setForeground(Color.BLACK);
             putClientProperty("selected", Boolean.FALSE);
         }
-
-        return this;
     }
 
     @Override
@@ -208,9 +253,18 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         int checkboxX = 10 + (isSubtask ? subtaskIndent : 0);
         int checkboxY = getHeight() / 2 - 11, checkboxSize = 22;
 
-        // Define checkbox dimensions (slightly increased to better fit checkmark)
-        // checkboxX now set above
+        drawCheckbox(g2, checkboxX, checkboxY, checkboxSize);
 
+        int textY = getHeight() / 2 + 5;
+        int availableWidth = getWidth() - textStartX - RIGHT_ICON_SPACE - 6;
+        drawTaskText(g2, textStartX, textY, availableWidth);
+        drawBreadcrumbIfNeeded(g2, textStartX, textY);
+        drawDoneTimestampIfNeeded(g2, textStartX);
+        drawWeekdayCircleIfNeeded(g2);
+        drawReminderIfNeeded(g2);
+    }
+
+    private void drawCheckbox(Graphics2D g2, int checkboxX, int checkboxY, int checkboxSize) {
         // Draw subtle shadow behind checkbox
         g2.setColor(new Color(200, 200, 200, 100)); // Light gray shadow with transparency
         g2.fillRoundRect(checkboxX + 2, checkboxY + 2, checkboxSize, checkboxSize, 8, 8);
@@ -231,13 +285,12 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             int imgY = checkboxY + (checkboxSize - imgH) / 2;
             g2.drawImage(checkmarkImage, imgX, imgY, null);
         }
+    }
 
-        // Draw the task text next to the checkbox. Reserve space on the right for weekday/reminder icons.
+    private void drawTaskText(Graphics2D g2, int textStartX, int textY, int availableWidth) {
         g2.setColor(getForeground());
         g2.setFont(getFont());
         FontMetrics fmMain = g2.getFontMetrics();
-        int textY = getHeight() / 2 + 5;
-        int availableWidth = getWidth() - textStartX - RIGHT_ICON_SPACE - 6;
         String drawTaskName = taskName != null ? taskName : "";
         if (availableWidth > 12 && fmMain.stringWidth(drawTaskName) > availableWidth) {
             while (fmMain.stringWidth(drawTaskName + "…") > availableWidth && drawTaskName.length() > 0) {
@@ -246,54 +299,70 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             drawTaskName = drawTaskName + "…";
         }
         g2.drawString(drawTaskName, textStartX, textY);
+    }
 
-        // Draw timestamp if task is checked - always in black, smaller font beneath the title
-        if (isChecked && doneDate != null && !doneDate.isEmpty()) {
-            g2.setColor(Color.BLACK);
-            g2.setFont(getFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL));
-            FontMetrics fmSmall = g2.getFontMetrics();
-            int availableWidthSmall = getWidth() - textStartX - RIGHT_ICON_SPACE - 6;
-            String timeText = "✓ " + doneDate;
-            if (availableWidthSmall > 12 && fmSmall.stringWidth(timeText) > availableWidthSmall) {
-                while (fmSmall.stringWidth(timeText + "…") > availableWidthSmall && timeText.length() > 0) {
-                    timeText = timeText.substring(0, timeText.length() - 1);
-                }
-                timeText = timeText + "…";
+    private void drawBreadcrumbIfNeeded(Graphics2D g2, int textStartX, int textY) {
+        if (breadcrumbText == null || breadcrumbText.isEmpty()) return;
+        // Compute available width and position for breadcrumb component
+        g2.setFont(getFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL));
+        FontMetrics fmCrumb = g2.getFontMetrics();
+        int crumbWidth = fmCrumb.stringWidth(breadcrumbText) + 6;
+        int crumbX = getWidth() - RIGHT_ICON_SPACE - 6 - crumbWidth;
+        if (crumbX > textStartX + 10) {
+            breadcrumbComponent.setFontToUse(getFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL));
+            breadcrumbComponent.setText(breadcrumbText);
+            breadcrumbComponent.setSize(crumbWidth, getHeight());
+            // Paint the component into our Graphics2D at the computed location
+            breadcrumbComponent.paint(g2.create(crumbX, 0, crumbWidth, getHeight()));
+        }
+    }
+
+    private void drawDoneTimestampIfNeeded(Graphics2D g2, int textStartX) {
+        if (!(isChecked && doneDate != null && !doneDate.isEmpty())) return;
+        g2.setColor(Color.BLACK);
+        g2.setFont(getFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL));
+        FontMetrics fmSmall = g2.getFontMetrics();
+        int availableWidthSmall = getWidth() - textStartX - RIGHT_ICON_SPACE - 6;
+        String timeText = "✓ " + doneDate;
+        if (availableWidthSmall > 12 && fmSmall.stringWidth(timeText) > availableWidthSmall) {
+            while (fmSmall.stringWidth(timeText + "…") > availableWidthSmall && timeText.length() > 0) {
+                timeText = timeText.substring(0, timeText.length() - 1);
             }
-            g2.drawString(timeText, textStartX, getHeight() / 2 + 20);
+            timeText = timeText + "…";
         }
+        g2.drawString(timeText, textStartX, getHeight() / 2 + 20);
+    }
 
-        // Draw weekday circle at the far right so it doesn't overlap with reminder icon
-        if (isWeekdayTask) {
-            int circleSize = 30;
-            int areaX = getWidth() - WEEKDAY_ICON_AREA;
-            int circleX = areaX + (WEEKDAY_ICON_AREA - circleSize) / 2;
-            int circleY = getHeight() / 2 - circleSize / 2;
-            g2.setColor(weekdayColor != null ? weekdayColor : new Color(120, 120, 120));
-            g2.fillOval(circleX, circleY, circleSize, circleSize);
+    private void drawWeekdayCircleIfNeeded(Graphics2D g2) {
+        if (!isWeekdayTask) return;
+        int circleSize = 30;
+        int areaX = getWidth() - WEEKDAY_ICON_AREA;
+        int circleX = areaX + (WEEKDAY_ICON_AREA - circleSize) / 2;
+        int circleY = getHeight() / 2 - circleSize / 2;
+        g2.setColor(weekdayColor != null ? weekdayColor : new Color(120, 120, 120));
+        g2.fillOval(circleX, circleY, circleSize, circleSize);
 
-            // Draw the weekday abbreviation inside the circle (centered)
-            g2.setColor(Color.WHITE);
-            g2.setFont(circleFont);
-            FontMetrics fm = g2.getFontMetrics();
-            int textX = circleX + (circleSize - fm.stringWidth(weekdayAbbreviation != null ? weekdayAbbreviation : "")) / 2;
-            int textCenterY = circleY + circleSize / 2 + (fm.getAscent() - fm.getDescent()) / 2;
-            g2.drawString(weekdayAbbreviation != null ? weekdayAbbreviation : "", textX, textCenterY);
-        }
+        // Draw the weekday abbreviation inside the circle (centered)
+        g2.setColor(Color.WHITE);
+        g2.setFont(circleFont);
+        FontMetrics fm = g2.getFontMetrics();
+        int textX = circleX + (circleSize - fm.stringWidth(weekdayAbbreviation != null ? weekdayAbbreviation : "")) / 2;
+        int textCenterY = circleY + circleSize / 2 + (fm.getAscent() - fm.getDescent()) / 2;
+        g2.drawString(weekdayAbbreviation != null ? weekdayAbbreviation : "", textX, textCenterY);
+    }
 
-        // Draw a reminder clock icon (and optional time text) inside the reserved right area for task-level reminders
-        if (taskReminder != null) {
-            ReminderClockIcon.State state = computeState(taskReminder);
-            javax.swing.Icon icon = IconCache.getReminderClockIcon(taskReminder.getHour(), taskReminder.getMinute(), state, true);
-            int iconW = icon.getIconWidth();
-            int iconH = icon.getIconHeight();
-            // reminder area is left of the weekday area
-            int areaX = getWidth() - WEEKDAY_ICON_AREA - REMINDER_ICON_AREA;
-            // center the icon (and its time text) within the reminder reserved area
-            int iconX = areaX + Math.max(2, (REMINDER_ICON_AREA - iconW) / 2);
-            int iconY = getHeight() / 2 - iconH / 2;
-            icon.paintIcon(this, g2, iconX, iconY);
-        }
+    private void drawReminderIfNeeded(Graphics2D g2) {
+        if (taskReminder == null) return;
+        ReminderClockIcon.State state = computeState(taskReminder);
+        javax.swing.Icon icon = IconCache.getReminderClockIcon(taskReminder.getHour(), taskReminder.getMinute(), state, true);
+        int iconW = icon.getIconWidth();
+        int iconH = icon.getIconHeight();
+        // reminder area is left of the weekday area
+        int areaX = getWidth() - WEEKDAY_ICON_AREA - REMINDER_ICON_AREA;
+        // center the icon (and its time text) within the reminder reserved area
+        int iconX = areaX + Math.max(2, (REMINDER_ICON_AREA - iconW) / 2);
+        int iconY = getHeight() / 2 - iconH / 2;
+        icon.paintIcon(this, g2, iconX, iconY);
     }
 
     private ReminderClockIcon.State computeState(Reminder r) {
