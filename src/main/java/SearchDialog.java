@@ -142,7 +142,13 @@ class SearchDialogUI {
                     if (x >= checkboxX && x <= checkboxX + checkboxSize &&
                         yInCell >= checkboxY && yInCell <= checkboxY + checkboxSize) {
                         Task t = (Task) value;
+                        // Persist the change via TaskManager so all registered panels refresh
                         t.setDone(!t.isDone());
+                        try {
+                            taskManager.updateTask(t);
+                        } catch (Exception ignore) {
+                            // If persistence fails, still refresh search view to reflect optimistic change
+                        }
                         performSearch.run();
                         return;
                     }
