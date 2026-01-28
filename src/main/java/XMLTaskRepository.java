@@ -135,7 +135,7 @@ public class XMLTaskRepository implements TaskRepository {
      * Gets all tasks from cache, loading from XML if cache is dirty.
      * Applies memory safety checks.
      */
-    private List<Task> getCachedTasks() {
+    private synchronized List<Task> getCachedTasks() {
         if (tasksCacheDirty) {
             ensureDataFileExists();
             try {
@@ -215,7 +215,7 @@ public class XMLTaskRepository implements TaskRepository {
     }
 
     @Override
-    public void addTask(Task task) {
+    public synchronized void addTask(Task task) {
         // Validate task before saving
         if (!TaskXmlHandler.validateTask(task)) {
             System.err.println("Invalid task data, skipping save: " + task);
@@ -233,7 +233,7 @@ public class XMLTaskRepository implements TaskRepository {
     }
 
     @Override
-    public void updateTask(Task task) {
+    public synchronized void updateTask(Task task) {
         // Validate task before saving
         if (!TaskXmlHandler.validateTask(task)) {
             System.err.println("Invalid task data, skipping save: " + task);
@@ -241,8 +241,10 @@ public class XMLTaskRepository implements TaskRepository {
         }
 
         try {
+            System.out.println("[TRACE] XMLTaskRepository.updateTask start id=" + task.getId() + ", thread=" + Thread.currentThread().getName());
             taskXmlHandler.updateTask(task);
             tasksCacheDirty = true; // Mark cache as dirty
+            System.out.println("[TRACE] XMLTaskRepository.updateTask done id=" + task.getId());
         } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
@@ -254,19 +256,50 @@ public class XMLTaskRepository implements TaskRepository {
      * Updates a task without showing error dialogs (for UI state management).
      * Returns true if successful, false if failed.
      */
-    public boolean updateTaskQuiet(Task task) {
+    public synchronized boolean updateTaskQuiet(Task task) {
         try {
+            System.out.println("[TRACE] XMLTaskRepository.updateTaskQuiet start id=" + task.getId() + ", thread=" + Thread.currentThread().getName());
             taskXmlHandler.updateTask(task);
             tasksCacheDirty = true; // Mark cache as dirty
+            System.out.println("[TRACE] XMLTaskRepository.updateTaskQuiet done id=" + task.getId());
             return true;
         } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
             // Don't show error dialog, just return failure
+            System.out.println("[TRACE] XMLTaskRepository.updateTaskQuiet failed id=" + task.getId() + ", err=" + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Atomically update multiple tasks and write once.
+     */
+    public synchronized void updateTasks(List<Task> tasks) {
+        if (tasks == null || tasks.isEmpty()) return;
+        try {
+            taskXmlHandler.updateTasks(tasks);
+            tasksCacheDirty = true;
+        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
+            if (parentComponent != null) {
+                ApplicationErrorHandler.showDataSaveError(parentComponent, "tasks", e);
+            }
+        }
+    }
+
+    /**
+     * Quiet variant of updateTasks for background persistence.
+     */
+    public synchronized boolean updateTasksQuiet(List<Task> tasks) {
+        try {
+            taskXmlHandler.updateTasks(tasks);
+            tasksCacheDirty = true; // Mark cache as dirty
+            return true;
+        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
             return false;
         }
     }
 
     @Override
-    public void removeTask(Task task) {
+    public synchronized void removeTask(Task task) {
         try {
             taskXmlHandler.removeTask(task);
             tasksCacheDirty = true; // Mark cache as dirty
@@ -289,7 +322,7 @@ public class XMLTaskRepository implements TaskRepository {
     }
 
     @Override
-    public void setTasks(List<Task> tasks) {
+    public synchronized void setTasks(List<Task> tasks) {
         try {
             // Create a backup before replacing all tasks
             if (backupManager != null) {

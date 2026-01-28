@@ -418,6 +418,40 @@ public class TaskXmlHandler {
         }
 
         writeDocument(document);
+
+    }
+
+    /**
+     * Update multiple tasks in the document and write once.
+     */
+    public void updateTasks(List<Task> tasks) throws ParserConfigurationException, SAXException, IOException, TransformerException {
+        if (tasks == null || tasks.isEmpty()) return;
+        Document document = readDocument();
+        Element root = document.getDocumentElement();
+        NodeList nodeList = document.getElementsByTagName("task");
+
+        // Build a map of existing elements by id for quick lookup
+        Map<String, Element> existing = new HashMap<>();
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Node node = nodeList.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element el = (Element) node;
+                String id = el.getAttribute("id");
+                if (id != null && !id.trim().isEmpty()) existing.put(id, el);
+            }
+        }
+
+        for (Task task : tasks) {
+            Element element = existing.get(task.getId());
+            if (element != null) {
+                updateTaskElement(element, task);
+            } else {
+                Element taskElement = createTaskElement(document, task);
+                root.appendChild(taskElement);
+            }
+        }
+
+        writeDocument(document);
     }
 
     /**

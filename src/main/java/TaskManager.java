@@ -36,6 +36,12 @@ public class TaskManager {
     public void removeTaskChangeListener(TaskChangeListener l) { if (l != null) listeners.remove(l); }
     private void notifyListeners() { for (TaskChangeListener l : listeners) { try { l.onChange(); } catch (Exception ignore) {} } }
 
+    /**
+     * Public helper to notify registered task-change listeners.
+     * Use this when model changes were persisted off the EDT and the UI needs refreshing.
+     */
+    public void notifyTaskChangeListeners() { notifyListeners(); }
+
     public List<Task> getDailyTasks() {
         return repository.getDailyTasks();
     }
@@ -82,6 +88,34 @@ public class TaskManager {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * Updates multiple tasks without showing error dialogs.
+     * Returns true if successful.
+     */
+    public boolean updateTasksQuiet(java.util.List<Task> tasks) {
+        if (repository instanceof XMLTaskRepository xmlRepo) {
+            return xmlRepo.updateTasksQuiet(tasks);
+        }
+        try {
+            for (Task t : tasks) repository.updateTask(t);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Atomically updates multiple tasks and notifies listeners.
+     */
+    public void updateTasks(java.util.List<Task> tasks) {
+        if (repository instanceof XMLTaskRepository xmlRepo) {
+            xmlRepo.updateTasks(tasks);
+        } else {
+            for (Task t : tasks) repository.updateTask(t);
+        }
+        notifyListeners();
     }
 
     public void removeTask(Task task) {
