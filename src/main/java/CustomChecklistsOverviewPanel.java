@@ -465,22 +465,26 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             if (choice == 0) {
                 // Delete list: remove any tasks (none expected) defensively
                 List<Task> allTasks = taskManager.getAllTasks();
+                java.util.List<Task> toRemove = new java.util.ArrayList<>();
                 for (Task task : allTasks) {
                     if (task.getChecklistId() != null && task.getChecklistId().equals(selectedChecklist.getId())) {
-                        taskManager.removeTask(task);
+                        toRemove.add(task);
                     }
                 }
+                for (Task t : toRemove) taskManager.removeTask(t);
             }
         } else {
             switch (choice) {
                 case 0 -> {
                     // Delete list
                     List<Task> allTasks = taskManager.getAllTasks();
+                    java.util.List<Task> toRemove = new java.util.ArrayList<>();
                     for (Task task : allTasks) {
                         if (task.getChecklistId() != null && task.getChecklistId().equals(selectedChecklist.getId())) {
-                            taskManager.removeTask(task);
+                            toRemove.add(task);
                         }
                     }
+                    for (Task t : toRemove) taskManager.removeTask(t);
                 }
                 case 1 -> // Move to morning
                     moveTasksToType(selectedChecklist.getId(), TaskType.MORNING);
