@@ -106,10 +106,13 @@ public class TaskReorderHandler {
             }
         }
 
-        // Replace the tasks in allTasks with the reordered ones
-        allTasks.removeAll(checklistTasks);
-        int insertIndex = 0;
-        for (Task t : allTasks) {
+        // Replace the tasks in allTasks with the reordered ones.
+        // Find the start index of this checklist's tasks in the global list and replace
+        // the contiguous block with the reordered tasks. This is more robust when the
+        // model contains interleaved subtasks and ensures daily lists reorder correctly.
+        int startIndex = -1;
+        for (int i = 0; i < allTasks.size(); i++) {
+            Task t = allTasks.get(i);
             boolean belongsToChecklist;
             if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
                 belongsToChecklist = checklistName.equals(t.getType().toString());
@@ -121,10 +124,22 @@ public class TaskReorderHandler {
                 belongsToChecklist = checklist != null && checklist.getId().equals(t.getChecklistId());
             }
             if (belongsToChecklist) {
-                insertIndex = allTasks.indexOf(t) + 1;
+                startIndex = i;
+                break;
             }
         }
-        allTasks.addAll(insertIndex, reorderedTasks);
+
+        // Remove existing checklist tasks from the global list
+        allTasks.removeAll(checklistTasks);
+
+        if (startIndex == -1) {
+            // No existing block found: append at end
+            allTasks.addAll(reorderedTasks);
+        } else {
+            // Insert reordered tasks at the previously found start index
+            if (startIndex > allTasks.size()) startIndex = allTasks.size();
+            allTasks.addAll(startIndex, reorderedTasks);
+        }
 
         // Save the reordered tasks
         taskManager.setTasks(allTasks);
