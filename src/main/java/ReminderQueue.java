@@ -26,6 +26,11 @@ public class ReminderQueue {
     private final Queue<Reminder> queue = new ConcurrentLinkedQueue<>();
     private final ReminderDisplayCallback callback;
     private volatile boolean dialogShowing = false;
+    private final java.util.concurrent.ScheduledExecutorService scheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "reminder-queue-scheduler");
+        t.setDaemon(true);
+        return t;
+    });
 
     /**
      * Callback interface for displaying reminders.
@@ -53,15 +58,14 @@ public class ReminderQueue {
      */
     public void onReminderDismissed() {
         dialogShowing = false;
-        // Show next reminder after a short delay to prevent rapid-fire dialogs
-        new Thread(() -> {
+        // Schedule showing next reminder after a short delay to prevent rapid dialogs
+        scheduler.schedule(() -> {
             try {
-                Thread.sleep(500);
                 showNextReminder();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                // ignore - safe to swallow here
             }
-        }).start();
+        }, 500, java.util.concurrent.TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -98,5 +102,17 @@ public class ReminderQueue {
      */
     public void clear() {
         queue.clear();
+    }
+
+    /**
+     * Shutdown the internal scheduler used for delayed showing.
+     */
+    public void shutdown() {
+        try {
+            scheduler.shutdownNow();
+            scheduler.awaitTermination(1, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

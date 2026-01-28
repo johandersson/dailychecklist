@@ -137,6 +137,40 @@ public class TaskManager {
         return filtered;
     }
 
+    /**
+     * Returns direct subtasks (one level) for the given parent id.
+     */
+    public List<Task> getSubtasks(String parentId) {
+        List<Task> out = new ArrayList<>();
+        if (parentId == null) return out;
+        for (Task t : getAllTasks()) {
+            if (parentId.equals(t.getParentId())) out.add(t);
+        }
+        return out;
+    }
+
+    /**
+     * Returns a Reminder targeting the given taskId, or null if none.
+     */
+    public Reminder getReminderForTask(String taskId) {
+        if (taskId == null) return null;
+        for (Reminder r : getReminders()) {
+            if (taskId.equals(r.getTaskId())) return r;
+        }
+        return null;
+    }
+
+    /**
+     * Convenience: get checklist display name by id (returns null if not found)
+     */
+    public String getChecklistNameById(String checklistId) {
+        if (checklistId == null) return null;
+        for (Checklist c : getCustomChecklists()) {
+            if (checklistId.equals(c.getId())) return c.getName();
+        }
+        return null;
+    }
+
     public java.util.Set<Checklist> getCustomChecklists() {
         return repository.getChecklists();
     }

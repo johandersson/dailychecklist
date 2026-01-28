@@ -80,6 +80,14 @@ public class ChecklistNameManager {
     }
 
     /**
+     * Convenience: get the checklist name by id, or null if not found.
+     */
+    public String getNameById(String id) {
+        Checklist c = getChecklistById(id);
+        return c == null ? null : c.getName();
+    }
+
+    /**
      * Gets a checklist by name.
      */
     public Checklist getChecklistByName(String name) {

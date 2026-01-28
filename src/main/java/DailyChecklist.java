@@ -188,11 +188,27 @@ public class DailyChecklist {
         SwingUtilities.invokeLater(() -> {
             // Compute a friendly display title: prefer task name when reminder targets a task
             String displayTitle = null;
+            String breadcrumb = null;
             if (reminder.getTaskId() != null) {
                 Task t = checklistManager.getTaskById(reminder.getTaskId());
                 if (t != null) displayTitle = t.getName();
+                if (t != null && t.getParentId() != null) {
+                    Task parent = checklistManager.getTaskById(t.getParentId());
+                    String parentName = parent != null ? parent.getName() : null;
+                    if (t.getType() == TaskType.CUSTOM) {
+                        String checklistDisplay = checklistManager.getChecklistNameById(t.getChecklistId());
+                        if (checklistDisplay != null && parentName != null) {
+                            breadcrumb = checklistDisplay + " > " + parentName;
+                        } else if (parentName != null) {
+                            breadcrumb = parentName;
+                        }
+                    } else {
+                        if (parentName != null) breadcrumb = parentName;
+                    }
+                }
             }
-            ReminderDialog dialog = new ReminderDialog(frame, reminder, displayTitle,
+
+            ReminderDialog dialog = new ReminderDialog(frame, reminder, displayTitle, breadcrumb,
                 handleReminderOpen(reminder),
                 handleReminderDismiss(reminder),
                 handleReminderRemindLater(reminder),
@@ -599,6 +615,11 @@ public class DailyChecklist {
     public void shutdown() {
         if (repository != null) {
             repository.shutdown();
+        }
+        if (reminderQueue != null) {
+            try {
+                reminderQueue.shutdown();
+            } catch (Exception ignore) {}
         }
         if (reminderScheduler != null) {
             try {

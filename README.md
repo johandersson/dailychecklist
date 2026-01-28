@@ -7,7 +7,7 @@ Stay organized and boost your productivity with the **Daily Checklist** applicat
 ## Features
 
 - **Daily Task Management**: Add, edit, rename, and remove tasks for your morning and evening routines with flexible scheduling (daily, weekday, or specific days).
-- **Subtasks**: Add subtasks to any daily or custom task. Subtasks appear directly below their parent and are indented. Marking all subtasks as done marks the parent as done, and marking the parent as done marks all subtasks as done. Only one level of subtasks is supported.
+- **Subtasks**: Add subtasks to any daily or custom task. Subtasks appear directly below their parent and are indented. Marking all subtasks as done marks the parent as done, and marking the parent as done marks all subtasks as done. Only one level of subtasks is supported. Reminders that target a subtask will show the subtask's name in the reminder dialog and — when applicable — a small breadcrumb showing the checklist and parent task for context.
 - **Custom Checklists**: Create named checklists for specific projects, habits, or one-off task lists with support for adding multiple tasks at once.
 - **Search Functionality**: Quickly find tasks across all checklists with real-time search (Ctrl+F) and jump directly to selected tasks.
 - **Reminders**: Set date/time reminders for any checklist with notifications and visual clock icons.
@@ -30,7 +30,7 @@ Daily Checklist is built as a **pure Java application with zero external depende
 
 ## Requirements
 
-- **Java**: JDK 8 or higher (for compilation and runtime).
+- **Java**: JDK 11 or higher (for compilation and runtime). The codebase uses `var` and lambda parameter `var` in places which require Java 10+ and lambda `var` requires Java 11; set your build JDK to 11+.
 - **Operating System**: Windows, macOS, or Linux.
 
 ## Installation
@@ -157,7 +157,7 @@ To build the JAR manually:
 
 ## Configuration
 
-- **Data Storage**: Tasks are stored in `dailychecklist-tasks.xml`, reminders in `dailychecklist-reminders.properties` in the user home directory.
+- **Data Storage**: Tasks (including parent/subtask relationships) are stored in `dailychecklist-tasks.xml`, reminders in `dailychecklist-reminders.properties` in the user home directory. Automatic backups include the full task XML (so subtasks are included in backups).
 - **Settings**: Managed via the Settings dialog (persisted in user preferences).
 - **Performance**: In-memory caching ensures fast access to frequently used data.
 

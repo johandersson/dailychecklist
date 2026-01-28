@@ -38,9 +38,8 @@ public class BackupManager {
     private final String[] dataFiles; // Array of file paths to backup
     private final Component parentComponent; // Parent component for error dialogs
 
-    private Thread backupThread;
-    private volatile boolean backupRunning = true;
-    private long lastBackupTime = 0;
+    private java.util.concurrent.ScheduledExecutorService scheduler;
+    private volatile boolean backupRunning = false;
 
     /**
      * Creates a new BackupManager.
@@ -76,40 +75,29 @@ public class BackupManager {
      * Should be called after initialization and when the application is ready.
      */
     public void start() {
-        if (backupThread != null && backupThread.isAlive()) {
-            return; // Already started
-        }
-
+        if (backupRunning) return;
         backupRunning = true;
-
-        // Start periodic backup thread
-        backupThread = new Thread(() -> {
-            while (backupRunning) {
-                try {
-                    Thread.sleep(backupIntervalMs);
-                    createPeriodicBackup();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (Exception e) {
-                    // Show user-friendly error dialog
-                    ApplicationErrorHandler.showBackupError(parentComponent, e);
-                }
-            }
+        scheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "backup-manager");
+            t.setDaemon(true);
+            return t;
         });
-        backupThread.setDaemon(true);
-        backupThread.start();
+
+        // Schedule periodic backups at fixed rate
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                createPeriodicBackup();
+            } catch (Exception e) {
+                ApplicationErrorHandler.showBackupError(parentComponent, e);
+            }
+        }, backupIntervalMs, backupIntervalMs, java.util.concurrent.TimeUnit.MILLISECONDS);
     }
 
     /**
      * Creates a periodic backup if enough time has passed since the last backup.
      */
     private void createPeriodicBackup() {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastBackupTime >= backupIntervalMs) {
-            createBackup("periodic");
-            lastBackupTime = currentTime;
-        }
+        createBackup("periodic");
     }
 
     /**
@@ -257,10 +245,10 @@ public class BackupManager {
      */
     public void shutdown() {
         backupRunning = false;
-        if (backupThread != null) {
-            backupThread.interrupt();
+        if (scheduler != null) {
             try {
-                backupThread.join(1000); // Wait up to 1 second
+                scheduler.shutdownNow();
+                scheduler.awaitTermination(1, java.util.concurrent.TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
