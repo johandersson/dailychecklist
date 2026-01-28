@@ -61,6 +61,16 @@ public class XMLTaskRepository implements TaskRepository {
         return t;
     });
 
+    // Coalescer for write debounce: collect frequent updates and flush them as a batch
+    private final java.util.concurrent.ConcurrentMap<String, Task> pendingWrites = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ScheduledExecutorService coalesceScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "xml-write-coalescer");
+        t.setDaemon(true);
+        return t;
+    });
+    private volatile java.util.concurrent.ScheduledFuture<?> coalesceFuture = null;
+    private final long COALESCE_DELAY_MS = 300; // short window to coalesce frequent updates
+
     // Read/write lock to allow concurrent readers but exclusive writers for cache access
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
@@ -157,6 +167,22 @@ public class XMLTaskRepository implements TaskRepository {
                 }
             }
         });
+    }
+
+    private void scheduleCoalescedFlushIfNeeded() {
+        if (coalesceFuture != null && !coalesceFuture.isDone()) return;
+        coalesceFuture = coalesceScheduler.schedule(this::flushPendingWrites, COALESCE_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+    }
+
+    private void flushPendingWrites() {
+        try {
+            if (pendingWrites.isEmpty()) return;
+            List<Task> batch = new ArrayList<>(pendingWrites.values());
+            pendingWrites.clear();
+            submitWithRetries("tasks-update-coalesced", () -> taskXmlHandler.updateTasks(batch));
+        } catch (Exception e) {
+            java.util.logging.Logger.getLogger(XMLTaskRepository.class.getName()).log(java.util.logging.Level.WARNING, "Failed to flush coalesced writes", e);
+        }
     }
 
     /**
@@ -384,9 +410,10 @@ public class XMLTaskRepository implements TaskRepository {
             rwLock.writeLock().unlock();
         }
 
-        // Persist asynchronously on the single-threaded executor (with retries/backoff)
-        submitWithRetries("task-update-" + task.getId(), () -> taskXmlHandler.updateTask(task));
-        System.out.println("[TRACE] XMLTaskRepository.updateTask scheduled persist id=" + task.getId());
+        // Add to coalesced pending writes and schedule a batched flush
+        pendingWrites.put(task.getId(), task);
+        scheduleCoalescedFlushIfNeeded();
+        System.out.println("[TRACE] XMLTaskRepository.updateTask scheduled coalesced persist id=" + task.getId());
     }
 
     /**
@@ -415,7 +442,9 @@ public class XMLTaskRepository implements TaskRepository {
                 rwLock.writeLock().unlock();
             }
 
-            submitWithRetries("task-update-quiet-" + task.getId(), () -> taskXmlHandler.updateTask(task));
+            // Coalesce quiet updates as well (batched flush will persist them)
+            pendingWrites.put(task.getId(), task);
+            scheduleCoalescedFlushIfNeeded();
             return true;
         } catch (Exception e) {
             System.out.println("[TRACE] XMLTaskRepository.updateTaskQuiet failed scheduling id=" + task.getId() + ", err=" + e.getMessage());
@@ -682,6 +711,9 @@ public class XMLTaskRepository implements TaskRepository {
         // Shutdown executor
         try {
             writeExecutor.shutdownNow();
+        } catch (Exception ignore) {}
+        try {
+            coalesceScheduler.shutdownNow();
         } catch (Exception ignore) {}
     }
 
