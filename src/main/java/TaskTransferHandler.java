@@ -211,6 +211,16 @@ public class TaskTransferHandler extends TransferHandler {
                         }
                     }
                 }
+                // If dropped at the very top (insert at index 0) but the first item is a top-level
+                // parent, treat this as a drop-on-parent onto that first item (user intent can be ambiguous).
+                if (isInsert && dropIndex == 0 && targetList.getModel().getSize() > 0) {
+                    Task first = targetList.getModel().getElementAt(0);
+                    if (first != null && first.getParentId() == null) {
+                        if (TaskDropHandler.handleDropOnItem(transferData, targetList, 0, taskManager, checklistName, updateAllPanels)) {
+                            return true;
+                        }
+                    }
+                }
             }
 
             if (transferData.sourceChecklistName.equals(checklistName)) {
