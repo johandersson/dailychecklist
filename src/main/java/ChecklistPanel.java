@@ -112,9 +112,12 @@ public class ChecklistPanel extends JPanel {
         if (index < 0) return;
 
         java.awt.Rectangle cellBounds = list.getCellBounds(index, index);
-        int checkboxX = cellBounds.x + 10;
+        Task task = list.getModel().getElementAt(index);
+        int baseIndent = 10;
+        int subtaskIndent = 24;
+        int checkboxX = cellBounds.x + baseIndent + (task.getParentId() != null ? subtaskIndent : 0);
         int checkboxY = cellBounds.y + cellBounds.height / 2 - 10;
-        int checkboxSize = 20;
+        int checkboxSize = 22;
         boolean onCheckbox = e.getPoint().x >= checkboxX && e.getPoint().x <= checkboxX + checkboxSize &&
                             e.getPoint().y >= checkboxY && e.getPoint().y <= checkboxY + checkboxSize;
 
@@ -155,7 +158,7 @@ public class ChecklistPanel extends JPanel {
             }
         }
 
-        // If parent, mark all subtasks done/undone
+        // If parent, mark all subtasks done/undone (use quiet updates to avoid repeated UI refreshes)
         if (subtasksByParent.containsKey(task.getId())) {
             for (Task sub : subtasksByParent.get(task.getId())) {
                 sub.setDone(newDone);
@@ -164,7 +167,7 @@ public class ChecklistPanel extends JPanel {
                 } else {
                     sub.setDoneDate(null);
                 }
-                taskManager.updateTask(sub);
+                taskManager.updateTaskQuiet(sub);
             }
         }
 
@@ -191,11 +194,11 @@ public class ChecklistPanel extends JPanel {
                 if (allSiblingsDone && newDone) {
                     parent.setDone(true);
                     parent.setDoneDate(new Date(System.currentTimeMillis()));
-                    taskManager.updateTask(parent);
+                    taskManager.updateTaskQuiet(parent);
                 } else if (!newDone) {
                     parent.setDone(false);
                     parent.setDoneDate(null);
-                    taskManager.updateTask(parent);
+                    taskManager.updateTaskQuiet(parent);
                 }
             }
         }
