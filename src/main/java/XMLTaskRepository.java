@@ -145,13 +145,11 @@ public class XMLTaskRepository implements TaskRepository {
                     long start = System.nanoTime();
                     op.run();
                     long dur = System.nanoTime() - start;
-                    java.util.logging.Logger.getLogger(XMLTaskRepository.class.getName())
-                        .log(java.util.logging.Level.FINE, "Persist succeeded (" + desc + ") in " + (dur / 1_000_000.0) + " ms");
+                    MetricsCollector.record("Persist succeeded (" + desc + ") in " + (dur / 1_000_000.0) + " ms");
                     return;
                 } catch (Exception e) {
                     attempts++;
-                    java.util.logging.Logger.getLogger(XMLTaskRepository.class.getName())
-                        .log(java.util.logging.Level.WARNING, "Persist failed (" + desc + ") attempt " + attempts, e);
+                    MetricsCollector.record("Persist failed (" + desc + ") attempt " + attempts + ": " + e.getMessage());
                     rwLock.writeLock().lock();
                     try { tasksCacheDirty = true; } finally { rwLock.writeLock().unlock(); }
                     if (attempts >= 3) {
@@ -223,8 +221,8 @@ public class XMLTaskRepository implements TaskRepository {
             // Use the quiet retry path for coalesced flushes to avoid showing a dialog
             // for transient background write failures.
             submitWithRetriesQuiet("tasks-update-coalesced", () -> taskXmlHandler.updateTasks(batch));
-        } catch (Exception e) {
-            java.util.logging.Logger.getLogger(XMLTaskRepository.class.getName()).log(java.util.logging.Level.WARNING, "Failed to flush coalesced writes", e);
+                } catch (Exception e) {
+            MetricsCollector.record("Failed to flush coalesced writes: " + e.getMessage());
         }
     }
 
@@ -528,8 +526,7 @@ public class XMLTaskRepository implements TaskRepository {
                 long start = System.nanoTime();
                 taskXmlHandler.updateTasks(tasks);
                 long dur = System.nanoTime() - start;
-                java.util.logging.Logger.getLogger(XMLTaskRepository.class.getName())
-                    .log(java.util.logging.Level.FINE, "updateTasks wrote " + tasks.size() + " tasks in " + (dur / 1_000_000.0) + " ms");
+                MetricsCollector.record("updateTasks wrote " + tasks.size() + " tasks in " + (dur / 1_000_000.0) + " ms");
             });
         } catch (Exception e) {
             if (parentComponent != null) {
