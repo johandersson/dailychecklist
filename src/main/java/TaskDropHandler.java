@@ -9,7 +9,7 @@ import javax.swing.JList;
 public final class TaskDropHandler {
     private TaskDropHandler() {}
 
-    public static boolean handleDropOnItem(TransferData transferData, JList<Task> targetList, int dropIndex, TaskManager taskManager, String checklistName, Runnable updateAllPanels) {
+    public static boolean handleDropOnItem(TransferData transferData, JList<Task> targetList, int dropIndex, int insertOffset, TaskManager taskManager, Runnable updateAllPanels) {
         if (transferData == null || targetList == null || taskManager == null) return false;
         if (dropIndex < 0 || dropIndex >= targetList.getModel().getSize()) return false;
         Task modelTarget = targetList.getModel().getElementAt(dropIndex);
@@ -26,7 +26,7 @@ public final class TaskDropHandler {
 
         if (wouldCreateSelfParenting(transferData, target)) return false;
 
-        List<Task> toPersist = prepareMovedTasks(transferData, checklistName, taskManager, target);
+        List<Task> toPersist = prepareMovedTasks(transferData, taskManager, target);
 
         // Persist field changes for moved tasks
         // Additionally, update the global task order so the moved tasks appear
@@ -48,8 +48,13 @@ public final class TaskDropHandler {
         if (targetIdx == -1) {
             // If target not found, append at end
             insertAt = all.size();
+        } else if (insertOffset >= 0) {
+            // Insert at a specific position inside the parent's subtask block
+            insertAt = targetIdx + 1 + insertOffset;
+            if (insertAt < 0) insertAt = 0;
+            if (insertAt > all.size()) insertAt = all.size();
         } else {
-            // Insert after the parent's existing subtask block
+            // Insert after the parent's existing subtask block (default behavior)
             insertAt = targetIdx + 1;
             while (insertAt < all.size() && target.getId().equals(all.get(insertAt).getParentId())) {
                 insertAt++;
@@ -75,7 +80,7 @@ public final class TaskDropHandler {
         return false;
     }
 
-    private static List<Task> prepareMovedTasks(TransferData transferData, String checklistName, TaskManager taskManager, Task target) {
+    private static List<Task> prepareMovedTasks(TransferData transferData, TaskManager taskManager, Task target) {
         List<Task> toPersist = new ArrayList<>();
         for (Task t : transferData.tasks) {
             // Use authoritative task instance to avoid modifying stale copies
