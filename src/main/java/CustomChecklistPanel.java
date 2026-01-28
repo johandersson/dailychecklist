@@ -136,6 +136,7 @@ public class CustomChecklistPanel extends JPanel {
         }
 
         // If parent and being marked done, mark all subtasks done (do not unmark subtasks when parent is unchecked)
+        boolean batchPersistScheduled = false;
         if (subtasksByParent.containsKey(task.getId()) && newDone) {
             java.util.List<Task> subs = new java.util.ArrayList<>(subtasksByParent.get(task.getId()));
             for (Task sub : subs) {
@@ -152,6 +153,7 @@ public class CustomChecklistPanel extends JPanel {
                 System.out.println("[TRACE] CustomChecklistPanel: background persisted " + subs.size() + " subtasks for parent=" + task.getId() + ", ok=" + ok);
                 javax.swing.SwingUtilities.invokeLater(this::updateTasks);
             }, "subtask-persist-worker").start();
+            batchPersistScheduled = true;
         }
 
         // If subtask, check if all siblings are done, then mark parent done/undone
@@ -186,11 +188,16 @@ public class CustomChecklistPanel extends JPanel {
         }
 
         System.out.println("[TRACE] CustomChecklistPanel: scheduling persist for clicked task id=" + task.getId());
-        new Thread(() -> {
-            taskManager.updateTaskQuiet(task);
-            javax.swing.SwingUtilities.invokeLater(this::updateTasks);
-            System.out.println("[TRACE] CustomChecklistPanel: background persisted clicked task id=" + task.getId());
-        }, "task-persist-worker").start();
+        // If we already scheduled a batch persist for parent+subtasks, skip the single-task persist
+        if (!batchPersistScheduled) {
+            new Thread(() -> {
+                taskManager.updateTaskQuiet(task);
+                javax.swing.SwingUtilities.invokeLater(this::updateTasks);
+                System.out.println("[TRACE] CustomChecklistPanel: background persisted clicked task id=" + task.getId());
+            }, "task-persist-worker").start();
+        } else {
+            System.out.println("[TRACE] CustomChecklistPanel: skipped single-task persist because batch persist scheduled for parent=" + task.getId());
+        }
         list.repaint(cellBounds);
     }
 
