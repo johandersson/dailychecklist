@@ -23,6 +23,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class TaskManager {
     private final TaskRepository repository;
     private final List<TaskChangeListener> listeners = new CopyOnWriteArrayList<>();
+    // Cache of subtasks grouped by parentId; rebuilt when tasks change to avoid repeated sorting
+    private volatile java.util.Map<String, java.util.List<Task>> cachedSubtasksByParent = new java.util.concurrent.ConcurrentHashMap<>();
+    private volatile boolean subtasksCacheValid = false;
 
     public TaskManager(TaskRepository repository) {
         this.repository = repository;
@@ -65,11 +68,13 @@ public class TaskManager {
 
     public void addTask(Task task) {
         repository.addTask(task);
+        invalidateSubtasksCache();
         notifyListeners();
     }
 
     public void updateTask(Task task) {
         repository.updateTask(task);
+        invalidateSubtasksCache();
         notifyListeners();
     }
 
@@ -85,6 +90,7 @@ public class TaskManager {
         } else {
             repository.updateTask(task);
         }
+        invalidateSubtasksCache();
         notifyListeners();
     }
 
@@ -130,11 +136,13 @@ public class TaskManager {
         } else {
             for (Task t : tasks) repository.updateTask(t);
         }
+        invalidateSubtasksCache();
         notifyListeners();
     }
 
     public void removeTask(Task task) {
         repository.removeTask(task);
+        invalidateSubtasksCache();
         notifyListeners();
     }
 
@@ -209,7 +217,48 @@ public class TaskManager {
 
     public void setTasks(List<Task> tasks) {
         repository.setTasks(tasks);
+        invalidateSubtasksCache();
         notifyListeners();
+    }
+
+    /**
+     * Invalidate cached subtasks map. Call after any data-modifying operation.
+     */
+    private void invalidateSubtasksCache() {
+        subtasksCacheValid = false;
+        cachedSubtasksByParent.clear();
+    }
+
+    /**
+     * Rebuild the subtasks-by-parent cache if it's invalid.
+     */
+    private synchronized void rebuildSubtasksCacheIfNeeded() {
+        if (subtasksCacheValid) return;
+        java.util.Map<String, java.util.List<Task>> map = new java.util.HashMap<>();
+        for (Task t : getAllTasks()) {
+            String pid = t.getParentId();
+            if (pid != null) {
+                map.computeIfAbsent(pid, k -> new java.util.ArrayList<>()).add(t);
+            }
+        }
+        // Sort each parent's list once using a case-insensitive comparator
+        java.util.Comparator<Task> cmp = java.util.Comparator.comparing(Task::getName, String.CASE_INSENSITIVE_ORDER);
+        for (java.util.Map.Entry<String, java.util.List<Task>> e : map.entrySet()) {
+            java.util.List<Task> list = e.getValue();
+            list.sort(cmp);
+            cachedSubtasksByParent.put(e.getKey(), java.util.Collections.unmodifiableList(list));
+        }
+        subtasksCacheValid = true;
+    }
+
+    /**
+     * Returns direct subtasks for the given parent id, cached and pre-sorted by name.
+     */
+    public java.util.List<Task> getSubtasksSorted(String parentId) {
+        if (parentId == null) return java.util.Collections.emptyList();
+        rebuildSubtasksCacheIfNeeded();
+        java.util.List<Task> list = cachedSubtasksByParent.get(parentId);
+        return list == null ? java.util.Collections.emptyList() : list;
     }
 
     public List<Reminder> getReminders() {
