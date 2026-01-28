@@ -150,39 +150,28 @@ public class ChecklistPanel extends JPanel {
             task.setDoneDate(null);
         }
 
-        List<Task> allTasks = taskManager.getAllTasks();
-        // Build parentId -> List<Task> map for O(1) subtask lookup
-        java.util.Map<String, java.util.List<Task>> subtasksByParent = new java.util.HashMap<>();
-        for (Task t : allTasks) {
-            if (t.getParentId() != null) {
-                subtasksByParent.computeIfAbsent(t.getParentId(), k -> new java.util.ArrayList<>()).add(t);
-            }
-        }
-
-        // If parent and being marked done, mark all subtasks done (do not unmark subtasks when parent is unchecked)
+        // Use TaskManager helper to get direct subtasks for this task
+        java.util.List<Task> subs = taskManager.getSubtasks(task.getId());
         boolean batchPersistScheduled = false;
-        if (subtasksByParent.containsKey(task.getId()) && newDone) {
-            java.util.List<Task> subs = new java.util.ArrayList<>(subtasksByParent.get(task.getId()));
+        if (!subs.isEmpty() && newDone) {
+            java.util.List<Task> toUpdate = new java.util.ArrayList<>();
             for (Task sub : subs) {
                 System.out.println("[TRACE] ChecklistPanel: parent->sub mark id=" + sub.getId());
                 sub.setDone(true);
                 sub.setDoneDate(new Date(System.currentTimeMillis()));
+                toUpdate.add(sub);
             }
-            // Persist subtask changes together with the parent off the EDT to avoid blocking the UI
-            new Thread(() -> {
-                java.util.List<Task> toPersist = new java.util.ArrayList<>();
-                toPersist.addAll(subs);
-                toPersist.add(task);
-                boolean ok = taskManager.updateTasksQuiet(toPersist);
-                System.out.println("[TRACE] ChecklistPanel: background persisted " + subs.size() + " subtasks for parent=" + task.getId() + ", ok=" + ok);
-                javax.swing.SwingUtilities.invokeLater(this::updateTasks);
-            }, "subtask-persist-worker").start();
+            toUpdate.add(task);
+            // Persist via TaskManager quiet update (repository will persist async)
+            boolean ok = taskManager.updateTasksQuiet(toUpdate);
+            System.out.println("[TRACE] ChecklistPanel: scheduled persist " + subs.size() + " subtasks for parent=" + task.getId() + ", ok=" + ok);
+            javax.swing.SwingUtilities.invokeLater(this::updateTasks);
             batchPersistScheduled = true;
         }
 
         // If subtask, check if all siblings are done, then mark parent done/undone
         if (task.getParentId() != null) {
-            java.util.List<Task> siblings = subtasksByParent.get(task.getParentId());
+            java.util.List<Task> siblings = taskManager.getSubtasks(task.getParentId());
             boolean allSiblingsDone = true;
             if (siblings != null) {
                 for (Task sib : siblings) {
@@ -192,13 +181,7 @@ public class ChecklistPanel extends JPanel {
                     }
                 }
             }
-            Task parent = null;
-            for (Task t : allTasks) {
-                if (t.getId().equals(task.getParentId())) {
-                    parent = t;
-                    break;
-                }
-            }
+            Task parent = taskManager.getTaskById(task.getParentId());
             if (parent != null) {
                 // Only mark parent done when all siblings are done and the current subtask was just marked done.
                 if (allSiblingsDone && newDone) {
@@ -214,12 +197,9 @@ public class ChecklistPanel extends JPanel {
         System.out.println("[TRACE] ChecklistPanel: scheduling persist for clicked task id=" + task.getId());
         // If we already scheduled a batch persist for parent+subtasks, skip the single-task persist
         if (!batchPersistScheduled) {
-            // Persist the clicked task off the EDT and then refresh UI
-            new Thread(() -> {
-                taskManager.updateTaskQuiet(task);
-                javax.swing.SwingUtilities.invokeLater(this::updateTasks);
-                System.out.println("[TRACE] ChecklistPanel: background persisted clicked task id=" + task.getId());
-            }, "task-persist-worker").start();
+            boolean ok = taskManager.updateTaskQuiet(task);
+            javax.swing.SwingUtilities.invokeLater(this::updateTasks);
+            System.out.println("[TRACE] ChecklistPanel: scheduled persist clicked task id=" + task.getId() + ", ok=" + ok);
         } else {
             System.out.println("[TRACE] ChecklistPanel: skipped single-task persist because batch persist scheduled for parent=" + task.getId());
         }

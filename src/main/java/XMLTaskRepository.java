@@ -506,17 +506,8 @@ public class XMLTaskRepository implements TaskRepository {
             rwLock.writeLock().unlock();
         }
 
-        writeExecutor.submit(() -> {
-            try {
-                taskXmlHandler.removeTask(task);
-                } catch (Exception e) {
-                    rwLock.writeLock().lock();
-                    try { tasksCacheDirty = true; } finally { rwLock.writeLock().unlock(); }
-                    if (parentComponent != null) {
-                        javax.swing.SwingUtilities.invokeLater(() -> ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e));
-                    }
-                }
-        });
+        // Use the centralized retry/persist helper to remove the task
+        submitWithRetries("task-remove-" + task.getId(), () -> taskXmlHandler.removeTask(task));
     }
 
     @Override

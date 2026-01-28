@@ -17,6 +17,7 @@
  */
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -39,11 +40,11 @@ public class ReminderDialog extends JDialog {
 
     @SuppressWarnings("this-escape")
     public ReminderDialog(JFrame parent, Reminder reminder, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow, Runnable onMarkAsDone) {
-        this(parent, reminder, null, onOpen, onDone, onRemindLater, onRemindTomorrow, onMarkAsDone);
+        this(parent, reminder, null, null, onOpen, onDone, onRemindLater, onRemindTomorrow, onMarkAsDone);
     }
 
     @SuppressWarnings("this-escape")
-    public ReminderDialog(JFrame parent, Reminder reminder, String displayTitle, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow, Runnable onMarkAsDone) {
+    public ReminderDialog(JFrame parent, Reminder reminder, String displayTitle, String breadcrumbText, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow, Runnable onMarkAsDone) {
         super(parent, "Reminder", true);
         this.onOpen = onOpen;
         this.onDone = onDone;
@@ -64,19 +65,27 @@ public class ReminderDialog extends JDialog {
         String timeString = String.format("%02d:%02d", reminder.getHour(), reminder.getMinute());
         String dateString = String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
 
-        // Create HTML-formatted message with better styling
-        String htmlMessage = "<html><body style='font-family: Arial, sans-serif; font-size: 12px; padding: 10px;'>" +
-            "<div style='text-align: center; margin-bottom: 15px;'>" +
-            "<h2 style='color: #2E86AB; margin: 0 0 5px 0; font-size: 16px;'>⏰ Reminder</h2>" +
-            "<div style='font-size: 14px; font-weight: bold; color: #333; margin-bottom: 8px;'>" + checklistName + "</div>" +
-            "<div style='color: #666; font-size: 11px;'>Scheduled for: " + timeString + " on " + dateString + "</div>" +
-            "</div>" +
-            "<div style='text-align: center; color: #555; font-style: italic;'>" +
-            "It's time to check your tasks!" +
-            "</div>" +
-            "</body></html>";
+        // Top panel: title + checklist/task name + optional breadcrumb for subtasks
+        JPanel topPanel = new JPanel(new BorderLayout());
+        String titleHtml = "<html><div style='text-align:center;padding:6px;'><h2 style='color: #2E86AB;margin:0 0 4px 0;font-size:16px;'>⏰ Reminder</h2>" +
+                "<div style='font-size:14px;font-weight:bold;color:#333;margin-bottom:4px;'>" + checklistName + "</div>" +
+                "<div style='color:#666;font-size:11px;'>Scheduled for: " + timeString + " on " + dateString + "</div></div></html>";
+        JLabel titleLabel = new JLabel(titleHtml);
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+        topPanel.add(titleLabel, BorderLayout.CENTER);
 
-        JLabel messageLabel = new JLabel(htmlMessage);
+        if (breadcrumbText != null && !breadcrumbText.trim().isEmpty()) {
+            SubtaskBreadcrumb crumb = new SubtaskBreadcrumb();
+            crumb.setFontToUse(FontManager.getTaskListFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL));
+            crumb.setText(breadcrumbText);
+            crumb.setPreferredSize(new java.awt.Dimension(400, 20));
+            JPanel crumbWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+            crumbWrap.add(crumb);
+            topPanel.add(crumbWrap, BorderLayout.SOUTH);
+        }
+
+        JLabel messageLabel = new JLabel("<html><div style='text-align:center;color:#555;font-style:italic;padding:8px;'>It's time to check your tasks!</div></html>");
         messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         messageLabel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
 
@@ -93,27 +102,27 @@ public class ReminderDialog extends JDialog {
         remindTomorrowButton.setToolTipText("Remind me tomorrow at the same time");
 
         openButton.addActionListener(e -> {
-            onOpen.run();
+            if (this.onOpen != null) this.onOpen.run();
             dispose();
         });
 
         dismissButton.addActionListener(e -> {
-            onDone.run();
+            if (this.onDone != null) this.onDone.run();
             dispose();
         });
 
         markAsDoneButton.addActionListener(e -> {
-            onMarkAsDone.run();
+            if (this.onMarkAsDone != null) this.onMarkAsDone.run();
             dispose();
         });
 
         remindLaterButton.addActionListener(e -> {
-            onRemindLater.run();
+            if (this.onRemindLater != null) this.onRemindLater.run();
             dispose();
         });
 
         remindTomorrowButton.addActionListener(e -> {
-            onRemindTomorrow.run();
+            if (this.onRemindTomorrow != null) this.onRemindTomorrow.run();
             dispose();
         });
 
@@ -129,6 +138,7 @@ public class ReminderDialog extends JDialog {
         buttonPanel.add(dismissButton);
 
         setLayout(new BorderLayout());
+        add(topPanel, BorderLayout.NORTH);
         add(messageLabel, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
 

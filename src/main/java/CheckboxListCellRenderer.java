@@ -26,7 +26,6 @@ import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import javax.swing.JList;
 import javax.swing.JPanel;
@@ -154,20 +153,14 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
         // Find a reminder that targets this specific task (task-level reminder)
         if (taskManager != null && this.taskId != null) {
-            List<Reminder> reminders = taskManager.getReminders();
-            for (Reminder r : reminders) {
-                if (this.taskId.equals(r.getTaskId())) {
-                    this.taskReminder = r;
-                    break;
-                }
-            }
+            this.taskReminder = taskManager.getReminderForTask(this.taskId);
         }
 
         // Resolve checklist name from ID if showing checklist info
         if (showChecklistInfo && task.getChecklistId() != null && checklistNameManager != null) {
-            Checklist checklist = checklistNameManager.getChecklistById(task.getChecklistId());
-            if (checklist != null && checklist.getName() != null && !checklist.getName().trim().isEmpty()) {
-                this.taskName = task.getName() + " (" + checklist.getName() + ")";
+            String cname = checklistNameManager.getNameById(task.getChecklistId());
+            if (cname != null && !cname.trim().isEmpty()) {
+                this.taskName = task.getName() + " (" + cname + ")";
             }
         }
 
