@@ -70,6 +70,58 @@ public class MenuBarBuilder {
         });
         fileMenu.add(restoreItem);
 
+        // Clean orphaned tasks: move orphans to a new custom checklist named "Unassigned"
+        JMenuItem cleanOrphansItem = new JMenuItem("Clean orphaned tasks");
+        cleanOrphansItem.addActionListener(e -> {
+            try {
+                java.util.List<Task> allTasks = taskManager.getAllTasks();
+                java.util.List<Task> orphans = new java.util.ArrayList<>();
+                for (Task t : allTasks) {
+                    if (t.getParentId() != null && taskManager.getTaskById(t.getParentId()) == null) {
+                        orphans.add(t);
+                    }
+                }
+                if (orphans.isEmpty()) {
+                    JOptionPane.showMessageDialog(parent, "No orphaned tasks found.", "Clean Orphans", JOptionPane.INFORMATION_MESSAGE);
+                    return;
+                }
+
+                int resp = JOptionPane.showConfirmDialog(parent,
+                        "Found " + orphans.size() + " orphaned task(s). Move them to a new checklist named 'Unassigned'?",
+                        "Clean Orphaned Tasks", JOptionPane.YES_NO_OPTION);
+                if (resp != JOptionPane.YES_OPTION) return;
+
+                // Find existing Unassigned checklist (case-insensitive) or create it
+                Checklist unassigned = null;
+                for (Checklist c : taskManager.getCustomChecklists()) {
+                    if ("Unassigned".equalsIgnoreCase(c.getName())) { unassigned = c; break; }
+                }
+                if (unassigned == null) {
+                    unassigned = new Checklist("Unassigned");
+                    taskManager.addChecklist(unassigned);
+                }
+
+                // Reparent orphans into Unassigned and clear parentId
+                java.util.List<Task> toPersist = new java.util.ArrayList<>();
+                for (Task o : orphans) {
+                    Task authoritative = taskManager.getTaskById(o.getId());
+                    if (authoritative == null) authoritative = o;
+                    authoritative.setChecklistId(unassigned.getId());
+                    authoritative.setParentId(null);
+                    toPersist.add(authoritative);
+                }
+
+                taskManager.updateTasks(toPersist);
+                if (updateTasks != null) updateTasks.run();
+                JOptionPane.showMessageDialog(parent, "Moved " + toPersist.size() + " orphaned task(s) to 'Unassigned'.", "Clean Orphans", JOptionPane.INFORMATION_MESSAGE);
+                // Ensure newly created checklist is visible
+                try { if (dailyChecklist != null) dailyChecklist.showCustomChecklist(unassigned.getName()); } catch (Exception ignore) {}
+            } catch (Exception ex) {
+                ErrorDialog.showError(parent, "Failed to clean orphaned tasks", ex);
+            }
+        });
+        fileMenu.add(cleanOrphansItem);
+
         fileMenu.addSeparator();
 
         // About
