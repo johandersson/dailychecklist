@@ -18,6 +18,7 @@
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
+import java.util.function.Consumer;
 import javax.swing.DefaultListModel;
 import javax.swing.JList;
 import javax.swing.TransferHandler;
@@ -28,11 +29,13 @@ public class ChecklistListTransferHandler extends TransferHandler {
     private transient final DefaultListModel<Checklist> listModel;
     private transient final TaskManager taskManager;
     private transient final Runnable updateTasks;
+    private final Consumer<String> onChecklistDrop;
 
-    public ChecklistListTransferHandler(DefaultListModel<Checklist> listModel, TaskManager taskManager, Runnable updateTasks) {
+    public ChecklistListTransferHandler(DefaultListModel<Checklist> listModel, TaskManager taskManager, Runnable updateTasks, Consumer<String> onChecklistDrop) {
         this.listModel = listModel;
         this.taskManager = taskManager;
         this.updateTasks = updateTasks;
+        this.onChecklistDrop = onChecklistDrop;
     }
 
     @Override
@@ -87,13 +90,18 @@ public class ChecklistListTransferHandler extends TransferHandler {
 
             taskManager.moveTaskToChecklist(task, targetChecklist);
             updateTasks.run();
-            // If the drop originated from a JList, try to select the target checklist in the UI
-            try {
-                Object comp = support.getComponent();
-                if (comp instanceof JList<?> list) {
-                    list.setSelectedValue(targetChecklistName, true);
+            // Notify the overview panel to select the target checklist in the UI
+            if (onChecklistDrop != null) {
+                onChecklistDrop.accept(targetChecklistName);
+            } else {
+                // fallback: try to select in the JList
+                try {
+                    Object comp = support.getComponent();
+                    if (comp instanceof JList<?> list) {
+                        list.setSelectedValue(targetChecklistName, true);
+                    }
+                } catch (Exception ignored) {
                 }
-            } catch (Exception ignored) {
             }
             return true;
         } catch (UnsupportedFlavorException | IOException e) {

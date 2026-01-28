@@ -112,7 +112,10 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         javax.swing.ToolTipManager.sharedInstance().registerComponent(checklistList);
         checklistList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Same as task lists
         checklistList.setSelectionForeground(java.awt.Color.BLACK);
-        checklistList.setTransferHandler(new ChecklistListTransferHandler(listModel, taskManager, this::updateTasks));
+        checklistList.setTransferHandler(new ChecklistListTransferHandler(
+            listModel, taskManager, this::updateTasks,
+            name -> javax.swing.SwingUtilities.invokeLater(() -> selectChecklistByName(name))
+        ));
         checklistList.setDropMode(DropMode.ON);
         checklistList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
