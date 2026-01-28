@@ -48,6 +48,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private static final int RIGHT_ICON_SPACE = REMINDER_ICON_AREA + WEEKDAY_ICON_AREA + 12; // total reserved space
     
     private boolean showChecklistInfo; // Whether to show checklist name in display
+    private boolean isSubtask; // True if this task is a subtask (for indentation)
     private ChecklistNameManager checklistNameManager; // Manager to resolve checklist IDs to names
     private transient TaskManager taskManager;
     private String taskId;
