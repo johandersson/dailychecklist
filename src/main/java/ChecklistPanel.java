@@ -142,6 +142,7 @@ public class ChecklistPanel extends JPanel {
     private void toggleTaskDone(JList<Task> list, int index) {
         Task task = list.getModel().getElementAt(index);
         boolean newDone = !task.isDone();
+        System.out.println("[TRACE] ChecklistPanel.toggleTaskDone start id=" + task.getId() + ", parentId=" + task.getParentId() + ", newDone=" + newDone + ", thread=" + Thread.currentThread().getName());
         task.setDone(newDone);
         if (newDone) {
             task.setDoneDate(new Date(System.currentTimeMillis()));
@@ -160,11 +161,21 @@ public class ChecklistPanel extends JPanel {
 
         // If parent and being marked done, mark all subtasks done (do not unmark subtasks when parent is unchecked)
         if (subtasksByParent.containsKey(task.getId()) && newDone) {
-            for (Task sub : subtasksByParent.get(task.getId())) {
+            java.util.List<Task> subs = new java.util.ArrayList<>(subtasksByParent.get(task.getId()));
+            for (Task sub : subs) {
+                System.out.println("[TRACE] ChecklistPanel: parent->sub mark id=" + sub.getId());
                 sub.setDone(true);
                 sub.setDoneDate(new Date(System.currentTimeMillis()));
-                taskManager.updateTaskQuiet(sub);
             }
+            // Persist subtask changes together with the parent off the EDT to avoid blocking the UI
+            new Thread(() -> {
+                java.util.List<Task> toPersist = new java.util.ArrayList<>();
+                toPersist.addAll(subs);
+                toPersist.add(task);
+                boolean ok = taskManager.updateTasksQuiet(toPersist);
+                System.out.println("[TRACE] ChecklistPanel: background persisted " + subs.size() + " subtasks for parent=" + task.getId() + ", ok=" + ok);
+                javax.swing.SwingUtilities.invokeLater(this::updateTasks);
+            }, "subtask-persist-worker").start();
         }
 
         // If subtask, check if all siblings are done, then mark parent done/undone
@@ -189,6 +200,7 @@ public class ChecklistPanel extends JPanel {
             if (parent != null) {
                 // Only mark parent done when all siblings are done and the current subtask was just marked done.
                 if (allSiblingsDone && newDone) {
+                    System.out.println("[TRACE] ChecklistPanel: all siblings done -> mark parent id=" + parent.getId());
                     parent.setDone(true);
                     parent.setDoneDate(new Date(System.currentTimeMillis()));
                     taskManager.updateTaskQuiet(parent);
@@ -197,7 +209,13 @@ public class ChecklistPanel extends JPanel {
             }
         }
 
-        taskManager.updateTask(task);
+        System.out.println("[TRACE] ChecklistPanel: scheduling persist for clicked task id=" + task.getId());
+        // Persist the clicked task off the EDT and then refresh UI
+        new Thread(() -> {
+            taskManager.updateTaskQuiet(task);
+            javax.swing.SwingUtilities.invokeLater(this::updateTasks);
+            System.out.println("[TRACE] ChecklistPanel: background persisted clicked task id=" + task.getId());
+        }, "task-persist-worker").start();
     }
 
     private void deleteSelectedTasks(JList<Task> list) {
