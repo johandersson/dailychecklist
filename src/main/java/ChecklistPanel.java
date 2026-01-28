@@ -302,10 +302,26 @@ public class ChecklistPanel extends JPanel {
     }
 
     private void addTaskActionItems(JPopupMenu menu, JList<Task> list, int index) {
+        menu.add(createAddSubtaskMenuItem(list, index));
         menu.add(createRemoveMenuItem(list, index));
         menu.add(createStartFocusTimerMenuItem(list, index));
         menu.add(createSetTaskReminderMenuItem(list, index));
         menu.add(createRemoveTaskReminderMenuItem(list, index));
+    }
+
+    // Place at the end of the class, before the final closing brace
+    private JMenuItem createAddSubtaskMenuItem(JList<Task> list, int index) {
+        JMenuItem addSubtaskItem = new JMenuItem("Add Subtask");
+        addSubtaskItem.addActionListener(event -> {
+            Task parent = list.getModel().getElementAt(index);
+            String subtaskName = javax.swing.JOptionPane.showInputDialog(this, "Enter subtask name:");
+            if (subtaskName != null && !subtaskName.trim().isEmpty()) {
+                Task subtask = new Task(subtaskName.trim(), parent.getType(), parent.getWeekday(), parent.getChecklistId(), parent.getId());
+                taskManager.addTask(subtask);
+                updateTasks();
+            }
+        });
+        return addSubtaskItem;
     }
 
     private JMenuItem createRemoveMenuItem(JList<Task> list, int index) {
