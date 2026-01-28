@@ -183,12 +183,28 @@ public class CustomChecklistPanel extends JPanel {
 
     private void showContextMenu(MouseEvent e, JList<Task> list, int index) {
         JPopupMenu contextMenu = new JPopupMenu();
+        contextMenu.add(createAddSubtaskMenuItem(list, index));
         contextMenu.add(createEditMenuItem(list, index));
         contextMenu.add(createRemoveMenuItem(list, index));
         contextMenu.add(createStartFocusTimerItem(list, index));
         contextMenu.add(createSetTaskReminderItem(list, index));
         contextMenu.add(createRemoveTaskReminderItem(list, index));
         contextMenu.show(list, e.getX(), e.getY());
+    }
+
+    // Place at the end of the class, before the final closing brace
+    private JMenuItem createAddSubtaskMenuItem(JList<Task> list, int index) {
+        JMenuItem addSubtaskItem = new JMenuItem("Add Subtask");
+        addSubtaskItem.addActionListener(event -> {
+            Task parent = list.getModel().getElementAt(index);
+            String subtaskName = JOptionPane.showInputDialog(this, "Enter subtask name:");
+            if (subtaskName != null && !subtaskName.trim().isEmpty()) {
+                Task subtask = new Task(subtaskName.trim(), parent.getType(), parent.getWeekday(), parent.getChecklistId(), parent.getId());
+                taskManager.addTask(subtask);
+                updateTasks();
+            }
+        });
+        return addSubtaskItem;
     }
 
     private JMenuItem createEditMenuItem(JList<Task> list, int index) {
