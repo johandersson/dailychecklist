@@ -33,6 +33,10 @@ public class Task {
     private String parentId; // null if not a subtask
     private List<Task> subtasks = new ArrayList<>(); // Only one level of subtasks
 
+    // Transient, runtime-only caches to avoid repeated work during painting
+    transient String cachedDisplayFullName;
+    transient int[] cachedCumulativeCharWidthsMain;
+
     // Constructor when loading from file (ID provided)
     public Task(String id, String name, TaskType type, String weekday, boolean done, String doneDate, String checklistId, String parentId) {
         this.id = id;

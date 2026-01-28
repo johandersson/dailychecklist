@@ -76,6 +76,9 @@ public class TaskUpdater {
             }
         }
 
+        // Precompute display data for renderer (no checklist info for daily lists)
+        DisplayPrecomputer.precomputeForList(desiredMorning, null, false);
+        DisplayPrecomputer.precomputeForList(desiredEvening, null, false);
         syncModel(morningListModel, desiredMorning);
         syncModel(eveningListModel, desiredEvening);
     }
