@@ -345,15 +345,22 @@ public class ChecklistPanel extends JPanel {
     // Place at the end of the class, before the final closing brace
     private JMenuItem createAddSubtaskMenuItem(JList<Task> list, int index) {
         JMenuItem addSubtaskItem = new JMenuItem("Add Subtask");
-        addSubtaskItem.addActionListener(event -> {
-            Task parent = list.getModel().getElementAt(index);
-            String subtaskName = javax.swing.JOptionPane.showInputDialog(this, "Enter subtask name:");
-            if (subtaskName != null && !subtaskName.trim().isEmpty()) {
-                Task subtask = new Task(subtaskName.trim(), parent.getType(), parent.getWeekday(), parent.getChecklistId(), parent.getId());
-                taskManager.addTask(subtask);
-                updateTasks();
-            }
-        });
+        Task parent = list.getModel().getElementAt(index);
+        if (parent.getParentId() != null) {
+            // Disable adding a subtask to a subtask (one-level only)
+            addSubtaskItem.setEnabled(false);
+            addSubtaskItem.setToolTipText("Cannot add a subtask to a subtask");
+        } else {
+            addSubtaskItem.addActionListener(event -> {
+                Task p = list.getModel().getElementAt(index);
+                String subtaskName = javax.swing.JOptionPane.showInputDialog(this, "Enter subtask name:");
+                if (subtaskName != null && !subtaskName.trim().isEmpty()) {
+                    Task subtask = new Task(subtaskName.trim(), p.getType(), p.getWeekday(), p.getChecklistId(), p.getId());
+                    taskManager.addTask(subtask);
+                    updateTasks();
+                }
+            });
+        }
         return addSubtaskItem;
     }
 
