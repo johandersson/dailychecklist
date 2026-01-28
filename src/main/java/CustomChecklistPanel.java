@@ -502,6 +502,8 @@ public class CustomChecklistPanel extends JPanel {
                                 desired.addAll(subs);
                             }
                         }
+                        // Precompute display strings (include checklist info for custom lists)
+                        DisplayPrecomputer.precomputeForList(desired, taskManager, true);
                         TaskUpdater.syncModel(customListModel, desired);
 
                     // Restore selections after updating

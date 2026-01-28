@@ -292,17 +292,39 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             smallFont = currentFont.deriveFont(Font.PLAIN, FontManager.SIZE_SMALL);
         }
         g2.setFont(currentFont);
-        if (fmMainCached == null || !currentFont.equals(lastBaseFont)) {
-            fmMainCached = g2.getFontMetrics(currentFont);
-        }
-        FontMetrics fmMain = fmMainCached;
+        FontMetrics fmMain = FontMetricsCache.get(currentFont);
         String drawTaskName = taskName != null ? taskName : "";
         if (availableWidth > 12 && fmMain.stringWidth(drawTaskName) > availableWidth) {
-            int len = drawTaskName.length();
-            while (len > 0 && fmMain.stringWidth(drawTaskName.substring(0, len) + "…") > availableWidth) {
-                len--;
+            // Try to use precomputed per-task cumulative widths if available
+            Task backing = (taskManager != null && taskId != null) ? taskManager.getTaskById(taskId) : null;
+            if (backing != null && backing.cachedDisplayFullName != null && backing.cachedDisplayFullName.equals(drawTaskName) && backing.cachedCumulativeCharWidthsMain != null) {
+                int[] cum = backing.cachedCumulativeCharWidthsMain;
+                int ellWidth = fmMain.charWidth('…');
+                int allowed = Math.max(0, availableWidth - ellWidth);
+                // binary search last index with cum[idx] <= allowed
+                int lo = 0, hi = cum.length - 1, found = -1;
+                while (lo <= hi) {
+                    int mid = (lo + hi) >>> 1;
+                    if (cum[mid] <= allowed) { found = mid; lo = mid + 1; } else { hi = mid - 1; }
+                }
+                if (found >= 0) {
+                    drawTaskName = drawTaskName.substring(0, found + 1) + "…";
+                } else {
+                    // no chars fit, fallback to ellipsis only
+                    drawTaskName = "…";
+                }
+            } else {
+                // Fallback: binary-search on length using FontMetrics stringWidth
+                int lo = 0, hi = drawTaskName.length() - 1, best = -1;
+                int ellWidth = fmMain.charWidth('…');
+                int allowed = Math.max(0, availableWidth - ellWidth);
+                while (lo <= hi) {
+                    int mid = (lo + hi) >>> 1;
+                    String sub = drawTaskName.substring(0, mid + 1);
+                    if (fmMain.stringWidth(sub) <= allowed) { best = mid; lo = mid + 1; } else { hi = mid - 1; }
+                }
+                if (best >= 0) drawTaskName = drawTaskName.substring(0, best + 1) + "…"; else drawTaskName = "…";
             }
-            drawTaskName = drawTaskName.substring(0, len) + "…";
         }
         g2.drawString(drawTaskName, textStartX, textY);
     }
