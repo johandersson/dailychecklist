@@ -29,26 +29,53 @@ public class TaskUpdater {
     public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showAllWeekdaySpecificTasks) {
         String currentWeekday = LocalDateTime.now().getDayOfWeek().toString().toLowerCase();
 
-        List<Task> desiredMorning = new ArrayList<>();
-        List<Task> desiredEvening = new ArrayList<>();
+        // Group tasks by id and parentId
+        List<Task> morningParents = new ArrayList<>();
+        List<Task> eveningParents = new ArrayList<>();
+        // Map from parentId to list of subtasks
+        java.util.Map<String, List<Task>> subtasksByParent = new java.util.HashMap<>();
+
         for (Task task : allTasks) {
             boolean show;
             if (task.getWeekday() == null) {
-                show = true; // Non-weekday-specific tasks always show
+                show = true;
             } else {
-                // If "show all" is enabled, show all weekday-specific tasks; otherwise show only today's weekday
                 show = showAllWeekdaySpecificTasks || task.getWeekday().toLowerCase().equals(currentWeekday);
             }
             if (show && task.getType() != TaskType.CUSTOM) {
-                if (task.getType() == TaskType.MORNING) {
-                    desiredMorning.add(task);
-                } else if (task.getType() == TaskType.EVENING) {
-                    desiredEvening.add(task);
+                if (task.getParentId() == null) {
+                    if (task.getType() == TaskType.MORNING) {
+                        morningParents.add(task);
+                    } else if (task.getType() == TaskType.EVENING) {
+                        eveningParents.add(task);
+                    }
+                } else {
+                    subtasksByParent.computeIfAbsent(task.getParentId(), k -> new ArrayList<>()).add(task);
                 }
             }
         }
 
-        // Sync models incrementally to avoid clearing and repopulating (reduces O(N) churn)
+        List<Task> desiredMorning = new ArrayList<>();
+        for (Task parent : morningParents) {
+            desiredMorning.add(parent);
+            List<Task> subs = subtasksByParent.get(parent.getId());
+            if (subs != null) {
+                // Sort subtasks by name for consistency
+                subs.sort(java.util.Comparator.comparing(Task::getName, String.CASE_INSENSITIVE_ORDER));
+                desiredMorning.addAll(subs);
+            }
+        }
+
+        List<Task> desiredEvening = new ArrayList<>();
+        for (Task parent : eveningParents) {
+            desiredEvening.add(parent);
+            List<Task> subs = subtasksByParent.get(parent.getId());
+            if (subs != null) {
+                subs.sort(java.util.Comparator.comparing(Task::getName, String.CASE_INSENSITIVE_ORDER));
+                desiredEvening.addAll(subs);
+            }
+        }
+
         syncModel(morningListModel, desiredMorning);
         syncModel(eveningListModel, desiredEvening);
     }

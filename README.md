@@ -7,6 +7,7 @@ Stay organized and boost your productivity with the **Daily Checklist** applicat
 ## Features
 
 - **Daily Task Management**: Add, edit, rename, and remove tasks for your morning and evening routines with flexible scheduling (daily, weekday, or specific days).
+- **Subtasks**: Add subtasks to any daily or custom task. Subtasks appear directly below their parent and are indented. Marking all subtasks as done marks the parent as done, and marking the parent as done marks all subtasks as done. Only one level of subtasks is supported.
 - **Custom Checklists**: Create named checklists for specific projects, habits, or one-off task lists with support for adding multiple tasks at once.
 - **Search Functionality**: Quickly find tasks across all checklists with real-time search (Ctrl+F) and jump directly to selected tasks.
 - **Reminders**: Set date/time reminders for any checklist with notifications and visual clock icons.
@@ -64,6 +65,13 @@ To build the JAR manually:
 - The main window appears with a split-pane layout: daily tasks on the left, custom checklists on the right.
 
 ### Managing Daily Tasks
+
+#### Subtasks
+- To add a subtask, use the "Add Task" dialog and select a parent task (if supported), or right-click a task and choose "Add Subtask" (if available).
+- Subtasks are shown directly below their parent and are indented for clarity.
+- When all subtasks are marked as done, the parent task is automatically marked as done.
+- Marking a parent task as done will also mark all its subtasks as done. Unmarking a parent will unmark all subtasks.
+- Subtasks are supported in both daily and custom checklists.
 
 #### 1. Add a New Daily Task
 - Click the "Add Task" button (or Ctrl+A).

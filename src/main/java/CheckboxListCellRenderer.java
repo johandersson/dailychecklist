@@ -126,6 +126,9 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.taskId = task.getId();
         this.taskReminder = null;
 
+        // Indentation for subtasks (one level)
+        this.isSubtask = (task.getParentId() != null);
+
         // Find a reminder that targets this specific task (task-level reminder)
         if (taskManager != null && this.taskId != null) {
             List<Reminder> reminders = taskManager.getReminders();
@@ -197,10 +200,15 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-        int textStartX = 40; // Adjusted text position to make space for checkbox
+        int baseIndent = 40;
+        int subtaskIndent = 24;
+        int textStartX = baseIndent + (isSubtask ? subtaskIndent : 0); // Indent subtasks
+
+        int checkboxX = 10 + (isSubtask ? subtaskIndent : 0);
+        int checkboxY = getHeight() / 2 - 11, checkboxSize = 22;
 
         // Define checkbox dimensions (slightly increased to better fit checkmark)
-        int checkboxX = 10, checkboxY = getHeight() / 2 - 11, checkboxSize = 22;
+        // checkboxX now set above
 
         // Draw subtle shadow behind checkbox
         g2.setColor(new Color(200, 200, 200, 100)); // Light gray shadow with transparency

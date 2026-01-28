@@ -138,12 +138,57 @@ public class ChecklistPanel extends JPanel {
 
     private void toggleTaskDone(JList<Task> list, int index) {
         Task task = list.getModel().getElementAt(index);
-        task.setDone(!task.isDone());
-        if (task.isDone()) {
+        boolean newDone = !task.isDone();
+        task.setDone(newDone);
+        if (newDone) {
             task.setDoneDate(new Date(System.currentTimeMillis()));
         } else {
             task.setDoneDate(null);
         }
+
+        // If parent, mark all subtasks done/undone
+        List<Task> allTasks = taskManager.getAllTasks();
+        for (Task t : allTasks) {
+            if (task.getId().equals(t.getParentId())) {
+                t.setDone(newDone);
+                if (newDone) {
+                    t.setDoneDate(new Date(System.currentTimeMillis()));
+                } else {
+                    t.setDoneDate(null);
+                }
+                taskManager.updateTask(t);
+            }
+        }
+
+        // If subtask, check if all siblings are done, then mark parent done
+        if (task.getParentId() != null) {
+            boolean allSiblingsDone = true;
+            for (Task t : allTasks) {
+                if (task.getParentId().equals(t.getParentId()) && !t.getId().equals(task.getId()) && !t.isDone()) {
+                    allSiblingsDone = false;
+                    break;
+                }
+            }
+            Task parent = null;
+            for (Task t : allTasks) {
+                if (t.getId().equals(task.getParentId())) {
+                    parent = t;
+                    break;
+                }
+            }
+            if (parent != null) {
+                if (allSiblingsDone && newDone) {
+                    parent.setDone(true);
+                    parent.setDoneDate(new Date(System.currentTimeMillis()));
+                    taskManager.updateTask(parent);
+                } else if (!newDone) {
+                    parent.setDone(false);
+                    parent.setDoneDate(null);
+                    taskManager.updateTask(parent);
+                }
+            }
+        }
+
         taskManager.updateTask(task);
     }
 

@@ -1,5 +1,14 @@
 <html>
 <body style="font-family: Arial, sans-serif; color: #222; line-height:1.4;">
+		<h2>Subtasks</h2>
+		<ul>
+			<li>You can add subtasks to any daily or custom task. Subtasks appear directly below their parent and are indented for clarity.</li>
+			<li>To create a subtask, use the "Add Task" dialog and select a parent task (if supported in the UI), or right-click a task and choose "Add Subtask" (if available).</li>
+			<li>When all subtasks are marked as done, the parent task is automatically marked as done.</li>
+			<li>When you mark a parent task as done, all its subtasks are also marked as done. Unmarking a parent will unmark all subtasks.</li>
+			<li>Subtasks support only one level (no sub-subtasks).</li>
+			<li>Subtasks are supported in both daily and custom checklists.</li>
+		</ul>
 	<h1>Daily Checklist Help</h1>
 
 	<p>Daily Checklist is a focused app for managing daily routines (not general todo history). It records whether a task was completed each day but resets status daily. This app is designed for quick, repeatable daily checklists rather than long‑lived task tracking.</p>
