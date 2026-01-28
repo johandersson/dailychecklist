@@ -88,14 +88,14 @@ public final class TaskDropHandler {
             if (authoritative == null) {
                 authoritative = t;
             }
-            adjustChecklistAndTypeIfNeeded(authoritative, transferData.sourceChecklistName, taskManager, target);
+            adjustChecklistAndTypeIfNeeded(authoritative, transferData.sourceChecklistName, target);
             authoritative.setParentId(target.getId());
             toPersist.add(authoritative);
         }
         return toPersist;
     }
 
-    private static void adjustChecklistAndTypeIfNeeded(Task t, String sourceChecklistName, TaskManager taskManager, Task target) {
+    private static void adjustChecklistAndTypeIfNeeded(Task t, String sourceChecklistName, Task target) {
         // If moving within the same checklist/list, nothing to do
         if (java.util.Objects.equals(sourceChecklistName, checklistNameFromTask(target))) return;
 
