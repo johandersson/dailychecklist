@@ -27,6 +27,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import org.xml.sax.SAXException;
@@ -50,15 +54,109 @@ public class XMLTaskRepository implements TaskRepository {
     private Map<TaskType, List<Task>> tasksByType = null;
     private Map<String, List<Task>> tasksByChecklist = null;
     private boolean tasksCacheDirty = true;
+    // Single-threaded executor for all writes to avoid concurrent DOM writes and to perform persistence off the EDT
+    private final ExecutorService writeExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "xml-persist-worker");
+        t.setDaemon(true);
+        return t;
+    });
+
+    // Read/write lock to allow concurrent readers but exclusive writers for cache access
+    private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     // Parent component for error dialogs
     private Component parentComponent;
+
+    // Lightweight retry/backoff: attempts before showing user-visible error
+    private static final int PERSIST_MAX_ATTEMPTS = 3;
+    private static final long PERSIST_INITIAL_BACKOFF_MS = 200L;
+
+    /**
+     * Submit a persistence task to the write executor with simple retry/backoff semantics.
+     * On repeated failure the in-memory cache is marked dirty and a user-visible error is shown on the EDT when possible.
+     */
+    private void submitPersistWithRetry(Runnable persistOp, String context) {
+        writeExecutor.submit(() -> {
+            int attempts = 0;
+            long backoff = PERSIST_INITIAL_BACKOFF_MS;
+            while (true) {
+                try {
+                    persistOp.run();
+                    return;
+                } catch (Exception e) {
+                    attempts++;
+                    if (attempts >= PERSIST_MAX_ATTEMPTS) {
+                        rwLock.writeLock().lock();
+                        try { tasksCacheDirty = true; } finally { rwLock.writeLock().unlock(); }
+                        if (parentComponent != null) {
+                            final Exception ex = e instanceof Exception ? (Exception)e : new Exception(e);
+                            javax.swing.SwingUtilities.invokeLater(() -> ApplicationErrorHandler.showDataSaveError(parentComponent, context, ex));
+                        } else {
+                            System.err.println("Failed persisting " + context + ": " + e.getMessage());
+                        }
+                        return;
+                    }
+                    try {
+                        Thread.sleep(backoff);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                    backoff *= 2L;
+                }
+            }
+        });
+    }
 
     /**
      * Sets the parent component for error dialogs.
      */
     public void setParentComponent(Component parentComponent) {
         this.parentComponent = parentComponent;
+    }
+
+    @FunctionalInterface
+    private interface PersistOperation {
+        void run() throws Exception;
+    }
+
+    /**
+     * Submits a persistence operation to the single-threaded write executor with
+     * a small retry/backoff strategy and lightweight logging. If the operation
+     * fails repeatedly the repository cache is marked dirty and a user-visible
+     * error dialog is shown (if a parent component is configured).
+     */
+    private void submitWithRetries(String desc, PersistOperation op) {
+        writeExecutor.submit(() -> {
+            int attempts = 0;
+            long backoff = 500; // ms
+            while (true) {
+                try {
+                    op.run();
+                    return;
+                } catch (Exception e) {
+                    attempts++;
+                    java.util.logging.Logger.getLogger(XMLTaskRepository.class.getName())
+                        .log(java.util.logging.Level.WARNING, "Persist failed (" + desc + ") attempt " + attempts, e);
+                    rwLock.writeLock().lock();
+                    try { tasksCacheDirty = true; } finally { rwLock.writeLock().unlock(); }
+                    if (attempts >= 3) {
+                        if (parentComponent != null) {
+                            final Exception ex = e;
+                            javax.swing.SwingUtilities.invokeLater(() -> ApplicationErrorHandler.showDataSaveError(parentComponent, desc, ex));
+                        }
+                        return;
+                    }
+                    try {
+                        Thread.sleep(backoff);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                    backoff *= 2;
+                }
+            }
+        });
     }
 
     /**
@@ -135,8 +233,23 @@ public class XMLTaskRepository implements TaskRepository {
      * Gets all tasks from cache, loading from XML if cache is dirty.
      * Applies memory safety checks.
      */
-    private synchronized List<Task> getCachedTasks() {
-        if (tasksCacheDirty) {
+    private List<Task> getCachedTasks() {
+        // Use read-lock for the fast path, escalate to write-lock when cache needs loading
+        rwLock.readLock().lock();
+        try {
+            if (!tasksCacheDirty && cachedTasks != null) {
+                return java.util.Collections.unmodifiableList(cachedTasks);
+            }
+        } finally {
+            rwLock.readLock().unlock();
+        }
+
+        // Need to (re)load the cache under write lock
+        rwLock.writeLock().lock();
+        try {
+            if (!tasksCacheDirty && cachedTasks != null) {
+                return java.util.Collections.unmodifiableList(cachedTasks);
+            }
             ensureDataFileExists();
             try {
                 cachedTasks = taskXmlHandler.parseAllTasks();
@@ -144,19 +257,7 @@ public class XMLTaskRepository implements TaskRepository {
                 if (MemorySafetyManager.checkTaskLimit(cachedTasks.size())) {
                     cachedTasks = cachedTasks.subList(0, Math.min(MemorySafetyManager.MAX_TASKS, cachedTasks.size()));
                 }
-                // Populate task map for fast lookups
-                taskMap = new HashMap<>();
-                tasksByType = new HashMap<>();
-                tasksByChecklist = new HashMap<>();
-                for (Task task : cachedTasks) {
-                    taskMap.put(task.getId(), task);
-                    // Group by type
-                    tasksByType.computeIfAbsent(task.getType(), k -> new ArrayList<>()).add(task);
-                    // Group by checklist (for custom tasks)
-                    if (task.getType() == TaskType.CUSTOM && task.getChecklistId() != null) {
-                        tasksByChecklist.computeIfAbsent(task.getChecklistId(), k -> new ArrayList<>()).add(task);
-                    }
-                }
+                rebuildMapsFromCachedTasks();
                 tasksCacheDirty = false;
             } catch (ParserConfigurationException | SAXException | IOException e) {
                 if (parentComponent != null) {
@@ -167,8 +268,26 @@ public class XMLTaskRepository implements TaskRepository {
                 tasksByType = new HashMap<>();
                 tasksByChecklist = new HashMap<>();
             }
+            return java.util.Collections.unmodifiableList(cachedTasks);
+        } finally {
+            rwLock.writeLock().unlock();
         }
-        return java.util.Collections.unmodifiableList(cachedTasks);
+    }
+
+    /**
+     * Rebuilds the lookup maps from the current cachedTasks list. Caller must hold write lock.
+     */
+    private void rebuildMapsFromCachedTasks() {
+        taskMap = new HashMap<>();
+        tasksByType = new HashMap<>();
+        tasksByChecklist = new HashMap<>();
+        for (Task task : cachedTasks) {
+            taskMap.put(task.getId(), task);
+            tasksByType.computeIfAbsent(task.getType(), k -> new ArrayList<>()).add(task);
+            if (task.getType() == TaskType.CUSTOM && task.getChecklistId() != null) {
+                tasksByChecklist.computeIfAbsent(task.getChecklistId(), k -> new ArrayList<>()).add(task);
+            }
+        }
     }
 
     @Override
@@ -222,14 +341,19 @@ public class XMLTaskRepository implements TaskRepository {
             return;
         }
 
+        // Update in-memory cache first and persist asynchronously
+        rwLock.writeLock().lock();
         try {
-            taskXmlHandler.addTask(task);
-            tasksCacheDirty = true; // Mark cache as dirty
-        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
-            if (parentComponent != null) {
-                ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
-            }
+            if (cachedTasks == null) cachedTasks = new ArrayList<>();
+            cachedTasks.add(task);
+            rebuildMapsFromCachedTasks();
+            tasksCacheDirty = false;
+        } finally {
+            rwLock.writeLock().unlock();
         }
+
+        // Persist off the write lock to avoid blocking readers (with retries)
+        submitWithRetries("task-add", () -> taskXmlHandler.addTask(task));
     }
 
     @Override
@@ -240,16 +364,29 @@ public class XMLTaskRepository implements TaskRepository {
             return;
         }
 
+        System.out.println("[TRACE] XMLTaskRepository.updateTask start id=" + task.getId() + ", thread=" + Thread.currentThread().getName());
+        // Update in-memory cache immediately
+        rwLock.writeLock().lock();
         try {
-            System.out.println("[TRACE] XMLTaskRepository.updateTask start id=" + task.getId() + ", thread=" + Thread.currentThread().getName());
-            taskXmlHandler.updateTask(task);
-            tasksCacheDirty = true; // Mark cache as dirty
-            System.out.println("[TRACE] XMLTaskRepository.updateTask done id=" + task.getId());
-        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
-            if (parentComponent != null) {
-                ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
+            if (cachedTasks == null) getCachedTasks();
+            boolean replaced = false;
+            for (int i = 0; i < cachedTasks.size(); i++) {
+                if (cachedTasks.get(i).getId().equals(task.getId())) {
+                    cachedTasks.set(i, task);
+                    replaced = true;
+                    break;
+                }
             }
+            if (!replaced) cachedTasks.add(task);
+            rebuildMapsFromCachedTasks();
+            tasksCacheDirty = false;
+        } finally {
+            rwLock.writeLock().unlock();
         }
+
+        // Persist asynchronously on the single-threaded executor (with retries/backoff)
+        submitWithRetries("task-update-" + task.getId(), () -> taskXmlHandler.updateTask(task));
+        System.out.println("[TRACE] XMLTaskRepository.updateTask scheduled persist id=" + task.getId());
     }
 
     /**
@@ -257,15 +394,31 @@ public class XMLTaskRepository implements TaskRepository {
      * Returns true if successful, false if failed.
      */
     public synchronized boolean updateTaskQuiet(Task task) {
+        // Update in-memory first and persist asynchronously
         try {
-            System.out.println("[TRACE] XMLTaskRepository.updateTaskQuiet start id=" + task.getId() + ", thread=" + Thread.currentThread().getName());
-            taskXmlHandler.updateTask(task);
-            tasksCacheDirty = true; // Mark cache as dirty
-            System.out.println("[TRACE] XMLTaskRepository.updateTaskQuiet done id=" + task.getId());
+            System.out.println("[TRACE] XMLTaskRepository.updateTaskQuiet scheduling id=" + task.getId() + ", thread=" + Thread.currentThread().getName());
+            rwLock.writeLock().lock();
+            try {
+                if (cachedTasks == null) getCachedTasks();
+                boolean replaced = false;
+                for (int i = 0; i < cachedTasks.size(); i++) {
+                    if (cachedTasks.get(i).getId().equals(task.getId())) {
+                        cachedTasks.set(i, task);
+                        replaced = true;
+                        break;
+                    }
+                }
+                if (!replaced) cachedTasks.add(task);
+                rebuildMapsFromCachedTasks();
+                tasksCacheDirty = false;
+            } finally {
+                rwLock.writeLock().unlock();
+            }
+
+            submitWithRetries("task-update-quiet-" + task.getId(), () -> taskXmlHandler.updateTask(task));
             return true;
-        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
-            // Don't show error dialog, just return failure
-            System.out.println("[TRACE] XMLTaskRepository.updateTaskQuiet failed id=" + task.getId() + ", err=" + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("[TRACE] XMLTaskRepository.updateTaskQuiet failed scheduling id=" + task.getId() + ", err=" + e.getMessage());
             return false;
         }
     }
@@ -276,9 +429,31 @@ public class XMLTaskRepository implements TaskRepository {
     public synchronized void updateTasks(List<Task> tasks) {
         if (tasks == null || tasks.isEmpty()) return;
         try {
-            taskXmlHandler.updateTasks(tasks);
-            tasksCacheDirty = true;
-        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
+            // Update in-memory cache first under write lock
+            rwLock.writeLock().lock();
+            try {
+                if (cachedTasks == null) getCachedTasks();
+                // Replace or add each task
+                for (Task t : tasks) {
+                    boolean found = false;
+                    for (int i = 0; i < cachedTasks.size(); i++) {
+                        if (cachedTasks.get(i).getId().equals(t.getId())) {
+                            cachedTasks.set(i, t);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) cachedTasks.add(t);
+                }
+                rebuildMapsFromCachedTasks();
+                tasksCacheDirty = false;
+            } finally {
+                rwLock.writeLock().unlock();
+            }
+
+            // Persist asynchronously (with retries/backoff)
+            submitWithRetries("tasks-update", () -> taskXmlHandler.updateTasks(tasks));
+        } catch (Exception e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "tasks", e);
             }
@@ -289,25 +464,59 @@ public class XMLTaskRepository implements TaskRepository {
      * Quiet variant of updateTasks for background persistence.
      */
     public synchronized boolean updateTasksQuiet(List<Task> tasks) {
+        // Update in-memory first and persist asynchronously
         try {
-            taskXmlHandler.updateTasks(tasks);
-            tasksCacheDirty = true; // Mark cache as dirty
+            rwLock.writeLock().lock();
+            try {
+                if (cachedTasks == null) getCachedTasks();
+                for (Task t : tasks) {
+                    boolean found = false;
+                    for (int i = 0; i < cachedTasks.size(); i++) {
+                        if (cachedTasks.get(i).getId().equals(t.getId())) {
+                            cachedTasks.set(i, t);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) cachedTasks.add(t);
+                }
+                rebuildMapsFromCachedTasks();
+                tasksCacheDirty = false;
+            } finally {
+                rwLock.writeLock().unlock();
+            }
+
+            submitWithRetries("tasks-update-quiet", () -> taskXmlHandler.updateTasks(tasks));
             return true;
-        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
+        } catch (Exception e) {
             return false;
         }
     }
 
     @Override
     public synchronized void removeTask(Task task) {
+        // Remove from in-memory cache then persist asynchronously
+        rwLock.writeLock().lock();
         try {
-            taskXmlHandler.removeTask(task);
-            tasksCacheDirty = true; // Mark cache as dirty
-        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
-            if (parentComponent != null) {
-                ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e);
-            }
+            if (cachedTasks == null) getCachedTasks();
+            cachedTasks.removeIf(t -> t.getId().equals(task.getId()));
+            rebuildMapsFromCachedTasks();
+            tasksCacheDirty = false;
+        } finally {
+            rwLock.writeLock().unlock();
         }
+
+        writeExecutor.submit(() -> {
+            try {
+                taskXmlHandler.removeTask(task);
+                } catch (Exception e) {
+                    rwLock.writeLock().lock();
+                    try { tasksCacheDirty = true; } finally { rwLock.writeLock().unlock(); }
+                    if (parentComponent != null) {
+                        javax.swing.SwingUtilities.invokeLater(() -> ApplicationErrorHandler.showDataSaveError(parentComponent, "task", e));
+                    }
+                }
+        });
     }
 
     @Override
@@ -329,7 +538,15 @@ public class XMLTaskRepository implements TaskRepository {
                 backupManager.createBackup("before-set-all-tasks");
             }
             taskXmlHandler.setAllTasks(tasks);
-            tasksCacheDirty = true; // Mark cache as dirty
+            // Update in-memory representation immediately
+            rwLock.writeLock().lock();
+            try {
+                cachedTasks = new ArrayList<>(tasks);
+                rebuildMapsFromCachedTasks();
+                tasksCacheDirty = false;
+            } finally {
+                rwLock.writeLock().unlock();
+            }
 
             // After setting tasks, rebuild the checklist names registry from the new tasks
             rebuildChecklistNamesRegistry(tasks);
@@ -471,6 +688,10 @@ public class XMLTaskRepository implements TaskRepository {
         // Clear cache to free memory
         cachedTasks = null;
         tasksCacheDirty = true;
+        // Shutdown executor
+        try {
+            writeExecutor.shutdownNow();
+        } catch (Exception ignore) {}
     }
 
     @Override
