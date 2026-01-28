@@ -57,6 +57,8 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private Reminder taskReminder;
     private Font lastBaseFont = null;
     private Font smallFont = null;
+    private FontMetrics fmMainCached = null;
+    private FontMetrics fmSmallCached = null;
     
     // Cached checkmark image for performance (smaller to avoid overflow)
     private static final BufferedImage checkmarkImage;
@@ -290,13 +292,17 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             smallFont = currentFont.deriveFont(Font.PLAIN, FontManager.SIZE_SMALL);
         }
         g2.setFont(currentFont);
-        FontMetrics fmMain = g2.getFontMetrics();
+        if (fmMainCached == null || !currentFont.equals(lastBaseFont)) {
+            fmMainCached = g2.getFontMetrics(currentFont);
+        }
+        FontMetrics fmMain = fmMainCached;
         String drawTaskName = taskName != null ? taskName : "";
         if (availableWidth > 12 && fmMain.stringWidth(drawTaskName) > availableWidth) {
-            while (fmMain.stringWidth(drawTaskName + "…") > availableWidth && drawTaskName.length() > 0) {
-                drawTaskName = drawTaskName.substring(0, drawTaskName.length() - 1);
+            int len = drawTaskName.length();
+            while (len > 0 && fmMain.stringWidth(drawTaskName.substring(0, len) + "…") > availableWidth) {
+                len--;
             }
-            drawTaskName = drawTaskName + "…";
+            drawTaskName = drawTaskName.substring(0, len) + "…";
         }
         g2.drawString(drawTaskName, textStartX, textY);
     }
@@ -304,31 +310,41 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private void drawBreadcrumbIfNeeded(Graphics2D g2, int textStartX, int textY) {
         if (breadcrumbText == null || breadcrumbText.isEmpty()) return;
         // Compute available width and position for breadcrumb component
-        g2.setFont(getFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL));
-        FontMetrics fmCrumb = g2.getFontMetrics();
+        if (smallFont == null) smallFont = getFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL);
+        if (fmSmallCached == null || !smallFont.equals(fmSmallCached.getFont())) {
+            fmSmallCached = g2.getFontMetrics(smallFont);
+        }
+        FontMetrics fmCrumb = fmSmallCached;
         int crumbWidth = fmCrumb.stringWidth(breadcrumbText) + 6;
         int crumbX = getWidth() - RIGHT_ICON_SPACE - 6 - crumbWidth;
         if (crumbX > textStartX + 10) {
-            breadcrumbComponent.setFontToUse(getFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL));
+            breadcrumbComponent.setFontToUse(smallFont);
             breadcrumbComponent.setText(breadcrumbText);
             breadcrumbComponent.setSize(crumbWidth, getHeight());
-            // Paint the component into our Graphics2D at the computed location
-            breadcrumbComponent.paint(g2.create(crumbX, 0, crumbWidth, getHeight()));
+            // Paint the component into our Graphics2D at the computed location without creating a new Graphics
+            java.awt.geom.AffineTransform at = g2.getTransform();
+            try {
+                g2.translate(crumbX, 0);
+                breadcrumbComponent.paint(g2);
+            } finally {
+                g2.setTransform(at);
+            }
         }
     }
 
     private void drawDoneTimestampIfNeeded(Graphics2D g2, int textStartX) {
         if (!(isChecked && doneDate != null && !doneDate.isEmpty())) return;
         g2.setColor(Color.BLACK);
-        g2.setFont(getFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL));
-        FontMetrics fmSmall = g2.getFontMetrics();
+        if (smallFont == null) smallFont = getFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL);
+        g2.setFont(smallFont);
+        if (fmSmallCached == null || !smallFont.equals(fmSmallCached.getFont())) fmSmallCached = g2.getFontMetrics(smallFont);
+        FontMetrics fmSmall = fmSmallCached;
         int availableWidthSmall = getWidth() - textStartX - RIGHT_ICON_SPACE - 6;
         String timeText = "✓ " + doneDate;
         if (availableWidthSmall > 12 && fmSmall.stringWidth(timeText) > availableWidthSmall) {
-            while (fmSmall.stringWidth(timeText + "…") > availableWidthSmall && timeText.length() > 0) {
-                timeText = timeText.substring(0, timeText.length() - 1);
-            }
-            timeText = timeText + "…";
+            int lt = timeText.length();
+            while (lt > 0 && fmSmall.stringWidth(timeText.substring(0, lt) + "…") > availableWidthSmall) lt--;
+            timeText = timeText.substring(0, lt) + "…";
         }
         g2.drawString(timeText, textStartX, getHeight() / 2 + 20);
     }
