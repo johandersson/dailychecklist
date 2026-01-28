@@ -482,8 +482,27 @@ public class CustomChecklistPanel extends JPanel {
             @Override
             protected void done() {
                 try {
-                    List<Task> tasks = get();
-                    TaskUpdater.syncModel(customListModel, tasks);
+                        List<Task> tasks = get();
+                        // For custom checklists we want parents followed by their direct subtasks
+                        java.util.List<Task> parents = new java.util.ArrayList<>();
+                        java.util.Map<String, java.util.List<Task>> subsByParent = new java.util.HashMap<>();
+                        for (Task t : tasks) {
+                            if (t.getParentId() == null) {
+                                parents.add(t);
+                            } else {
+                                subsByParent.computeIfAbsent(t.getParentId(), k -> new java.util.ArrayList<>()).add(t);
+                            }
+                        }
+                        java.util.List<Task> desired = new java.util.ArrayList<>();
+                        for (Task p : parents) {
+                            desired.add(p);
+                            java.util.List<Task> subs = subsByParent.get(p.getId());
+                            if (subs != null) {
+                                subs.sort(java.util.Comparator.comparing(Task::getName, String.CASE_INSENSITIVE_ORDER));
+                                desired.addAll(subs);
+                            }
+                        }
+                        TaskUpdater.syncModel(customListModel, desired);
 
                     // Restore selections after updating
                     for (Task selectedTask : selectedTasks) {
