@@ -19,7 +19,6 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.io.File;
 import java.util.List;
-import java.util.Map;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JPanel;
@@ -59,14 +58,14 @@ public class RestorePreviewDialog {
         sb.append("</div>");
 
         if (!preview.checklists.isEmpty()) {
-            sb.append("<div style='margin-top:8px; font-size:12px; color:#333;'><b>Checklists in backup:</b><ul style='margin:6px 0 0 18px;'>");
-            for (Map.Entry<String,String> e : preview.checklists.entrySet()) {
-                String id = e.getKey();
-                String name = e.getValue();
-                int cnt = preview.checklistTaskCounts.getOrDefault(id, 0);
-                sb.append("<li>").append(escapeHtml(name)).append(" — ").append(cnt).append(" task(s)</li>");
-            }
-            sb.append("</ul></div>");
+            // Show a concise summary instead of listing every checklist name.
+            sb.append("<div style='margin-top:8px; font-size:12px; color:#333;'><b>Checklists in backup:</b> ");
+            sb.append("<b>").append(preview.checklists.size()).append("</b> checklist(s)");
+            sb.append(" — total tasks: <b>");
+            int totalInBackup = 0;
+            for (Integer c : preview.checklistTaskCounts.values()) totalInBackup += c == null ? 0 : c;
+            sb.append(totalInBackup).append("</b>");
+            sb.append("</div>");
         }
 
         sb.append("</body></html>");

@@ -109,6 +109,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             }
         };
         checklistList.setCellRenderer(new ChecklistCellRenderer(taskManager));
+        checklistList.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         javax.swing.ToolTipManager.sharedInstance().registerComponent(checklistList);
         checklistList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Same as task lists
         checklistList.setSelectionForeground(java.awt.Color.BLACK);
@@ -129,7 +130,10 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 if (e.isPopupTrigger()) {
                     int index = checklistList.locationToIndex(e.getPoint());
                     if (index >= 0) {
-                        checklistList.setSelectedIndex(index);
+                        // If clicked element is not selected, make it the sole selection.
+                        if (!checklistList.isSelectedIndex(index)) {
+                            checklistList.setSelectedIndex(index);
+                        }
                         selectedChecklist = checklistList.getSelectedValue();
                         showChecklistPopup(e.getX(), e.getY());
                     }
@@ -140,7 +144,9 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                 if (e.isPopupTrigger()) {
                     int index = checklistList.locationToIndex(e.getPoint());
                     if (index >= 0) {
-                        checklistList.setSelectedIndex(index);
+                        if (!checklistList.isSelectedIndex(index)) {
+                            checklistList.setSelectedIndex(index);
+                        }
                         selectedChecklist = checklistList.getSelectedValue();
                         showChecklistPopup(e.getX(), e.getY());
                     }
@@ -356,47 +362,51 @@ public class CustomChecklistsOverviewPanel extends JPanel {
 
     private void showChecklistPopup(int x, int y) {
         JPopupMenu menu = new JPopupMenu();
+        java.util.List<Checklist> selected = checklistList.getSelectedValuesList();
+        int selCount = selected == null ? 0 : selected.size();
+
         JMenuItem renameItem = new JMenuItem("Rename");
+        renameItem.setEnabled(selCount == 1);
         renameItem.addActionListener(e -> renameChecklist());
         menu.add(renameItem);
-        JMenuItem deleteItem = new JMenuItem("Delete");
-        deleteItem.addActionListener(e -> deleteChecklist());
+
+        JMenuItem deleteItem = new JMenuItem(selCount > 1 ? "Delete Selected" : "Delete");
+        deleteItem.addActionListener(e -> deleteSelectedChecklists(selected));
         menu.add(deleteItem);
-        // If a reminder exists for this checklist, label should indicate edit
-        boolean hasReminderForSelected = false;
-        if (selectedChecklist != null) {
-            hasReminderForSelected = taskManager.getReminders().stream().anyMatch(r -> r.getChecklistName().equals(selectedChecklist.getName()));
-        }
-        JMenuItem addReminderItem = new JMenuItem(hasReminderForSelected ? "Edit Reminder" : "Set Reminder");
-        addReminderItem.addActionListener(e -> setReminder());
-        menu.add(addReminderItem);
-        // Only offer remove when there actually are reminders
-        if (selectedChecklist != null && taskManager.getReminders().stream().anyMatch(r -> r.getChecklistName().equals(selectedChecklist.getName()))) {
-            JMenuItem removeReminderItem = new JMenuItem("Remove Reminder");
-            removeReminderItem.addActionListener(e -> {
-                if (selectedChecklist == null) return;
-                List<Reminder> allReminders = taskManager.getReminders();
-                List<Reminder> toRemove = allReminders.stream()
-                        .filter(r -> r.getChecklistName().equals(selectedChecklist.getName()))
-                        .toList();
-                if (toRemove.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "No reminders to remove for '" + selectedChecklist.getName() + "'.");
-                    return;
-                }
-                int res = JOptionPane.showConfirmDialog(this, "Remove reminder(s) for '" + selectedChecklist.getName() + "'?", "Confirm", JOptionPane.YES_NO_OPTION);
-                if (res == JOptionPane.YES_OPTION) {
-                    toRemove.forEach(taskManager::removeReminder);
-                    // Restore focus to the task list
-                    if (rightPanel != null && rightPanel.getComponentCount() > 0) {
-                        java.awt.Component c = rightPanel.getComponent(0);
-                        if (c instanceof CustomChecklistPanel panel) {
+
+        // Reminder menu only valid for single selection
+        if (selCount == 1 && selected.get(0) != null) {
+            Checklist single = selected.get(0);
+            boolean hasReminderForSelected = taskManager.getReminders().stream().anyMatch(r -> r.getChecklistName().equals(single.getName()));
+            JMenuItem addReminderItem = new JMenuItem(hasReminderForSelected ? "Edit Reminder" : "Set Reminder");
+            addReminderItem.addActionListener(e -> setReminder());
+            menu.add(addReminderItem);
+            if (taskManager.getReminders().stream().anyMatch(r -> r.getChecklistName().equals(single.getName()))) {
+                JMenuItem removeReminderItem = new JMenuItem("Remove Reminder");
+                removeReminderItem.addActionListener(e -> {
+                    List<Reminder> allReminders = taskManager.getReminders();
+                    List<Reminder> toRemove = allReminders.stream()
+                            .filter(r -> r.getChecklistName().equals(single.getName()))
+                            .toList();
+                    if (toRemove.isEmpty()) {
+                        JOptionPane.showMessageDialog(this, "No reminders to remove for '" + single.getName() + "'.");
+                        return;
+                    }
+                    int res = JOptionPane.showConfirmDialog(this, "Remove reminder(s) for '" + single.getName() + "'?", "Confirm", JOptionPane.YES_NO_OPTION);
+                    if (res == JOptionPane.YES_OPTION) {
+                        toRemove.forEach(taskManager::removeReminder);
+                        if (rightPanel != null && rightPanel.getComponentCount() > 0) {
+                            java.awt.Component c = rightPanel.getComponent(0);
+                            if (c instanceof CustomChecklistPanel panel) {
                                 panel.getTaskList().requestFocusInWindow();
                             }
+                        }
                     }
-                }
-            });
-            menu.add(removeReminderItem);
+                });
+                menu.add(removeReminderItem);
+            }
         }
+
         menu.show(checklistList, x, y);
     }
 
@@ -517,6 +527,97 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             checklistList.clearSelection();
         }
     }
+
+        private void deleteSelectedChecklists(java.util.List<Checklist> selected) {
+            if (selected == null || selected.isEmpty()) return;
+            java.util.Set<String> ids = new java.util.HashSet<>();
+            java.util.Set<String> names = new java.util.HashSet<>();
+            for (Checklist c : selected) { if (c != null) { ids.add(c.getId()); names.add(c.getName()); } }
+
+            boolean hasTasks = taskManager.getAllTasks().stream().anyMatch(t -> t.getChecklistId() != null && ids.contains(t.getChecklistId()));
+
+            Object[] options;
+            if (hasTasks) {
+                options = new Object[]{"Delete lists", "Move to morning", "Move to evening", "Cancel"};
+            } else {
+                options = new Object[]{"Delete lists", "Cancel"};
+            }
+            int defaultOption = options.length - 1;
+            int choice = JOptionPane.showOptionDialog(this, "What to do with the tasks in the selected checklist(s)?", "Delete Checklists", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[defaultOption]);
+            if (choice < 0 || choice == defaultOption) return;
+
+            if (!hasTasks) {
+                List<Task> allTasks = taskManager.getAllTasks();
+                java.util.List<Task> toRemove = new java.util.ArrayList<>();
+                for (Task task : allTasks) {
+                    if (task.getChecklistId() != null && ids.contains(task.getChecklistId())) {
+                        toRemove.add(task);
+                    }
+                }
+                for (Task t : toRemove) taskManager.removeTask(t);
+            } else {
+                switch (choice) {
+                    case 0 -> {
+                        List<Task> allTasks = taskManager.getAllTasks();
+                        java.util.List<Task> toRemove = new java.util.ArrayList<>();
+                        for (Task task : allTasks) {
+                            if (task.getChecklistId() != null && ids.contains(task.getChecklistId())) {
+                                toRemove.add(task);
+                            }
+                        }
+                        for (Task t : toRemove) taskManager.removeTask(t);
+                    }
+                    case 1 -> moveTasksToTypeMultiple(ids, TaskType.MORNING);
+                    case 2 -> moveTasksToTypeMultiple(ids, TaskType.EVENING);
+                    default -> { return; }
+                }
+            }
+
+            // Remove reminders for deleted checklists
+            removeRemindersForChecklists(names);
+
+            for (Checklist c : selected) {
+                if (c == null) continue;
+                allChecklists.remove(c);
+                taskManager.removeChecklist(c);
+                panelMap.remove(c.getId());
+            }
+
+            updateTasks();
+            updateTasks.run();
+
+            if (listModel.size() > 0) {
+                Checklist firstChecklist = listModel.get(0);
+                selectChecklist(firstChecklist);
+                checklistList.setSelectedValue(firstChecklist, true);
+            } else {
+                selectChecklist(null);
+                checklistList.clearSelection();
+            }
+        }
+
+        private void moveTasksToTypeMultiple(java.util.Set<String> checklistIds, TaskType type) {
+            List<Task> allTasks = taskManager.getAllTasks();
+            for (Task task : allTasks) {
+                if (task.getChecklistId() != null && checklistIds.contains(task.getChecklistId())) {
+                    task.setType(type);
+                    task.setChecklistId(null);
+                    task.setDone(false);
+                    task.setDoneDate(null);
+                    taskManager.updateTask(task);
+                }
+            }
+        }
+
+        private void removeRemindersForChecklists(java.util.Set<String> checklistNames) {
+            if (checklistNames == null || checklistNames.isEmpty()) return;
+            List<Reminder> allReminders = taskManager.getReminders();
+            for (Reminder r : new java.util.ArrayList<>(allReminders)) {
+                if (checklistNames.contains(r.getChecklistName())) {
+                    taskManager.removeReminder(r);
+                }
+            }
+        }
 
     private void moveTasksToType(String checklistId, TaskType type) {
         List<Task> allTasks = taskManager.getAllTasks();

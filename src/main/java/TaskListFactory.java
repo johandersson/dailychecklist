@@ -40,6 +40,18 @@ public class TaskListFactory {
             taskList.addMouseListener(new TaskListMouseHandler(taskList, listModel, taskManager, updateCallback));
             // Ensure ToolTipManager will query our getToolTipText override
             ToolTipManager.sharedInstance().registerComponent(taskList);
+            // Ctrl+A: select all items in the list for easy batch deletion (O(n))
+            javax.swing.KeyStroke selectAllKs = javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_A, java.awt.Event.CTRL_MASK);
+            taskList.getInputMap(javax.swing.JComponent.WHEN_FOCUSED).put(selectAllKs, "selectAllItems");
+            taskList.getActionMap().put("selectAllItems", new javax.swing.AbstractAction() {
+                @Override
+                public void actionPerformed(java.awt.event.ActionEvent e) {
+                    int size = listModel.getSize();
+                    if (size > 0) {
+                        taskList.setSelectionInterval(0, size - 1);
+                    }
+                }
+            });
         }
         return taskList;
     }

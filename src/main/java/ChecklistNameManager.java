@@ -156,10 +156,20 @@ public class ChecklistNameManager {
             props.setProperty(checklist.getId(), checklist.getName());
         }
 
-        try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(checklistNamesFileName), StandardCharsets.UTF_8)) {
+        java.nio.file.Path target = java.nio.file.Paths.get(checklistNamesFileName);
+        java.nio.file.Path parent = target.toAbsolutePath().getParent();
+        try {
+            if (parent != null) java.nio.file.Files.createDirectories(parent);
+        } catch (IOException e) {
+            java.util.logging.Logger.getLogger(ChecklistNameManager.class.getName())
+                    .log(java.util.logging.Level.WARNING, "Failed creating parent directory for checklist names file: " + parent, e);
+        }
+
+        try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(target.toFile()), StandardCharsets.UTF_8)) {
             props.store(writer, "Daily Checklist Custom Checklists");
         } catch (IOException e) {
-            // Ignore errors
+            java.util.logging.Logger.getLogger(ChecklistNameManager.class.getName())
+                    .log(java.util.logging.Level.SEVERE, "Failed to write checklist names file: " + checklistNamesFileName, e);
         }
     }
 
