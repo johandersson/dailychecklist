@@ -114,6 +114,25 @@ public class TaskReorderHandler {
         int size = listModel.getSize();
         if (dropIndex < 0) dropIndex = 0;
         if (dropIndex > size) dropIndex = size;
+        // If the insertion point is clearly between two top-level parents (or at ends),
+        // treat this as a top-level insertion (no parent).
+        if (size == 0) return null;
+        if (dropIndex == 0) {
+            Task next = listModel.getElementAt(0);
+            if (next == null || next.getParentId() == null) return null;
+        }
+        if (dropIndex == size) {
+            Task prev = listModel.getElementAt(size - 1);
+            if (prev == null || prev.getParentId() == null) return null;
+        }
+
+        if (dropIndex > 0 && dropIndex < size) {
+            Task prev = listModel.getElementAt(dropIndex - 1);
+            Task next = listModel.getElementAt(dropIndex);
+            if (prev != null && next != null && prev.getParentId() == null && next.getParentId() == null) {
+                return null; // between two top-level parents
+            }
+        }
 
         // Search backward for a top-level parent
         for (int i = dropIndex - 1; i >= 0; i--) {
