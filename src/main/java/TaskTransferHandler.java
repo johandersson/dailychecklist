@@ -198,13 +198,21 @@ public class TaskTransferHandler extends TransferHandler {
             if (comp instanceof JList) {
                 @SuppressWarnings("unchecked")
                 JList<Task> targetList = (JList<Task>) comp;
-                if (tryHandleDropOnItemCases(targetList, transferData, dropIndex, isInsert)) return true;
-
-                // Prioritize same-checklist reorders so users can reorder subtasks within a parent.
-                if (java.util.Objects.equals(transferData.sourceChecklistName, checklistName)) {
-                    DebugLog.d("importData: same-checklist reorder candidate: checklist=%s dropIndex=%d", checklistName, dropIndex);
-                    if (handleSameChecklistReorder(transferData, dropIndex)) return true;
+                // If this is a same-checklist drag and all moved tasks are top-level,
+                // prefer same-checklist reorder immediately to avoid interpreting the
+                // drop as a subtask insertion.
+                boolean sameChecklist = java.util.Objects.equals(transferData.sourceChecklistName, checklistName);
+                boolean movedAllTopLevel = true;
+                for (Task mt : transferData.tasks) {
+                    if (mt.getParentId() != null) { movedAllTopLevel = false; break; }
                 }
+                if (sameChecklist && movedAllTopLevel) {
+                    DebugLog.d("importData: same-checklist top-level reorder shortcut: checklist=%s dropIndex=%d", checklistName, dropIndex);
+                    if (handleSameChecklistReorder(transferData, dropIndex)) return true;
+                    // If reorder didn't handle it, continue to normal handling below
+                }
+
+                if (tryHandleDropOnItemCases(targetList, transferData, dropIndex, isInsert)) return true;
 
                 // If same-checklist reorder did not run or did not handle it, fall back to cross-checklist move
                 return handleCrossChecklistMove(transferData, dropIndex);
@@ -216,20 +224,36 @@ public class TaskTransferHandler extends TransferHandler {
     }
 
     private boolean tryHandleDropOnItemCases(JList<Task> targetList, TransferData transferData, int dropIndex, boolean isInsert) {
+        // If the drag originates from the same checklist and all moved tasks are top-level,
+        // prefer same-checklist reorders handled later instead of converting the drop into
+        // a subtask insertion. This preserves the ability to reorder top-level tasks.
+        boolean sameChecklist = java.util.Objects.equals(transferData.sourceChecklistName, checklistName);
+        boolean movedAllTopLevel = true;
+        for (Task mt : transferData.tasks) {
+            if (mt.getParentId() != null) { movedAllTopLevel = false; break; }
+        }
+
         if (!isInsert && dropIndex >= 0 && dropIndex < targetList.getModel().getSize()) {
             Task modelTarget = targetList.getModel().getElementAt(dropIndex);
             DebugLog.d("importData: dropOnItem targetIndex=%d targetId=%s isInsert=%s", dropIndex, modelTarget == null ? "<null>" : modelTarget.getId(), isInsert);
             if (modelTarget != null && modelTarget.getParentId() == null) {
-                // Dropped onto top-level parent
-                int parentIndex = dropIndex;
-                if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndex, -1, taskManager, updateAllPanels, checklistName)) return true;
+                // Dropped onto top-level parent. If this is a same-checklist drag of top-level
+                // tasks, don't treat it as "drop onto parent" — let same-checklist reorder handle it.
+                if (!(sameChecklist && movedAllTopLevel)) {
+                    int parentIndex = dropIndex;
+                    if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndex, -1, taskManager, updateAllPanels, checklistName)) return true;
+                }
             } else {
                 int parentIndexFallback = findNearestTopLevelParentIndex(targetList, dropIndex);
                 DebugLog.d("importData: dropOnSubtask parentIndexFallback=%d", parentIndexFallback);
                 if (parentIndexFallback != -1) {
                     int offset = computeInsertOffsetWithinParent(targetList, parentIndexFallback, dropIndex);
                     DebugLog.d("importData: computed offset within parent=%d", offset);
-                    if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndexFallback, offset, taskManager, updateAllPanels, checklistName)) return true;
+                    // If this is a same-checklist drag of top-level tasks, avoid interpreting
+                    // the drop as a nested subtask insertion.
+                    if (!(sameChecklist && movedAllTopLevel)) {
+                        if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndexFallback, offset, taskManager, updateAllPanels, checklistName)) return true;
+                    }
                 }
             }
         }
@@ -240,7 +264,10 @@ public class TaskTransferHandler extends TransferHandler {
             if (parentIndex != -1) {
                 int offset = computeInsertOffsetWithinParent(targetList, parentIndex, dropIndex);
                 DebugLog.d("importData: computed insert offset=%d", offset);
-                if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndex, offset, taskManager, updateAllPanels, checklistName)) return true;
+                // For same-checklist drags of top-level tasks, prefer reorder semantics.
+                if (!(sameChecklist && movedAllTopLevel)) {
+                    if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndex, offset, taskManager, updateAllPanels, checklistName)) return true;
+                }
             }
         }
         return false;

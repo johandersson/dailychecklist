@@ -96,13 +96,41 @@ public class TaskXmlHandler {
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
 
         DOMSource source = new DOMSource(document);
-        // Explicitly specify UTF-8 encoding for the output stream
-        try (java.io.OutputStreamWriter writer = new java.io.OutputStreamWriter(
-                new java.io.FileOutputStream(fileName), "UTF-8")) {
-            StreamResult result = new StreamResult(writer);
-            transformer.transform(source, result);
-        } catch (java.io.IOException e) {
-            throw new TransformerException("Failed to write XML file: " + e.getMessage(), e);
+        // Write via a temp file then move into place. Retry briefly on transient IO errors
+        // (file-locks are common on Windows when another process touches the file).
+        java.nio.file.Path target = java.nio.file.Paths.get(fileName);
+        java.nio.file.Path parent = target.toAbsolutePath().getParent();
+        if (parent == null) parent = java.nio.file.Paths.get(".");
+        java.nio.file.Path temp = parent.resolve(target.getFileName().toString() + ".tmp");
+
+        int attempts = 0;
+        int maxAttempts = 5;
+        long backoffMs = 50;
+        while (true) {
+            try {
+                try (java.io.OutputStreamWriter writer = new java.io.OutputStreamWriter(
+                        new java.io.FileOutputStream(temp.toFile()), "UTF-8")) {
+                    StreamResult result = new StreamResult(writer);
+                    transformer.transform(source, result);
+                }
+                // Move temp into final location, replacing existing file
+                java.nio.file.Files.move(temp, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+                return;
+            } catch (java.io.IOException e) {
+                attempts++;
+                // If temp exists, try to delete it to avoid stale files
+                try { java.nio.file.Files.deleteIfExists(temp); } catch (Exception ex) { /* ignore */ }
+                if (attempts >= maxAttempts) {
+                    throw new TransformerException("Failed to write XML file: " + e.getMessage(), e);
+                }
+                try {
+                    Thread.sleep(backoffMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new TransformerException("Interrupted while writing XML file", ie);
+                }
+                backoffMs *= 2;
+            }
         }
     }
 
