@@ -133,7 +133,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     // Populate renderer state fields from the given Task (keeps getListCellRendererComponent small)
     private void populateFromTask(Task task) {
         setBasicFields(task);
-        resolveReminderForTask(task);
+        resolveReminderForTask();
         resolveChecklistInfo(task);
         resolveBreadcrumb(task);
         resolveWeekday(task);
@@ -149,7 +149,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.doneDate = task.getDoneDate();
     }
 
-    private void resolveReminderForTask(Task task) {
+    private void resolveReminderForTask() {
         if (taskManager != null && this.taskId != null) {
             this.taskReminder = taskManager.getReminderForTask(this.taskId);
         }
