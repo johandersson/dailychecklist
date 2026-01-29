@@ -129,6 +129,11 @@ class SearchDialogUI {
     }
 
     private void setupListListeners(Runnable performSearch) {
+        setupSearchListMouseListener(performSearch);
+        setupSearchListSelectionListener();
+    }
+
+    private void setupSearchListMouseListener(Runnable performSearch) {
         listPanel.unifiedList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -165,7 +170,9 @@ class SearchDialogUI {
                 }
             }
         });
+    }
 
+    private void setupSearchListSelectionListener() {
         listPanel.unifiedList.addListSelectionListener(e -> {
             boolean enabled = listPanel.unifiedList.getSelectedValue() != null;
             buttonPanel.goToButton.setEnabled(enabled);
