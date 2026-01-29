@@ -60,8 +60,6 @@ public final class TaskDropHandler {
             all.removeIf(x -> x.getId().equals(t.getId()));
         }
 
-        DebugLog.d("handleDropOnItem: insertAt=%d toPersist=%s", insertAt, toPersist.toString());
-
         // Find the authoritative target index
         int targetIdx = -1;
         for (int i = 0; i < all.size(); i++) {
@@ -84,6 +82,8 @@ public final class TaskDropHandler {
                 insertAt++;
             }
         }
+
+        DebugLog.d("handleDropOnItem: insertAt=%d toPersist=%s", insertAt, toPersist.toString());
 
         // Insert moved tasks at computed position
         all.addAll(insertAt, toPersist);
