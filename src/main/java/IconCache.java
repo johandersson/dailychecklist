@@ -96,10 +96,26 @@ public final class IconCache {
     private static ImageIcon renderToImageIcon(javax.swing.Icon raw) {
         int w = Math.max(1, raw.getIconWidth());
         int h = Math.max(1, raw.getIconHeight());
-        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        // Detect device scale (HiDPI) and render at device pixel size to avoid blurry scaling
+        double scaleX = 1.0, scaleY = 1.0;
+        try {
+            java.awt.GraphicsDevice gd = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+            java.awt.geom.AffineTransform tx = gd.getDefaultConfiguration().getDefaultTransform();
+            scaleX = tx.getScaleX();
+            scaleY = tx.getScaleY();
+        } catch (Throwable ex) {
+            // best-effort; fall back to 1.0
+        }
+        int sw = Math.max(1, (int) Math.ceil(w * scaleX));
+        int sh = Math.max(1, (int) Math.ceil(h * scaleY));
+        BufferedImage img = new BufferedImage(sw, sh, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
         try {
             g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            g.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            // If scaling is needed, scale the Graphics so the icon draws at the correct device pixel size
+            if (scaleX != 1.0 || scaleY != 1.0) g.scale(scaleX, scaleY);
             raw.paintIcon(null, g, 0, 0);
         } finally {
             g.dispose();
