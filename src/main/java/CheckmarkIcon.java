@@ -28,14 +28,15 @@ public class CheckmarkIcon implements Icon {
             g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setColor(new Color(76, 175, 80));
             g2.setStroke(new BasicStroke(Math.max(1f, size / 8f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            // Draw checkmark
-            int sx = x + 3;
-            int sy = y + size/2;
-            int mx = x + size/2;
-            int ex = x + size - 3;
-            int ey = y + 4;
-            g2.drawLine(sx, sy, mx, ey + (size/8));
-            g2.drawLine(mx, ey + (size/8), ex, y + size - 4);
+            // Draw checkmark: from lower-left -> mid -> upper-right
+            int sx = x + (int) Math.round(size * 0.20);
+            int sy = y + (int) Math.round(size * 0.60);
+            int mx = x + (int) Math.round(size * 0.45);
+            int my = y + (int) Math.round(size * 0.80);
+            int ex = x + (int) Math.round(size * 0.85);
+            int ey = y + (int) Math.round(size * 0.25);
+            g2.drawLine(sx, sy, mx, my);
+            g2.drawLine(mx, my, ex, ey);
         } finally {
             g2.dispose();
         }

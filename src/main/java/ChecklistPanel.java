@@ -19,7 +19,6 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import javax.swing.BorderFactory;
@@ -139,68 +138,7 @@ public class ChecklistPanel extends JPanel {
 
     private void toggleTaskDone(JList<Task> list, int index) {
         Task task = list.getModel().getElementAt(index);
-        boolean newDone = !task.isDone();
-        System.out.println("[TRACE] ChecklistPanel.toggleTaskDone start id=" + task.getId() + ", parentId=" + task.getParentId() + ", newDone=" + newDone + ", thread=" + Thread.currentThread().getName());
-        task.setDone(newDone);
-        if (newDone) {
-            task.setDoneDate(new Date(System.currentTimeMillis()));
-        } else {
-            task.setDoneDate(null);
-        }
-
-        // Use TaskManager helper to get direct subtasks for this task
-        java.util.List<Task> subs = taskManager.getSubtasks(task.getId());
-        boolean batchPersistScheduled = false;
-        if (!subs.isEmpty() && newDone) {
-            java.util.List<Task> toUpdate = new java.util.ArrayList<>();
-            for (Task sub : subs) {
-                System.out.println("[TRACE] ChecklistPanel: parent->sub mark id=" + sub.getId());
-                sub.setDone(true);
-                sub.setDoneDate(new Date(System.currentTimeMillis()));
-                toUpdate.add(sub);
-            }
-            toUpdate.add(task);
-            // Persist via TaskManager quiet update (repository will persist async)
-            boolean ok = taskManager.updateTasksQuiet(toUpdate);
-            System.out.println("[TRACE] ChecklistPanel: scheduled persist " + subs.size() + " subtasks for parent=" + task.getId() + ", ok=" + ok);
-            javax.swing.SwingUtilities.invokeLater(this::updateTasks);
-            batchPersistScheduled = true;
-        }
-
-        // If subtask, check if all siblings are done, then mark parent done/undone
-        if (task.getParentId() != null) {
-            java.util.List<Task> siblings = taskManager.getSubtasks(task.getParentId());
-            boolean allSiblingsDone = true;
-            if (siblings != null) {
-                for (Task sib : siblings) {
-                    if (!sib.isDone()) {
-                        allSiblingsDone = false;
-                        break;
-                    }
-                }
-            }
-            Task parent = taskManager.getTaskById(task.getParentId());
-            if (parent != null) {
-                // Only mark parent done when all siblings are done and the current subtask was just marked done.
-                if (allSiblingsDone && newDone) {
-                    System.out.println("[TRACE] ChecklistPanel: all siblings done -> mark parent id=" + parent.getId());
-                    parent.setDone(true);
-                    parent.setDoneDate(new Date(System.currentTimeMillis()));
-                    taskManager.updateTaskQuiet(parent);
-                }
-                // Do NOT unmark parent when a single subtask is unchecked.
-            }
-        }
-
-        System.out.println("[TRACE] ChecklistPanel: scheduling persist for clicked task id=" + task.getId());
-        // If we already scheduled a batch persist for parent+subtasks, skip the single-task persist
-        if (!batchPersistScheduled) {
-            boolean ok = taskManager.updateTaskQuiet(task);
-            javax.swing.SwingUtilities.invokeLater(this::updateTasks);
-            System.out.println("[TRACE] ChecklistPanel: scheduled persist clicked task id=" + task.getId() + ", ok=" + ok);
-        } else {
-            System.out.println("[TRACE] ChecklistPanel: skipped single-task persist because batch persist scheduled for parent=" + task.getId());
-        }
+        TaskDoneToggler.toggle(taskManager, task, this::updateTasks);
     }
 
     private void deleteSelectedTasks(JList<Task> list) {
@@ -328,7 +266,9 @@ public class ChecklistPanel extends JPanel {
             addSubtaskItem.addActionListener(event -> {
                 Task p = taskManager.getTaskById(modelParent.getId());
                 if (p == null) p = modelParent;
-                String subtaskName = javax.swing.JOptionPane.showInputDialog(this, "Enter subtask name:");
+                Task pForDialog = (p != null) ? p : modelParent;
+                String prompt = "Add subtask to " + (pForDialog != null ? pForDialog.getName() : "");
+                String subtaskName = javax.swing.JOptionPane.showInputDialog(this, prompt);
                 if (subtaskName != null && !subtaskName.trim().isEmpty()) {
                     Task subtask = new Task(subtaskName.trim(), p.getType(), p.getWeekday(), p.getChecklistId(), p.getId());
                     taskManager.addTask(subtask);
