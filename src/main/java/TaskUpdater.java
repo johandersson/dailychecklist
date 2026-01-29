@@ -29,11 +29,12 @@ public class TaskUpdater {
     public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showAllWeekdaySpecificTasks, TaskManager taskManager) {
         String currentWeekday = LocalDateTime.now().getDayOfWeek().toString().toLowerCase();
 
-        // Group tasks by id and parentId
+        // Group tasks by id and parentId. Also collect optional heading entries (type HEADING)
         List<Task> morningParents = new ArrayList<>();
         List<Task> eveningParents = new ArrayList<>();
         // Map from parentId to list of subtasks
         java.util.Map<String, List<Task>> subtasksByParent = new java.util.HashMap<>();
+        java.util.Map<String, Task> headingByParent = new java.util.HashMap<>();
 
         for (Task task : allTasks) {
             boolean show;
@@ -42,7 +43,13 @@ public class TaskUpdater {
             } else {
                 show = showAllWeekdaySpecificTasks || task.getWeekday().toLowerCase().equals(currentWeekday);
             }
-            if (show && task.getType() != TaskType.CUSTOM) {
+            if (!show) continue;
+            if (task.getType() == TaskType.HEADING) {
+                // Headings are GUI-only items that reference a parent task id
+                if (task.getParentId() != null) headingByParent.put(task.getParentId(), task);
+                continue;
+            }
+            if (task.getType() != TaskType.CUSTOM) {
                 if (task.getParentId() == null) {
                     if (task.getType() == TaskType.MORNING) {
                         morningParents.add(task);
@@ -57,6 +64,9 @@ public class TaskUpdater {
 
         List<Task> desiredMorning = new ArrayList<>();
         for (Task parent : morningParents) {
+            // If a heading exists for this parent, show it immediately above the parent
+            Task heading = headingByParent.get(parent.getId());
+            if (heading != null) desiredMorning.add(heading);
             desiredMorning.add(parent);
             if (taskManager != null) {
                 java.util.List<Task> subs = taskManager.getSubtasksSorted(parent.getId());
@@ -73,6 +83,8 @@ public class TaskUpdater {
 
         List<Task> desiredEvening = new ArrayList<>();
         for (Task parent : eveningParents) {
+            Task heading = headingByParent.get(parent.getId());
+            if (heading != null) desiredEvening.add(heading);
             desiredEvening.add(parent);
             if (taskManager != null) {
                 java.util.List<Task> subs = taskManager.getSubtasksSorted(parent.getId());

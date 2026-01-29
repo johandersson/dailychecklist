@@ -236,6 +236,8 @@ public class TaskManager {
         if (subtasksCacheValid) return;
         java.util.Map<String, java.util.List<Task>> map = new java.util.HashMap<>();
         for (Task t : getAllTasks()) {
+            // Treat HEADING entries as GUI-only and not as real subtasks when building subtask cache
+            if (t.getType() == TaskType.HEADING) continue;
             String pid = t.getParentId();
             if (pid != null) {
                 map.computeIfAbsent(pid, k -> new java.util.ArrayList<>()).add(t);

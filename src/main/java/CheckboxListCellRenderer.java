@@ -43,6 +43,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     
     private boolean showChecklistInfo; // Whether to show checklist name in display
     private boolean isSubtask; // True if this task is a subtask (for indentation)
+    private boolean isHeading; // True if this list element is a heading (render differently)
     private ChecklistNameManager checklistNameManager; // Manager to resolve checklist IDs to names
     private transient TaskManager taskManager;
     private boolean showSubtaskBreadcrumb = false; // When true, subtasks are not indented and show breadcrumb text to the right
@@ -148,8 +149,10 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.isChecked = task.isDone();
         this.taskName = task.getName();
         this.taskId = task.getId();
+        this.isHeading = task.getType() == TaskType.HEADING;
         this.taskReminder = null;
-        this.isSubtask = (task.getParentId() != null) && !this.showSubtaskBreadcrumb;
+        // Headings are not subtasks visually
+        this.isSubtask = !this.isHeading && (task.getParentId() != null) && !this.showSubtaskBreadcrumb;
         this.breadcrumbText = null;
         this.doneDate = task.getDoneDate();
     }
@@ -252,6 +255,25 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         // Enable anti-aliasing for smoother rendering
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+        if (isHeading) {
+            // Render heading as bold text spanning the full width, no checkbox or icons
+            int textStartX = 12;
+            int textY = getHeight() / 2 + 5;
+            g2.setColor(getForeground());
+            Font bold = getFont().deriveFont(Font.BOLD);
+            g2.setFont(bold);
+            String drawTaskName = taskName != null ? taskName : "";
+            FontMetrics fm = g2.getFontMetrics(bold);
+            int availableWidth = getWidth() - textStartX - 6;
+            if (availableWidth > 12 && fm.stringWidth(drawTaskName) > availableWidth) {
+                // simple truncation
+                while (drawTaskName.length() > 0 && fm.stringWidth(drawTaskName + "…") > availableWidth) drawTaskName = drawTaskName.substring(0, drawTaskName.length() - 1);
+                drawTaskName = drawTaskName + "…";
+            }
+            g2.drawString(drawTaskName, textStartX, textY);
+            return;
+        }
 
         int baseIndent = 40;
         int subtaskIndent = 24;

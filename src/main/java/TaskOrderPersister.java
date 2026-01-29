@@ -54,15 +54,31 @@ public final class TaskOrderPersister {
     private static List<Task> collectChecklistTasks(List<Task> allTasks, String checklistName, TaskManager taskManager) {
         List<Task> checklistTasks = new ArrayList<>();
         for (Task t : allTasks) {
-            boolean belongsToChecklist;
-            if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
-                belongsToChecklist = checklistName.equals(t.getType().toString());
+            boolean belongsToChecklist = false;
+            if (t.getType() == TaskType.HEADING) {
+                // A heading belongs to the same checklist as its referenced parent (if available)
+                Task parent = t.getParentId() == null ? null : taskManager.getTaskById(t.getParentId());
+                if (parent != null) {
+                    if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
+                        belongsToChecklist = checklistName.equals(parent.getType().toString());
+                    } else {
+                        Checklist checklist = taskManager.getCustomChecklists().stream()
+                            .filter(c -> checklistName.equals(c.getName()))
+                            .findFirst()
+                            .orElse(null);
+                        belongsToChecklist = checklist != null && checklist.getId().equals(parent.getChecklistId());
+                    }
+                }
             } else {
-                Checklist checklist = taskManager.getCustomChecklists().stream()
-                    .filter(c -> checklistName.equals(c.getName()))
-                    .findFirst()
-                    .orElse(null);
-                belongsToChecklist = checklist != null && checklist.getId().equals(t.getChecklistId());
+                if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
+                    belongsToChecklist = checklistName.equals(t.getType().toString());
+                } else {
+                    Checklist checklist = taskManager.getCustomChecklists().stream()
+                        .filter(c -> checklistName.equals(c.getName()))
+                        .findFirst()
+                        .orElse(null);
+                    belongsToChecklist = checklist != null && checklist.getId().equals(t.getChecklistId());
+                }
             }
             if (belongsToChecklist) checklistTasks.add(t);
         }
@@ -101,19 +117,32 @@ public final class TaskOrderPersister {
     private static int findChecklistStartIndex(List<Task> allTasks, String checklistName, TaskManager taskManager) {
         for (int i = 0; i < allTasks.size(); i++) {
             Task t = allTasks.get(i);
-            boolean belongsToChecklist;
-            if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
-                belongsToChecklist = checklistName.equals(t.getType().toString());
+            boolean belongsToChecklist = false;
+            if (t.getType() == TaskType.HEADING) {
+                Task parent = t.getParentId() == null ? null : taskManager.getTaskById(t.getParentId());
+                if (parent != null) {
+                    if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
+                        belongsToChecklist = checklistName.equals(parent.getType().toString());
+                    } else {
+                        Checklist checklist = taskManager.getCustomChecklists().stream()
+                            .filter(c -> checklistName.equals(c.getName()))
+                            .findFirst()
+                            .orElse(null);
+                        belongsToChecklist = checklist != null && checklist.getId().equals(parent.getChecklistId());
+                    }
+                }
             } else {
-                Checklist checklist = taskManager.getCustomChecklists().stream()
-                    .filter(c -> checklistName.equals(c.getName()))
-                    .findFirst()
-                    .orElse(null);
-                belongsToChecklist = checklist != null && checklist.getId().equals(t.getChecklistId());
+                if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
+                    belongsToChecklist = checklistName.equals(t.getType().toString());
+                } else {
+                    Checklist checklist = taskManager.getCustomChecklists().stream()
+                        .filter(c -> checklistName.equals(c.getName()))
+                        .findFirst()
+                        .orElse(null);
+                    belongsToChecklist = checklist != null && checklist.getId().equals(t.getChecklistId());
+                }
             }
-            if (belongsToChecklist) {
-                return i;
-            }
+            if (belongsToChecklist) return i;
         }
         return -1;
     }
