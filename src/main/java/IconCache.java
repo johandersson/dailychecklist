@@ -40,21 +40,14 @@ public final class IconCache {
     private static final ConcurrentMap<String, Icon> reminderClockCache = new ConcurrentHashMap<>();
     private static final ConcurrentLinkedQueue<String> reminderClockKeys = new ConcurrentLinkedQueue<>();
     private static final int MAX_REMINDER_ICONS = 200;
-    // Cached application icon (32x32)
-    private static volatile Image APP_ICON;
+    // NOTE: application icon is provided by AppIcon.getAppIcon()
 
     public static Icon getChecklistDocumentIcon() {
         return CHECKLIST_DOC;
     }
 
     public static Image getAppIcon() {
-        Image img = APP_ICON;
-        if (img != null) return img;
-        synchronized (IconCache.class) {
-            if (APP_ICON != null) return APP_ICON;
-            APP_ICON = createAppIcon();
-            return APP_ICON;
-        }
+        return AppIcon.getAppIcon();
     }
 
     public static Icon getZzzIcon() {
@@ -76,19 +69,8 @@ public final class IconCache {
     public static Icon getReminderClockIcon(int hour, int minute, ReminderClockIcon.State state, boolean showTimeText) {
         String key = hour + "-" + minute + "-" + (state == null ? "" : state.name()) + "-" + showTimeText;
         return reminderClockCache.computeIfAbsent(key, k -> {
-            // Pre-render the ReminderClockIcon into a BufferedImage and return an ImageIcon.
             ReminderClockIcon tmp = new ReminderClockIcon(hour, minute, state, showTimeText);
-            int w = tmp.getIconWidth();
-            int h = tmp.getIconHeight();
-            BufferedImage img = new BufferedImage(Math.max(1, w), Math.max(1, h), BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g = img.createGraphics();
-            try {
-                // Paint into the buffered image once
-                tmp.paintIcon(null, g, 0, 0);
-            } finally {
-                g.dispose();
-            }
-            ImageIcon icon = new ImageIcon(img);
+            ImageIcon icon = renderToImageIcon(tmp);
             // Track insertion order and prune if necessary
             reminderClockKeys.add(k);
             while (reminderClockKeys.size() > MAX_REMINDER_ICONS) {
@@ -100,100 +82,30 @@ public final class IconCache {
     }
 
     static {
-        // Pre-render ZzzIcon into an ImageIcon to avoid repeated painting work
+        // Pre-render static icons via helper to reduce duplication
         ZzzIcon rawZzz = new ZzzIcon();
-        int zw = rawZzz.getIconWidth();
-        int zh = rawZzz.getIconHeight();
-        java.awt.image.BufferedImage zimg = new java.awt.image.BufferedImage(Math.max(1, zw), Math.max(1, zh), java.awt.image.BufferedImage.TYPE_INT_ARGB);
-        java.awt.Graphics2D zg = zimg.createGraphics();
-        try {
-            zg.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-            rawZzz.paintIcon(null, zg, 0, 0);
-        } finally {
-            zg.dispose();
-        }
-        ZZZ = new javax.swing.ImageIcon(zimg);
+        ZZZ = renderToImageIcon(rawZzz);
 
-        // Pre-render the checklist document icon into an ImageIcon for consistent painting
-        int w = CHECKLIST_DOC_RAW.getIconWidth();
-        int h = CHECKLIST_DOC_RAW.getIconHeight();
-        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(Math.max(1, w), Math.max(1, h), java.awt.image.BufferedImage.TYPE_INT_ARGB);
-        java.awt.Graphics2D g = img.createGraphics();
+        CHECKLIST_DOC = renderToImageIcon(CHECKLIST_DOC_RAW);
+
+        ADD_SUBTASK_ICON = renderToImageIcon(new AddSubtaskIcon(16));
+
+        CHECKMARK_ICON = renderToImageIcon(new CheckmarkIcon(16));
+    }
+
+    private static ImageIcon renderToImageIcon(javax.swing.Icon raw) {
+        int w = Math.max(1, raw.getIconWidth());
+        int h = Math.max(1, raw.getIconHeight());
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
         try {
-            CHECKLIST_DOC_RAW.paintIcon(null, g, 0, 0);
+            g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            raw.paintIcon(null, g, 0, 0);
         } finally {
             g.dispose();
         }
-        CHECKLIST_DOC = new javax.swing.ImageIcon(img);
-
-        // Use dedicated AddSubtaskIcon class and pre-render into an ImageIcon
-        AddSubtaskIcon rawAdd = new AddSubtaskIcon(16);
-        int aw = rawAdd.getIconWidth();
-        int ah = rawAdd.getIconHeight();
-        java.awt.image.BufferedImage aimg = new java.awt.image.BufferedImage(Math.max(1, aw), Math.max(1, ah), java.awt.image.BufferedImage.TYPE_INT_ARGB);
-        java.awt.Graphics2D ag = aimg.createGraphics();
-        try {
-            ag.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-            rawAdd.paintIcon(null, ag, 0, 0);
-        } finally {
-            ag.dispose();
-        }
-        ADD_SUBTASK_ICON = new javax.swing.ImageIcon(aimg);
-
-        // Pre-render checkmark icon
-        CheckmarkIcon rawCheck = new CheckmarkIcon(16);
-        int cw = rawCheck.getIconWidth();
-        int ch = rawCheck.getIconHeight();
-        java.awt.image.BufferedImage cimg = new java.awt.image.BufferedImage(Math.max(1, cw), Math.max(1, ch), java.awt.image.BufferedImage.TYPE_INT_ARGB);
-        java.awt.Graphics2D cg = cimg.createGraphics();
-        try {
-            cg.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-            rawCheck.paintIcon(null, cg, 0, 0);
-        } finally {
-            cg.dispose();
-        }
-        CHECKMARK_ICON = new javax.swing.ImageIcon(cimg);
+        return new ImageIcon(img);
     }
 
-    private static Image createAppIcon() {
-        int size = 32;
-        BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
-        java.awt.Graphics2D g2 = image.createGraphics();
-
-        // Enable anti-aliasing
-        g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-
-        // Clear background to transparent
-        g2.setComposite(java.awt.AlphaComposite.Clear);
-        g2.fillRect(0, 0, size, size);
-        g2.setComposite(java.awt.AlphaComposite.SrcOver);
-
-        // Define checkbox dimensions (centered)
-        int checkboxSize = 24;
-        int checkboxX = (size - checkboxSize) / 2;
-        int checkboxY = (size - checkboxSize) / 2;
-
-        // Draw subtle shadow
-        g2.setColor(new java.awt.Color(200, 200, 200, 100));
-        g2.fillRoundRect(checkboxX + 1, checkboxY + 1, checkboxSize, checkboxSize, 6, 6);
-
-        // Draw checkbox outline
-        g2.setColor(new java.awt.Color(120, 120, 120));
-        g2.drawRoundRect(checkboxX, checkboxY, checkboxSize, checkboxSize, 6, 6);
-
-        // Fill checkbox with white
-        g2.setColor(java.awt.Color.WHITE);
-        g2.fillRoundRect(checkboxX + 1, checkboxY + 1, checkboxSize - 2, checkboxSize - 2, 6, 6);
-
-        // Draw checkmark
-        g2.setColor(new java.awt.Color(76, 175, 80)); // Material green
-        g2.setStroke(new java.awt.BasicStroke(2, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
-        int offsetX = checkboxX + 3;
-        int offsetY = checkboxY + 6;
-        g2.drawLine(offsetX + 2, offsetY + 6, offsetX + 7, offsetY + 11);
-        g2.drawLine(offsetX + 7, offsetY + 11, offsetX + 15, offsetY + 1);
-
-        g2.dispose();
-        return image;
-    }
+    
 }
