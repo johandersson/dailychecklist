@@ -63,8 +63,9 @@ public class ReminderStatusPanel extends JPanel {
         textLabel.setFont(FontManager.getSmallMediumFont());
         // Tooltip to explain the reminder timestamp when hovering the icon or text
         String tooltip = "Reminder: " + text;
-        iconLabel.setToolTipText(tooltip);
-        textLabel.setToolTipText(tooltip);
+        String htmlTip = "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + tooltip + "</p></html>";
+        iconLabel.setToolTipText(htmlTip);
+        textLabel.setToolTipText(htmlTip);
         small.add(iconLabel);
         small.add(textLabel);
         add(small, BorderLayout.WEST);

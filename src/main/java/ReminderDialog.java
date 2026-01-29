@@ -90,16 +90,16 @@ public class ReminderDialog extends JDialog {
         messageLabel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
 
         JButton openButton = new JButton("Open Checklist");
-        openButton.setToolTipText("Open the checklist in the application");
+        openButton.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Open the checklist in the application</p></html>");
         JButton dismissButton = new JButton("Remove Reminders");
-        dismissButton.setToolTipText("Remove all reminders for this checklist");
+        dismissButton.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Remove all reminders for this checklist</p></html>");
         boolean isTaskLevel = reminder.getTaskId() != null;
         JButton markAsDoneButton = new JButton(isTaskLevel ? "Mark task as Done" : "Mark as Done");
-        markAsDoneButton.setToolTipText(isTaskLevel ? "Mark the targeted task as done" : "Mark all tasks in checklist as done and open the checklist");
+        markAsDoneButton.setToolTipText(isTaskLevel ? "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Mark the targeted task as done</p></html>" : "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Mark all tasks in checklist as done and open the checklist</p></html>");
         JButton remindLaterButton = new JButton("Remind me in 15 minutes");
-        remindLaterButton.setToolTipText("Remind me again in 15 minutes");
+        remindLaterButton.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Remind me again in 15 minutes</p></html>");
         JButton remindTomorrowButton = new JButton("Remind me tomorrow");
-        remindTomorrowButton.setToolTipText("Remind me tomorrow at the same time");
+        remindTomorrowButton.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Remind me tomorrow at the same time</p></html>");
 
         openButton.addActionListener(e -> {
             if (this.onOpen != null) this.onOpen.run();
