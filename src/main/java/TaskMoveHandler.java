@@ -23,6 +23,7 @@ import javax.swing.JList;
 
 public class TaskMoveHandler {
     public static boolean performMove(JList<Task> list, DefaultListModel<Task> listModel, TaskManager taskManager, String checklistName, Runnable updateAllPanels, List<Task> tasks, int dropIndex) {
+        DebugLog.d("performMove: checklist=%s dropIndex=%d tasks=%s", checklistName, dropIndex, tasks.toString());
         // Check if move is allowed
         boolean isTargetDaily = "MORNING".equals(checklistName) || "EVENING".equals(checklistName);
         // Ensure drop index is within valid bounds
@@ -36,6 +37,7 @@ public class TaskMoveHandler {
 
         final int finalDropIndex = dropIndex;
         javax.swing.SwingUtilities.invokeLater(() -> {
+            DebugLog.d("performMove (invokeLater): finalDropIndex=%d", finalDropIndex);
             // Update the properties for all tasks and persist them in one batch
             java.util.List<Task> toPersist = new java.util.ArrayList<>();
             for (Task task : tasks) {

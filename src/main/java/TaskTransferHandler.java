@@ -75,6 +75,7 @@ public class TaskTransferHandler extends TransferHandler {
                 Task task = listModel.get(index);
                 data.append(";").append(task.getId());
             }
+            DebugLog.d("createTransferable: checklist=%s selectedCount=%d ids=%s", checklistName, selectedIndices.length, data.toString());
             return new StringSelection(data.toString());
         }
         return null;
@@ -181,12 +182,14 @@ public class TaskTransferHandler extends TransferHandler {
         }
 
         try {
+            DebugLog.d("importData: incoming drop on component=%s", support.getComponent().getClass().getSimpleName());
             TransferData transferData = extractTransferData(support);
             if (transferData == null) {
                 return false;
             }
 
             int dropIndex = getDropIndex(support);
+            DebugLog.d("importData: dropIndex=%d", dropIndex);
 
             // Delegate drop-on-item handling to TaskDropHandler (keeps this class small)
             JList.DropLocation dl = (JList.DropLocation) support.getDropLocation();
@@ -199,6 +202,7 @@ public class TaskTransferHandler extends TransferHandler {
                     // If user dropped onto an item, attempt drop on that item. If that item is a subtask
                     // we want to insert the moved tasks at that subtask's position within its parent.
                     Task modelTarget = targetList.getModel().getElementAt(dropIndex);
+                    DebugLog.d("importData: dropOnItem targetIndex=%d targetId=%s isInsert=%s", dropIndex, modelTarget == null ? "<null>" : modelTarget.getId(), isInsert);
                     if (modelTarget != null && modelTarget.getParentId() == null) {
                         // Dropped onto a top-level parent -> use default behavior (append to end of block)
                         if (TaskDropHandler.handleDropOnItem(transferData, targetList, dropIndex, -1, taskManager, updateAllPanels)) {
@@ -207,8 +211,10 @@ public class TaskTransferHandler extends TransferHandler {
                     } else {
                         // Dropped onto a subtask: find its parent and compute offset within block
                         int parentIndexFallback = findNearestTopLevelParentIndex(targetList, dropIndex);
+                        DebugLog.d("importData: dropOnSubtask parentIndexFallback=%d", parentIndexFallback);
                         if (parentIndexFallback != -1) {
                             int offset = computeInsertOffsetWithinParent(targetList, parentIndexFallback, dropIndex);
+                            DebugLog.d("importData: computed offset within parent=%d", offset);
                             if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndexFallback, offset, taskManager, updateAllPanels)) {
                                 return true;
                             }
@@ -221,8 +227,10 @@ public class TaskTransferHandler extends TransferHandler {
                 // parent's subtask block and have the item become a subtask of that parent.
                 if (isInsert) {
                     int parentIndex = findNearestTopLevelParentIndex(targetList, dropIndex);
+                    DebugLog.d("importData: insertBetween parentIndex=%d", parentIndex);
                     if (parentIndex != -1) {
                         int offset = computeInsertOffsetWithinParent(targetList, parentIndex, dropIndex);
+                        DebugLog.d("importData: computed insert offset=%d", offset);
                         if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndex, offset, taskManager, updateAllPanels)) {
                             return true;
                         }
@@ -231,6 +239,7 @@ public class TaskTransferHandler extends TransferHandler {
 
                 // Prioritize same-checklist reorders so users can reorder subtasks within a parent.
                 if (java.util.Objects.equals(transferData.sourceChecklistName, checklistName)) {
+                    DebugLog.d("importData: same-checklist reorder candidate: checklist=%s dropIndex=%d", checklistName, dropIndex);
                     if (handleSameChecklistReorder(transferData, dropIndex)) return true;
                 }
 
@@ -248,6 +257,7 @@ public class TaskTransferHandler extends TransferHandler {
     private TransferData extractTransferData(TransferHandler.TransferSupport support)
             throws UnsupportedFlavorException, IOException {
         String data = (String) support.getTransferable().getTransferData(DataFlavor.stringFlavor);
+        DebugLog.d("extractTransferData: raw=%s", data == null ? "<null>" : data);
         String[] parts = data.split(";", -1);
         if (parts.length < 2) {
             return null;
@@ -276,6 +286,7 @@ public class TaskTransferHandler extends TransferHandler {
             }
             tasks.add(task);
         }
+        DebugLog.d("extractTransferData: sourceChecklist=%s taskIds=%s", sourceChecklistName, taskIds.toString());
 
         return new TransferData(sourceChecklistName, tasks);
     }

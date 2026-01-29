@@ -25,6 +25,7 @@ public class TaskReorderHandler {
         // Ensure drop index is within valid bounds
         int originalSize = listModel.getSize();
         if (dropIndex > originalSize) {
+            DebugLog.d("performReorder: checklist=%s dropIndex=%d tasks=%s", checklistName, dropIndex, tasks.toString());
             dropIndex = originalSize;
         }
         if (dropIndex < 0) {
@@ -63,6 +64,7 @@ public class TaskReorderHandler {
         final String targetParentId = determineTargetParentId(listModel, dropIndex);
 
         javax.swing.SwingUtilities.invokeLater(() -> {
+            DebugLog.d("performReorder (invokeLater): finalDropIndex=%d", finalDropIndex);
             // Update parentId for moved tasks to reflect intended placement
             List<Task> toPersistParentChange = new ArrayList<>();
             for (Task t : tasks) {
@@ -95,6 +97,9 @@ public class TaskReorderHandler {
             // Insert all tasks at the drop position
             for (int i = 0; i < tasks.size(); i++) {
                 listModel.add(adjustedDropIndex + i, tasks.get(i));
+            }
+
+            DebugLog.d("performReorder: adjustedDropIndex=%d resultingSize=%d", adjustedDropIndex, listModel.getSize());
             }
 
             // Persist the new order in the underlying data

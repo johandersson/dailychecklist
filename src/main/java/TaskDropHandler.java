@@ -28,6 +28,7 @@ public final class TaskDropHandler {
     private TaskDropHandler() {}
 
     public static boolean handleDropOnItem(TransferData transferData, JList<Task> targetList, int dropIndex, int insertOffset, TaskManager taskManager, Runnable updateAllPanels) {
+        DebugLog.d("handleDropOnItem: targetIndex=%d insertOffset=%d sourceChecklist=%s tasks=%s", dropIndex, insertOffset, transferData == null ? "<null>" : transferData.sourceChecklistName, transferData == null ? "<null>" : transferData.tasks.toString());
         if (transferData == null || targetList == null || taskManager == null) return false;
         if (dropIndex < 0 || dropIndex >= targetList.getModel().getSize()) return false;
         Task modelTarget = targetList.getModel().getElementAt(dropIndex);
@@ -40,7 +41,10 @@ public final class TaskDropHandler {
         }
 
         // Only allow dropping onto top-level tasks (no nested subtasks)
-        if (target.getParentId() != null) return false;
+        if (target.getParentId() != null) {
+            DebugLog.d("handleDropOnItem: rejected target is not top-level (parentId=%s)", target.getParentId());
+            return false;
+        }
 
         if (wouldCreateSelfParenting(transferData, target)) return false;
 
@@ -55,6 +59,8 @@ public final class TaskDropHandler {
         for (Task t : toPersist) {
             all.removeIf(x -> x.getId().equals(t.getId()));
         }
+
+        DebugLog.d("handleDropOnItem: insertAt=%d toPersist=%s", insertAt, toPersist.toString());
 
         // Find the authoritative target index
         int targetIdx = -1;
