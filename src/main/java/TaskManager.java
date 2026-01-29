@@ -67,6 +67,24 @@ public class TaskManager {
     }
 
     public void addTask(Task task) {
+        // Validation: only one heading per parent
+        if (task != null && task.getType() == TaskType.HEADING) {
+            String pid = task.getParentId();
+            if (pid == null || pid.trim().isEmpty()) {
+                javax.swing.JOptionPane.showMessageDialog(null,
+                    "Heading must refer to a parent task.",
+                    "Invalid Heading", javax.swing.JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            for (Task t : getAllTasks()) {
+                if (t.getType() == TaskType.HEADING && pid.equals(t.getParentId())) {
+                    javax.swing.JOptionPane.showMessageDialog(null,
+                        "A heading already exists for the selected parent.",
+                        "Duplicate Heading", javax.swing.JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
+        }
         repository.addTask(task);
         invalidateSubtasksCache();
         notifyListeners();
@@ -216,6 +234,23 @@ public class TaskManager {
     }
 
     public void setTasks(List<Task> tasks) {
+        // Sanitize incoming task list: ensure headings reference a parent and only one heading per parent
+        if (tasks != null) {
+            java.util.Set<String> seenHeadingParents = new java.util.HashSet<>();
+            java.util.Iterator<Task> it = tasks.iterator();
+            while (it.hasNext()) {
+                Task t = it.next();
+                if (t.getType() == TaskType.HEADING) {
+                    String pid = t.getParentId();
+                    if (pid == null || pid.trim().isEmpty() || seenHeadingParents.contains(pid)) {
+                        // remove invalid or duplicate heading
+                        it.remove();
+                        continue;
+                    }
+                    seenHeadingParents.add(pid);
+                }
+            }
+        }
         repository.setTasks(tasks);
         invalidateSubtasksCache();
         notifyListeners();
