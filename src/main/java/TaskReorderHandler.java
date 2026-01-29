@@ -16,6 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.DefaultListModel;
 
@@ -56,8 +57,22 @@ public class TaskReorderHandler {
         // Adjust drop index for removals that occur before it
         dropIndex -= itemsRemovedBeforeDrop;
 
+        // Determine target parent based on drop location in the model so we can
+        // update moved tasks' parentId before persisting the new order.
         final int finalDropIndex = dropIndex;
+        final String targetParentId = determineTargetParentId(listModel, dropIndex);
+
         javax.swing.SwingUtilities.invokeLater(() -> {
+            // Update parentId for moved tasks to reflect intended placement
+            List<Task> toPersistParentChange = new ArrayList<>();
+            for (Task t : tasks) {
+                Task authoritative = taskManager.getTaskById(t.getId());
+                if (authoritative == null) authoritative = t;
+                authoritative.setParentId(targetParentId);
+                toPersistParentChange.add(authoritative);
+            }
+            // Persist parent changes first so TaskOrderPersister sees authoritative state
+            taskManager.updateTasks(toPersistParentChange);
             // Remove all tasks from their current positions
             for (Task task : tasks) {
                 for (int i = 0; i < listModel.getSize(); i++) {
@@ -90,4 +105,23 @@ public class TaskReorderHandler {
     }
 
     // Persisting logic moved to TaskOrderPersister for clarity and testability.
+    // Determine the nearest top-level parent for the given dropIndex inside the provided model.
+    private static String determineTargetParentId(DefaultListModel<Task> listModel, int dropIndex) {
+        int size = listModel.getSize();
+        if (dropIndex < 0) dropIndex = 0;
+        if (dropIndex > size) dropIndex = size;
+
+        // Search backward for a top-level parent
+        for (int i = dropIndex - 1; i >= 0; i--) {
+            Task t = listModel.get(i);
+            if (t != null && t.getParentId() == null) return t.getId();
+        }
+        // If none, search forward
+        for (int i = dropIndex; i < size; i++) {
+            Task t = listModel.get(i);
+            if (t != null && t.getParentId() == null) return t.getId();
+        }
+        // No enclosing parent found => top-level
+        return null;
+    }
 }
