@@ -54,4 +54,4 @@ tasks.xml
 # Test coverage reports
 coverage-report/
 jacoco.exec
-coverage.csv
+coverage.csvcopilot-instructions.md
