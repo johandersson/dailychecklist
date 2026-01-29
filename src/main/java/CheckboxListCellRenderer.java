@@ -382,7 +382,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         if (!isWeekdayTask) return;
         int circleSize = 30;
         int areaX = getWidth() - UiLayout.WEEKDAY_ICON_AREA;
-        int circleX = areaX + (WEEKDAY_ICON_AREA - circleSize) / 2;
+        int circleX = areaX + (UiLayout.WEEKDAY_ICON_AREA - circleSize) / 2;
         int circleY = getHeight() / 2 - circleSize / 2;
         g2.setColor(weekdayColor != null ? weekdayColor : new Color(120, 120, 120));
         g2.fillOval(circleX, circleY, circleSize, circleSize);
@@ -405,7 +405,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         // reminder area is left of the weekday area
         int areaX = getWidth() - UiLayout.WEEKDAY_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
         // center the icon (and its time text) within the reminder reserved area
-        int iconX = areaX + Math.max(2, (REMINDER_ICON_AREA - iconW) / 2);
+        int iconX = areaX + Math.max(2, (UiLayout.REMINDER_ICON_AREA - iconW) / 2);
         int iconY = getHeight() / 2 - iconH / 2;
         icon.paintIcon(this, g2, iconX, iconY);
     }
@@ -422,7 +422,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         int aw = add.getIconWidth();
         int ah = add.getIconHeight();
         // Place it to the left of the reminder area
-        int areaX = getWidth() - WEEKDAY_ICON_AREA - REMINDER_ICON_AREA;
+        int areaX = getWidth() - UiLayout.WEEKDAY_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
         int iconX = areaX - UiLayout.ADD_SUBTASK_OFFSET; // spacing
         if (iconX < 0) iconX = Math.max(2, getWidth() - UiLayout.RIGHT_ICON_SPACE - aw - 6);
         int iconY = getHeight() / 2 - ah / 2;
