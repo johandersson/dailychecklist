@@ -50,7 +50,6 @@ public class TaskListMouseAdapter extends MouseAdapter {
                 // showContextMenu is handled by subclasses or passed
             } else if (onCheckbox && e.getClickCount() == 1) {
                 // Single-click on checkbox: toggle done
-                Task task = list.getModel().getElementAt(index);
                 task.setDone(!task.isDone());
                 if (task.isDone()) {
                     task.setDoneDate(new Date(System.currentTimeMillis()));
