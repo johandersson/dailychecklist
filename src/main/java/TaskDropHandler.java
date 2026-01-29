@@ -27,7 +27,7 @@ import javax.swing.JList;
 public final class TaskDropHandler {
     private TaskDropHandler() {}
 
-    public static boolean handleDropOnItem(TransferData transferData, JList<Task> targetList, int dropIndex, int insertOffset, TaskManager taskManager, Runnable updateAllPanels) {
+    public static boolean handleDropOnItem(TransferData transferData, JList<Task> targetList, int dropIndex, int insertOffset, TaskManager taskManager, Runnable updateAllPanels, String checklistName) {
         DebugLog.d("handleDropOnItem: targetIndex=%d insertOffset=%d sourceChecklist=%s tasks=%s", dropIndex, insertOffset, transferData == null ? "<null>" : transferData.sourceChecklistName, transferData == null ? "<null>" : transferData.tasks.toString());
         if (transferData == null || targetList == null || taskManager == null) return false;
         if (dropIndex < 0 || dropIndex >= targetList.getModel().getSize()) return false;
@@ -50,49 +50,83 @@ public final class TaskDropHandler {
 
         List<Task> toPersist = prepareMovedTasks(transferData, taskManager, target);
 
-        // Persist field changes for moved tasks
-        // Additionally, update the global task order so the moved tasks appear
-        // directly after the target and its existing subtask block (append into parent's subtask block).
-        java.util.List<Task> all = new java.util.ArrayList<>(taskManager.getAllTasks());
-
-        // Remove moved tasks from the global list if present
-        for (Task t : toPersist) {
-            all.removeIf(x -> x.getId().equals(t.getId()));
+        // Prefer operating on the mutable UI model and then persist ordering centrally.
+        if (targetList.getModel() instanceof javax.swing.DefaultListModel) {
+            javax.swing.DefaultListModel<Task> model = (javax.swing.DefaultListModel<Task>) targetList.getModel();
+            return persistUsingModel(model, toPersist, target, insertOffset, taskManager, updateAllPanels, checklistName);
         }
 
-        // Find the authoritative target index
-        int targetIdx = -1;
-        for (int i = 0; i < all.size(); i++) {
-            if (all.get(i).getId().equals(target.getId())) { targetIdx = i; break; }
+        // Fallback: operate directly on global task list when model isn't mutable
+        return persistUsingFallback(toPersist, target, insertOffset, taskManager, updateAllPanels);
+    }
+
+    private static boolean persistUsingModel(javax.swing.DefaultListModel<Task> model, List<Task> toPersist, Task target, int insertOffset, TaskManager taskManager, Runnable updateAllPanels, String checklistName) {
+        // Remove moved tasks from the UI model if they exist
+        removeMovedFromModel(model, toPersist);
+
+        int parentModelIndex = findModelIndex(model, target.getId());
+        int modelInsertIndex = computeModelInsertIndex(model, parentModelIndex, insertOffset, target);
+
+        DebugLog.d("persistUsingModel: parentModelIndex=%d modelInsertIndex=%d toPersist=%s", parentModelIndex, modelInsertIndex, toPersist.toString());
+
+        // Insert into model
+        for (int i = 0; i < toPersist.size(); i++) {
+            model.add(modelInsertIndex + i, toPersist.get(i));
         }
 
-        int insertAt;
-        if (targetIdx == -1) {
-            // If target not found, append at end
-            insertAt = all.size();
-        } else if (insertOffset >= 0) {
-            // Insert at a specific position inside the parent's subtask block
-            insertAt = targetIdx + 1 + insertOffset;
-            if (insertAt < 0) insertAt = 0;
-            if (insertAt > all.size()) insertAt = all.size();
-        } else {
-            // Insert after the parent's existing subtask block (default behavior)
-            insertAt = targetIdx + 1;
-            while (insertAt < all.size() && target.getId().equals(all.get(insertAt).getParentId())) {
-                insertAt++;
-            }
-        }
+        // Persist parent/type/checklist changes first
+        taskManager.updateTasks(toPersist);
 
-        DebugLog.d("handleDropOnItem: insertAt=%d toPersist=%s", insertAt, toPersist.toString());
-
-        // Insert moved tasks at computed position
-        all.addAll(insertAt, toPersist);
-
-        // Persist both structural (parentId) and order changes atomically
-        taskManager.setTasks(all);
+        // Persist full checklist ordering using the model
+        TaskOrderPersister.persist(model, checklistName, taskManager);
 
         if (updateAllPanels != null) updateAllPanels.run();
         return true;
+    }
+
+    private static boolean persistUsingFallback(List<Task> toPersist, Task target, int insertOffset, TaskManager taskManager, Runnable updateAllPanels) {
+        java.util.List<Task> all = new java.util.ArrayList<>(taskManager.getAllTasks());
+        for (Task t : toPersist) all.removeIf(x -> x.getId().equals(t.getId()));
+        int targetIdx = -1;
+        for (int i = 0; i < all.size(); i++) if (all.get(i).getId().equals(target.getId())) { targetIdx = i; break; }
+        int insertAt;
+        if (targetIdx == -1) insertAt = all.size();
+        else if (insertOffset >= 0) insertAt = Math.max(0, Math.min(all.size(), targetIdx + 1 + insertOffset));
+        else {
+            insertAt = targetIdx + 1;
+            while (insertAt < all.size() && target.getId().equals(all.get(insertAt).getParentId())) insertAt++;
+        }
+        DebugLog.d("persistUsingFallback: insertAt=%d toPersist=%s", insertAt, toPersist.toString());
+        all.addAll(insertAt, toPersist);
+        taskManager.setTasks(all);
+        if (updateAllPanels != null) updateAllPanels.run();
+        return true;
+    }
+
+    private static void removeMovedFromModel(javax.swing.DefaultListModel<Task> model, List<Task> toPersist) {
+        for (Task t : toPersist) {
+            for (int i = 0; i < model.getSize(); i++) {
+                if (model.get(i).getId().equals(t.getId())) { model.remove(i); break; }
+            }
+        }
+    }
+
+    private static int findModelIndex(javax.swing.DefaultListModel<Task> model, String id) {
+        for (int i = 0; i < model.getSize(); i++) if (model.get(i).getId().equals(id)) return i;
+        return -1;
+    }
+
+    private static int computeModelInsertIndex(javax.swing.DefaultListModel<Task> model, int parentModelIndex, int insertOffset, Task target) {
+        if (parentModelIndex == -1) return model.getSize();
+        if (insertOffset >= 0) {
+            int idx = parentModelIndex + 1 + insertOffset;
+            if (idx < 0) idx = 0;
+            if (idx > model.getSize()) idx = model.getSize();
+            return idx;
+        }
+        int idx = parentModelIndex + 1;
+        while (idx < model.getSize() && target.getId().equals(model.get(idx).getParentId())) idx++;
+        return idx;
     }
 
     // removed isValidTarget helper - validation is done with authoritative Task in caller
