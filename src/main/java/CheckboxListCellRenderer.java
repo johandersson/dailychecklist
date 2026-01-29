@@ -14,8 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */import java.awt.BasicStroke;
-import java.awt.Color;
+ */import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -24,7 +23,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
 import javax.swing.JList;
@@ -60,8 +58,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private FontMetrics fmMainCached = null;
     private FontMetrics fmSmallCached = null;
     
-    // Cached checkmark image for performance (smaller to avoid overflow)
-    private static final BufferedImage checkmarkImage;
+    // Checkmark is provided by IconCache
 
     // Mapping of weekdays to abbreviations and WCAG-compliant colors
     private static final Map<String, String> WEEKDAY_ABBREVIATIONS = new HashMap<>();
@@ -85,16 +82,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         WEEKDAY_COLORS.put("saturday", new Color(255, 69, 0));   // Dark Orange
         WEEKDAY_COLORS.put("sunday", new Color(199, 21, 133));   // Dark Pink
         
-        // Pre-render checkmark image for performance and ensure it fits the checkbox
-        checkmarkImage = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = checkmarkImage.createGraphics();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(new Color(76, 175, 80)); // Material green checkmark
-        g2.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        // Draw a clearer checkmark centered in the 16x16 image
-        g2.drawLine(3, 9, 7, 13);
-        g2.drawLine(7, 13, 13, 5);
-        g2.dispose();
+        // No local checkmark bitmap; use IconCache.getCheckmarkIcon()
     }
 
     private final Dimension preferredSize = new Dimension(200, 50);
@@ -282,11 +270,12 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
         // Draw checkmark if selected (center it within the checkbox)
         if (isChecked) {
-            int imgW = checkmarkImage.getWidth();
-            int imgH = checkmarkImage.getHeight();
+            javax.swing.Icon ck = IconCache.getCheckmarkIcon();
+            int imgW = ck.getIconWidth();
+            int imgH = ck.getIconHeight();
             int imgX = checkboxX + (checkboxSize - imgW) / 2;
             int imgY = checkboxY + (checkboxSize - imgH) / 2;
-            g2.drawImage(checkmarkImage, imgX, imgY, null);
+            ck.paintIcon(this, g2, imgX, imgY);
         }
     }
 

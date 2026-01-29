@@ -34,6 +34,7 @@ public final class IconCache {
     private static final javax.swing.Icon ZZZ;
     private static final javax.swing.Icon CHECKLIST_DOC;
     private static final javax.swing.Icon ADD_SUBTASK_ICON;
+    private static final javax.swing.Icon CHECKMARK_ICON;
 
     // Key format: hour-minute-state-showTime
     private static final ConcurrentMap<String, Icon> reminderClockCache = new ConcurrentHashMap<>();
@@ -66,6 +67,10 @@ public final class IconCache {
 
     public static Icon getAddSubtaskIcon() {
         return ADD_SUBTASK_ICON;
+    }
+
+    public static Icon getCheckmarkIcon() {
+        return CHECKMARK_ICON;
     }
 
     public static Icon getReminderClockIcon(int hour, int minute, ReminderClockIcon.State state, boolean showTimeText) {
@@ -134,6 +139,20 @@ public final class IconCache {
             ag.dispose();
         }
         ADD_SUBTASK_ICON = new javax.swing.ImageIcon(aimg);
+
+        // Pre-render checkmark icon
+        CheckmarkIcon rawCheck = new CheckmarkIcon(16);
+        int cw = rawCheck.getIconWidth();
+        int ch = rawCheck.getIconHeight();
+        java.awt.image.BufferedImage cimg = new java.awt.image.BufferedImage(Math.max(1, cw), Math.max(1, ch), java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D cg = cimg.createGraphics();
+        try {
+            cg.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            rawCheck.paintIcon(null, cg, 0, 0);
+        } finally {
+            cg.dispose();
+        }
+        CHECKMARK_ICON = new javax.swing.ImageIcon(cimg);
     }
 
     private static Image createAppIcon() {
