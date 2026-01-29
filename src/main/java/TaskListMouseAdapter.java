@@ -35,9 +35,10 @@ public class TaskListMouseAdapter extends MouseAdapter {
         int index = list.locationToIndex(e.getPoint());
         if (index >= 0) {
             java.awt.Rectangle cellBounds = list.getCellBounds(index, index);
-            int checkboxX = cellBounds.x + 10;
-            int checkboxY = cellBounds.y + cellBounds.height / 2 - 10;
-            int checkboxSize = 20;
+            Task task = list.getModel().getElementAt(index);
+            int checkboxX = cellBounds.x + UiLayout.CHECKBOX_X + (task != null && task.getParentId() != null ? UiLayout.SUBTASK_INDENT : 0);
+            int checkboxY = cellBounds.y + cellBounds.height / 2 - UiLayout.CHECKBOX_SIZE / 2;
+            int checkboxSize = UiLayout.CHECKBOX_SIZE;
             boolean onCheckbox = e.getPoint().x >= checkboxX && e.getPoint().x <= checkboxX + checkboxSize &&
                                  e.getPoint().y >= checkboxY && e.getPoint().y <= checkboxY + checkboxSize;
 
