@@ -227,7 +227,7 @@ public class CustomChecklistPanel extends JPanel {
                 Task p = taskManager.getTaskById(modelParent.getId());
                 if (p == null) p = modelParent;
                 Task pForDialog = (p != null) ? p : modelParent;
-                String prompt = "Add subtask to " + (pForDialog != null ? pForDialog.getName() : "");
+                String prompt = "Subtask to " + (pForDialog != null ? pForDialog.getName() : "");
                 String subtaskName = JOptionPane.showInputDialog(this, prompt);
                 if (subtaskName != null && !subtaskName.trim().isEmpty()) {
                     Task subtask = new Task(subtaskName.trim(), p.getType(), p.getWeekday(), p.getChecklistId(), p.getId());
