@@ -60,6 +60,8 @@ public class XMLTaskRepository implements TaskRepository {
 
     // Coalescer for write debounce: collect frequent updates and flush them as a batch
     private final java.util.concurrent.ConcurrentMap<String, Task> pendingWrites = new java.util.concurrent.ConcurrentHashMap<>();
+    // Track pending removals to avoid immediate per-delete reparse/write
+    private final java.util.Set<String> pendingRemovals = java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
     private final java.util.concurrent.ScheduledExecutorService coalesceScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "xml-write-coalescer");
         t.setDaemon(true);
@@ -212,12 +214,31 @@ public class XMLTaskRepository implements TaskRepository {
 
     private void flushPendingWrites() {
         try {
-            if (pendingWrites.isEmpty()) return;
-            List<Task> batch = new ArrayList<>(pendingWrites.values());
+            // If there is nothing to flush, return early
+            if (pendingWrites.isEmpty() && pendingRemovals.isEmpty()) return;
+
+            // Capture a stable snapshot of the authoritative cachedTasks under read lock
+            List<Task> snapshot;
+            rwLock.readLock().lock();
+            try {
+                if (cachedTasks == null) getCachedTasks();
+                snapshot = new ArrayList<>(cachedTasks);
+            } finally {
+                rwLock.readLock().unlock();
+            }
+
+            // Apply pending removals defensively (in case cachedTasks wasn't updated earlier)
+            if (!pendingRemovals.isEmpty()) {
+                snapshot.removeIf(t -> pendingRemovals.contains(t.getId()));
+            }
+
+            // Clear pending sets before persisting to avoid races with new updates
             pendingWrites.clear();
+            pendingRemovals.clear();
+
             // Use the quiet retry path for coalesced flushes to avoid showing a dialog
-            // for transient background write failures.
-            submitWithRetriesQuiet("tasks-update-coalesced", () -> persistUpdateTasks(batch));
+            // for transient background write failures. Persist the full snapshot.
+            submitWithRetriesQuiet("tasks-update-coalesced", () -> persistSetAllTasks(snapshot));
                 } catch (Exception e) {
             MetricsCollector.record("Failed to flush coalesced writes: " + e.getMessage());
         }
@@ -467,8 +488,9 @@ public class XMLTaskRepository implements TaskRepository {
             rwLock.writeLock().unlock();
         }
 
-        // Persist off the write lock to avoid blocking readers (with retries)
-        submitWithRetries("task-add", () -> persistAdd(task));
+        // Coalesce add: schedule batched flush so many additions are written once
+        pendingWrites.put(task.getId(), task);
+        scheduleCoalescedFlushIfNeeded();
     }
 
     @Override
@@ -620,22 +642,20 @@ public class XMLTaskRepository implements TaskRepository {
     public synchronized void removeTask(Task task) {
         // Remove from in-memory cache then persist asynchronously
         rwLock.writeLock().lock();
-        List<Task> snapshot = null;
         try {
             if (cachedTasks == null) getCachedTasks();
             cachedTasks.removeIf(t -> t.getId().equals(task.getId()));
             rebuildMapsFromCachedTasks();
             tasksCacheDirty = false;
-            // Capture a snapshot to persist without re-reading the file
-            snapshot = new ArrayList<>(cachedTasks);
         } finally {
             rwLock.writeLock().unlock();
         }
 
-        // Persist the full snapshot to avoid parse+partial-write on each removal.
-        // This reduces I/O when many deletes happen in succession.
-        final List<Task> toPersist = snapshot;
-        submitWithRetries("task-remove-" + task.getId(), () -> persistSetAllTasks(toPersist));
+        // Schedule removal in the coalescer (avoid immediate I/O)
+        pendingRemovals.add(task.getId());
+        // Ensure any pending write entry for this id is removed
+        pendingWrites.remove(task.getId());
+        scheduleCoalescedFlushIfNeeded();
     }
 
     @Override
