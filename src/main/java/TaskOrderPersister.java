@@ -11,7 +11,17 @@ public final class TaskOrderPersister {
     public static void persist(DefaultListModel<Task> listModel, String checklistName, TaskManager taskManager) {
         List<Task> allTasks = new ArrayList<>(taskManager.getAllTasks());
 
-        // Find the tasks that belong to this checklist in their current order
+        List<Task> checklistTasks = collectChecklistTasks(allTasks, checklistName, taskManager);
+        List<Task> reorderedTasks = buildReorderedTasks(listModel, checklistTasks);
+
+        int startIndex = findChecklistStartIndex(allTasks, checklistName, taskManager);
+        removeChecklistTasks(allTasks, checklistTasks);
+        insertReorderedTasks(allTasks, reorderedTasks, startIndex);
+
+        taskManager.setTasks(allTasks);
+    }
+
+    private static List<Task> collectChecklistTasks(List<Task> allTasks, String checklistName, TaskManager taskManager) {
         List<Task> checklistTasks = new ArrayList<>();
         for (Task t : allTasks) {
             boolean belongsToChecklist;
@@ -24,13 +34,12 @@ public final class TaskOrderPersister {
                     .orElse(null);
                 belongsToChecklist = checklist != null && checklist.getId().equals(t.getChecklistId());
             }
-            if (belongsToChecklist) {
-                checklistTasks.add(t);
-            }
+            if (belongsToChecklist) checklistTasks.add(t);
         }
+        return checklistTasks;
+    }
 
-        // Reorder checklistTasks to match listModel order. Match by task id
-        // to ensure we use the authoritative Task instances from taskManager.
+    private static List<Task> buildReorderedTasks(DefaultListModel<Task> listModel, List<Task> checklistTasks) {
         List<Task> reorderedTasks = new ArrayList<>();
         for (int i = 0; i < listModel.getSize(); i++) {
             Task modelTask = listModel.get(i);
@@ -41,28 +50,22 @@ public final class TaskOrderPersister {
                     break;
                 }
             }
-            if (authoritative != null) {
-                reorderedTasks.add(authoritative);
-            }
+            if (authoritative != null) reorderedTasks.add(authoritative);
         }
+        return reorderedTasks;
+    }
 
-        // Replace the tasks in allTasks with the reordered ones.
-        int startIndex = findChecklistStartIndex(allTasks, checklistName, taskManager);
-
-        // Remove existing checklist tasks from the global list
+    private static void removeChecklistTasks(List<Task> allTasks, List<Task> checklistTasks) {
         allTasks.removeAll(checklistTasks);
+    }
 
+    private static void insertReorderedTasks(List<Task> allTasks, List<Task> reorderedTasks, int startIndex) {
         if (startIndex == -1) {
-            // No existing block found: append at end
             allTasks.addAll(reorderedTasks);
         } else {
-            // Insert reordered tasks at the previously found start index
             if (startIndex > allTasks.size()) startIndex = allTasks.size();
             allTasks.addAll(startIndex, reorderedTasks);
         }
-
-        // Save the reordered tasks
-        taskManager.setTasks(allTasks);
     }
 
     private static int findChecklistStartIndex(List<Task> allTasks, String checklistName, TaskManager taskManager) {
