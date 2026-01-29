@@ -200,6 +200,12 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     }
 
     private void buildToolTip(Task task) {
+        // For top-level tasks show only the add-subtask affordance in the tooltip.
+        if (task.getParentId() == null) {
+            setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Add subtask</p></html>");
+            return;
+        }
+
         StringBuilder tip = new StringBuilder();
         if (this.taskReminder != null) {
             tip.append(String.format("Reminder: %04d-%02d-%02d %02d:%02d", this.taskReminder.getYear(), this.taskReminder.getMonth(), this.taskReminder.getDay(), this.taskReminder.getHour(), this.taskReminder.getMinute()));
@@ -212,11 +218,6 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
                 if (tip.length() > 0) tip.append(" — ");
                 tip.append("Weekday: ").append(nice);
             }
-        }
-        // If this is a top-level task, indicate add-subtask affordance in the tooltip
-        if (task.getParentId() == null) {
-            if (tip.length() > 0) tip.append(" — ");
-            tip.append("Add subtask");
         }
         if (tip.length() > 0) {
             String html = "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + tip.toString() + "</p></html>";
