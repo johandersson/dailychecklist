@@ -247,10 +247,25 @@ public class ChecklistPanel extends JPanel {
 
     private JMenuItem createCreateHeadingMenuItem(JList<Task> list, int index) {
         JMenuItem item = new JMenuItem("Create Heading Above");
+        // Determine authoritative parent and disable the action when inappropriate
+        Task modelParent = list.getModel().getElementAt(index);
+        Task tmpParent = taskManager.getTaskById(modelParent.getId());
+        final Task parent = (tmpParent == null) ? modelParent : tmpParent;
+        boolean alreadyHasHeading = false;
+        try {
+            java.util.List<Task> subs = taskManager.getSubtasks(parent.getId());
+            for (Task s : subs) {
+                if (s.getType() == TaskType.HEADING) { alreadyHasHeading = true; break; }
+            }
+        } catch (Exception ignored) {}
+        boolean disabled = parent.getType() == TaskType.HEADING || alreadyHasHeading;
+        if (disabled) {
+            item.setEnabled(false);
+            item.setToolTipText(parent.getType() == TaskType.HEADING ? "Cannot create a heading above a heading" : "A heading already exists for this parent");
+            return item;
+        }
+
         item.addActionListener(e -> {
-            Task modelParent = list.getModel().getElementAt(index);
-            Task parent = taskManager.getTaskById(modelParent.getId());
-            if (parent == null) parent = modelParent;
             String raw = javax.swing.JOptionPane.showInputDialog(this, "Enter heading text:", "");
             String name = TaskManager.validateInputWithError(raw, "Heading text");
             if (name == null) return;
