@@ -16,7 +16,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import java.util.ArrayList;
 import java.util.List;
 import javax.swing.DefaultListModel;
 
@@ -84,79 +83,11 @@ public class TaskReorderHandler {
             }
 
             // Persist the new order in the underlying data
-            persistTaskOrder(listModel, checklistName, taskManager);
+            TaskOrderPersister.persist(listModel, checklistName, taskManager);
         });
 
         return true;
     }
 
-    private static void persistTaskOrder(DefaultListModel<Task> listModel, String checklistName, TaskManager taskManager) {
-        List<Task> allTasks = new ArrayList<>(taskManager.getAllTasks());
-
-        // Find the tasks that belong to this checklist in their current order
-        List<Task> checklistTasks = new ArrayList<>();
-        for (Task t : allTasks) {
-            boolean belongsToChecklist;
-            if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
-                belongsToChecklist = checklistName.equals(t.getType().toString());
-            } else {
-                Checklist checklist = taskManager.getCustomChecklists().stream()
-                    .filter(c -> checklistName.equals(c.getName()))
-                    .findFirst()
-                    .orElse(null);
-                belongsToChecklist = checklist != null && checklist.getId().equals(t.getChecklistId());
-            }
-            if (belongsToChecklist) {
-                checklistTasks.add(t);
-            }
-        }
-
-        // Reorder checklistTasks to match listModel order
-        List<Task> reorderedTasks = new ArrayList<>();
-        for (int i = 0; i < listModel.getSize(); i++) {
-            Task task = listModel.get(i);
-            int indexInChecklistTasks = checklistTasks.indexOf(task);
-            if (indexInChecklistTasks >= 0) {
-                reorderedTasks.add(checklistTasks.get(indexInChecklistTasks));
-            }
-        }
-
-        // Replace the tasks in allTasks with the reordered ones.
-        // Find the start index of this checklist's tasks in the global list and replace
-        // the contiguous block with the reordered tasks. This is more robust when the
-        // model contains interleaved subtasks and ensures daily lists reorder correctly.
-        int startIndex = -1;
-        for (int i = 0; i < allTasks.size(); i++) {
-            Task t = allTasks.get(i);
-            boolean belongsToChecklist;
-            if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
-                belongsToChecklist = checklistName.equals(t.getType().toString());
-            } else {
-                Checklist checklist = taskManager.getCustomChecklists().stream()
-                    .filter(c -> checklistName.equals(c.getName()))
-                    .findFirst()
-                    .orElse(null);
-                belongsToChecklist = checklist != null && checklist.getId().equals(t.getChecklistId());
-            }
-            if (belongsToChecklist) {
-                startIndex = i;
-                break;
-            }
-        }
-
-        // Remove existing checklist tasks from the global list
-        allTasks.removeAll(checklistTasks);
-
-        if (startIndex == -1) {
-            // No existing block found: append at end
-            allTasks.addAll(reorderedTasks);
-        } else {
-            // Insert reordered tasks at the previously found start index
-            if (startIndex > allTasks.size()) startIndex = allTasks.size();
-            allTasks.addAll(startIndex, reorderedTasks);
-        }
-
-        // Save the reordered tasks
-        taskManager.setTasks(allTasks);
-    }
+    // Persisting logic moved to TaskOrderPersister for clarity and testability.
 }
