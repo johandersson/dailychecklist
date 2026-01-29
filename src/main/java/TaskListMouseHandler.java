@@ -45,9 +45,10 @@ public class TaskListMouseHandler extends MouseAdapter {
         if (idx < 0) return;
         Rectangle cb = taskList.getCellBounds(idx, idx);
         if (cb == null) return;
-        int checkboxX = cb.x + 10;
-        int checkboxY = cb.y + cb.height / 2 - 10;
-        int checkboxSize = 20;
+        Task t = taskList.getModel().getElementAt(idx);
+        int checkboxX = cb.x + UiLayout.CHECKBOX_X + (t != null && t.getParentId() != null ? UiLayout.SUBTASK_INDENT : 0);
+        int checkboxY = cb.y + cb.height / 2 - UiLayout.CHECKBOX_SIZE / 2;
+        int checkboxSize = UiLayout.CHECKBOX_SIZE;
         boolean onCheckbox = e.getX() >= checkboxX && e.getX() <= checkboxX + checkboxSize &&
                              e.getY() >= checkboxY && e.getY() <= checkboxY + checkboxSize;
         if (onCheckbox) {

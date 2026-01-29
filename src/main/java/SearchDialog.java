@@ -137,7 +137,7 @@ class SearchDialogUI {
                 if (value instanceof Task) {
                     int cellHeight = listPanel.unifiedList.getFixedCellHeight();
                     int yInCell = e.getY() - (index * cellHeight);
-                    int checkboxX = 10, checkboxY = cellHeight / 2 - 11, checkboxSize = 22;
+                    int checkboxX = UiLayout.CHECKBOX_X, checkboxY = cellHeight / 2 - UiLayout.CHECKBOX_SIZE / 2, checkboxSize = UiLayout.CHECKBOX_SIZE;
                     int x = e.getX();
                     if (x >= checkboxX && x <= checkboxX + checkboxSize &&
                         yInCell >= checkboxY && yInCell <= checkboxY + checkboxSize) {
