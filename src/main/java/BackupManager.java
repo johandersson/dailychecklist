@@ -20,6 +20,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
@@ -152,7 +156,24 @@ public class BackupManager {
      * Adds a file to the ZIP output stream.
      */
     private void addFileToZip(ZipOutputStream zos, File file, String entryName) throws IOException {
-        try (FileInputStream fis = new FileInputStream(file)) {
+        // Copy source file to a temporary file inside backup dir first. This avoids failures
+        // when the source file is locked by another process or held open for writing.
+        Path backupDirPath = Paths.get(backupDir);
+        Path tmp = backupDirPath.resolve(entryName + ".tmp");
+        int attempts = 0;
+        boolean copied = false;
+        while (attempts < 5 && !copied) {
+            try {
+                Files.copy(file.toPath(), tmp, StandardCopyOption.REPLACE_EXISTING);
+                copied = true;
+            } catch (IOException e) {
+                attempts++;
+                try { Thread.sleep(100); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
+        }
+
+        Path sourceForZip = copied ? tmp : file.toPath();
+        try (FileInputStream fis = new FileInputStream(sourceForZip.toFile())) {
             ZipEntry zipEntry = new ZipEntry(entryName);
             zos.putNextEntry(zipEntry);
 
@@ -162,6 +183,8 @@ public class BackupManager {
                 zos.write(buffer, 0, length);
             }
             zos.closeEntry();
+        } finally {
+            try { Files.deleteIfExists(tmp); } catch (IOException ignored) {}
         }
     }
 
