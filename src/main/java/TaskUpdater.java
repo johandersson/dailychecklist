@@ -28,82 +28,64 @@ public class TaskUpdater {
 
     public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showAllWeekdaySpecificTasks, TaskManager taskManager) {
         String currentWeekday = LocalDateTime.now().getDayOfWeek().toString().toLowerCase();
-
-        // Group tasks by id and parentId. Also collect optional heading entries (type HEADING)
-        List<Task> morningParents = new ArrayList<>();
-        List<Task> eveningParents = new ArrayList<>();
-        // Map from parentId to list of subtasks
-        java.util.Map<String, List<Task>> subtasksByParent = new java.util.HashMap<>();
-        java.util.Map<String, Task> headingByParent = new java.util.HashMap<>();
-
-        for (Task task : allTasks) {
-            boolean show;
-            if (task.getWeekday() == null) {
-                show = true;
-            } else {
-                show = showAllWeekdaySpecificTasks || task.getWeekday().toLowerCase().equals(currentWeekday);
-            }
-            if (!show) continue;
-            if (task.getType() == TaskType.HEADING) {
-                // Headings are GUI-only items that reference a parent task id
-                if (task.getParentId() != null) headingByParent.put(task.getParentId(), task);
-                continue;
-            }
-            if (task.getType() != TaskType.CUSTOM) {
-                if (task.getParentId() == null) {
-                    if (task.getType() == TaskType.MORNING) {
-                        morningParents.add(task);
-                    } else if (task.getType() == TaskType.EVENING) {
-                        eveningParents.add(task);
-                    }
-                } else {
-                    subtasksByParent.computeIfAbsent(task.getParentId(), k -> new ArrayList<>()).add(task);
-                }
-            }
-        }
-
-        List<Task> desiredMorning = new ArrayList<>();
-        for (Task parent : morningParents) {
-            // If a heading exists for this parent, show it immediately above the parent
-            Task heading = headingByParent.get(parent.getId());
-            if (heading != null) desiredMorning.add(heading);
-            desiredMorning.add(parent);
-            if (taskManager != null) {
-                java.util.List<Task> subs = taskManager.getSubtasksSorted(parent.getId());
-                if (subs != null && !subs.isEmpty()) {
-                    for (Task s : subs) {
-                        boolean showSub;
-                        if (s.getWeekday() == null) showSub = true;
-                        else showSub = showAllWeekdaySpecificTasks || s.getWeekday().toLowerCase().equals(currentWeekday);
-                        if (showSub) desiredMorning.add(s);
-                    }
-                }
-            }
-        }
-
-        List<Task> desiredEvening = new ArrayList<>();
-        for (Task parent : eveningParents) {
-            Task heading = headingByParent.get(parent.getId());
-            if (heading != null) desiredEvening.add(heading);
-            desiredEvening.add(parent);
-            if (taskManager != null) {
-                java.util.List<Task> subs = taskManager.getSubtasksSorted(parent.getId());
-                if (subs != null && !subs.isEmpty()) {
-                    for (Task s : subs) {
-                        boolean showSub;
-                        if (s.getWeekday() == null) showSub = true;
-                        else showSub = showAllWeekdaySpecificTasks || s.getWeekday().toLowerCase().equals(currentWeekday);
-                        if (showSub) desiredEvening.add(s);
-                    }
-                }
-            }
-        }
+        Collected c = collectVisible(allTasks, showAllWeekdaySpecificTasks, currentWeekday);
+        List<Task> desiredMorning = buildDesiredList(c.morningParents, c.headingByParent, taskManager, showAllWeekdaySpecificTasks, currentWeekday);
+        List<Task> desiredEvening = buildDesiredList(c.eveningParents, c.headingByParent, taskManager, showAllWeekdaySpecificTasks, currentWeekday);
 
         // Precompute display data for renderer (no checklist info for daily lists)
         DisplayPrecomputer.precomputeForList(desiredMorning, null, false);
         DisplayPrecomputer.precomputeForList(desiredEvening, null, false);
         syncModel(morningListModel, desiredMorning);
         syncModel(eveningListModel, desiredEvening);
+    }
+
+    private static class Collected {
+        List<Task> morningParents = new ArrayList<>();
+        List<Task> eveningParents = new ArrayList<>();
+        java.util.Map<String, List<Task>> subtasksByParent = new java.util.HashMap<>();
+        java.util.Map<String, Task> headingByParent = new java.util.HashMap<>();
+    }
+
+    private Collected collectVisible(List<Task> allTasks, boolean showAllWeekdaySpecificTasks, String currentWeekday) {
+        Collected c = new Collected();
+        for (Task task : allTasks) {
+            boolean show;
+            if (task.getWeekday() == null) show = true;
+            else show = showAllWeekdaySpecificTasks || task.getWeekday().toLowerCase().equals(currentWeekday);
+            if (!show) continue;
+            if (task.getType() == TaskType.HEADING) {
+                if (task.getParentId() != null) c.headingByParent.put(task.getParentId(), task);
+                continue;
+            }
+            if (task.getType() != TaskType.CUSTOM) {
+                if (task.getParentId() == null) {
+                    if (task.getType() == TaskType.MORNING) c.morningParents.add(task);
+                    else if (task.getType() == TaskType.EVENING) c.eveningParents.add(task);
+                } else {
+                    c.subtasksByParent.computeIfAbsent(task.getParentId(), k -> new ArrayList<>()).add(task);
+                }
+            }
+        }
+        return c;
+    }
+
+    private List<Task> buildDesiredList(List<Task> parents, java.util.Map<String, Task> headingByParent, TaskManager taskManager, boolean showAllWeekdaySpecificTasks, String currentWeekday) {
+        List<Task> desired = new ArrayList<>();
+        for (Task parent : parents) {
+            Task heading = headingByParent.get(parent.getId());
+            if (heading != null) desired.add(heading);
+            desired.add(parent);
+            if (taskManager != null) {
+                java.util.List<Task> subs = taskManager.getSubtasksSorted(parent.getId());
+                if (subs != null && !subs.isEmpty()) {
+                    for (Task s : subs) {
+                        boolean showSub = s.getWeekday() == null || showAllWeekdaySpecificTasks || s.getWeekday().toLowerCase().equals(currentWeekday);
+                        if (showSub) desired.add(s);
+                    }
+                }
+            }
+        }
+        return desired;
     }
 
     /**

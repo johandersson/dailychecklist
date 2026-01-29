@@ -125,14 +125,29 @@ public class ChecklistPanel extends JPanel {
         }
 
         if (onCheckbox && e.getClickCount() == 1) {
-            toggleTaskDone(list, index);
-            list.repaint(cellBounds);
+            Task t = list.getModel().getElementAt(index);
+            if (t.getType() != TaskType.HEADING) {
+                toggleTaskDone(list, index);
+                list.repaint(cellBounds);
+            }
             return;
         }
 
         if (e.getClickCount() == 2) {
-            toggleTaskDone(list, index);
-            list.repaint(cellBounds);
+            Task t = list.getModel().getElementAt(index);
+            if (t.getType() == TaskType.HEADING) {
+                // Inline rename for heading
+                String raw = javax.swing.JOptionPane.showInputDialog(this, "Enter heading text:", t.getName());
+                String newName = TaskManager.validateInputWithError(raw, "Heading text");
+                if (newName != null) {
+                    t.setName(newName);
+                    taskManager.updateTask(t);
+                    list.repaint(cellBounds);
+                }
+            } else {
+                toggleTaskDone(list, index);
+                list.repaint(cellBounds);
+            }
         }
     }
 
@@ -193,6 +208,7 @@ public class ChecklistPanel extends JPanel {
 
         // Single selection: show full context menu
         contextMenu.add(createEditMenuItem(list, index));
+        contextMenu.add(createCreateHeadingMenuItem(list, index));
         addTypeChangeMenu(contextMenu, list, index);
         addFrequencyMenuIfNeeded(contextMenu, list, index);
         addTaskActionItems(contextMenu, list, index);
@@ -215,7 +231,9 @@ public class ChecklistPanel extends JPanel {
         JMenuItem editItem = new JMenuItem("Rename task");
         editItem.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
-            String prompt = (task.getParentId() != null) ? "Enter new name for subtask:" : "Enter new name for task:";
+            String prompt;
+            if (task.getType() == TaskType.HEADING) prompt = "Enter heading text:";
+            else prompt = (task.getParentId() != null) ? "Enter new name for subtask:" : "Enter new name for task:";
             String rawNewName = javax.swing.JOptionPane.showInputDialog(this, prompt, task.getName());
             String newName = TaskManager.validateInputWithError(rawNewName, "Task name");
             if (newName != null) {
@@ -225,6 +243,22 @@ public class ChecklistPanel extends JPanel {
             }
         });
         return editItem;
+    }
+
+    private JMenuItem createCreateHeadingMenuItem(JList<Task> list, int index) {
+        JMenuItem item = new JMenuItem("Create Heading Above");
+        item.addActionListener(e -> {
+            Task modelParent = list.getModel().getElementAt(index);
+            Task parent = taskManager.getTaskById(modelParent.getId());
+            if (parent == null) parent = modelParent;
+            String raw = javax.swing.JOptionPane.showInputDialog(this, "Enter heading text:", "");
+            String name = TaskManager.validateInputWithError(raw, "Heading text");
+            if (name == null) return;
+            Task heading = new Task(name, TaskType.HEADING, null, parent.getChecklistId(), parent.getId());
+            taskManager.addTask(heading);
+            updateTasks();
+        });
+        return item;
     }
 
     private void addTypeChangeMenu(JPopupMenu menu, JList<Task> list, int index) {
