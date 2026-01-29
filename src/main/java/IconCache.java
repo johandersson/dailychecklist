@@ -121,23 +121,15 @@ public final class IconCache {
         }
         CHECKLIST_DOC = new javax.swing.ImageIcon(img);
 
-        // Pre-render a small "add subtask" icon (plus in circle)
-        int asize = 16;
-        java.awt.image.BufferedImage aimg = new java.awt.image.BufferedImage(Math.max(1, asize), Math.max(1, asize), java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        // Use dedicated AddSubtaskIcon class and pre-render into an ImageIcon
+        AddSubtaskIcon rawAdd = new AddSubtaskIcon(16);
+        int aw = rawAdd.getIconWidth();
+        int ah = rawAdd.getIconHeight();
+        java.awt.image.BufferedImage aimg = new java.awt.image.BufferedImage(Math.max(1, aw), Math.max(1, ah), java.awt.image.BufferedImage.TYPE_INT_ARGB);
         java.awt.Graphics2D ag = aimg.createGraphics();
         try {
             ag.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-            // draw translucent circular background
-            ag.setColor(new java.awt.Color(0, 0, 0, 0));
-            ag.fillRect(0, 0, asize, asize);
-            ag.setColor(new java.awt.Color(66, 133, 244)); // blue tone
-            ag.fillOval(0, 0, asize, asize);
-            ag.setColor(java.awt.Color.WHITE);
-            ag.setStroke(new java.awt.BasicStroke(2f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
-            int cx = asize / 2;
-            int len = Math.max(4, asize / 3);
-            ag.drawLine(cx - len/2, cx, cx + len/2, cx);
-            ag.drawLine(cx, cx - len/2, cx, cx + len/2);
+            rawAdd.paintIcon(null, ag, 0, 0);
         } finally {
             ag.dispose();
         }
