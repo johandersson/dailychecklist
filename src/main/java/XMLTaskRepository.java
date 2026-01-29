@@ -17,7 +17,6 @@
  */
 import java.awt.Component;
 import java.io.File;
-import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
@@ -31,9 +30,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.TransformerException;
-import org.xml.sax.SAXException;
 
 public class XMLTaskRepository implements TaskRepository {
     private static String FILE_NAME = ApplicationConfiguration.APPLICATION_DATA_DIR + File.separator + ApplicationConfiguration.DATA_FILE_NAME;
@@ -41,7 +37,8 @@ public class XMLTaskRepository implements TaskRepository {
     private static String CHECKLIST_NAMES_FILE_NAME = ApplicationConfiguration.APPLICATION_DATA_DIR + File.separator + ApplicationConfiguration.CHECKLIST_NAMES_FILE_NAME;
 
     // Component managers
-    private TaskXmlHandler taskXmlHandler;
+    private TaskStaxHandler taskXmlHandler;
+    private TaskXmlHandler fallbackXmlHandler;
     private ReminderManager reminderManager;
     private ChecklistNameManager checklistNameManager;
 
@@ -220,9 +217,42 @@ public class XMLTaskRepository implements TaskRepository {
             pendingWrites.clear();
             // Use the quiet retry path for coalesced flushes to avoid showing a dialog
             // for transient background write failures.
-            submitWithRetriesQuiet("tasks-update-coalesced", () -> taskXmlHandler.updateTasks(batch));
+            submitWithRetriesQuiet("tasks-update-coalesced", () -> persistUpdateTasks(batch));
                 } catch (Exception e) {
             MetricsCollector.record("Failed to flush coalesced writes: " + e.getMessage());
+        }
+    }
+
+    // Persistence helpers: try StAX first, fall back to DOM-based TaskXmlHandler on error.
+    private void persistAdd(Task task) throws Exception {
+        try {
+            taskXmlHandler.addTask(task);
+        } catch (Exception e) {
+            fallbackXmlHandler.addTask(task);
+        }
+    }
+
+    private void persistUpdateTasks(List<Task> tasks) throws Exception {
+        try {
+            taskXmlHandler.updateTasks(tasks);
+        } catch (Exception e) {
+            fallbackXmlHandler.updateTasks(tasks);
+        }
+    }
+
+    private void persistRemove(Task task) throws Exception {
+        try {
+            taskXmlHandler.removeTask(task);
+        } catch (Exception e) {
+            fallbackXmlHandler.removeTask(task);
+        }
+    }
+
+    private void persistSetAllTasks(List<Task> tasks) throws Exception {
+        try {
+            taskXmlHandler.setAllTasks(tasks);
+        } catch (Exception e) {
+            fallbackXmlHandler.setAllTasks(tasks);
         }
     }
 
@@ -246,7 +276,8 @@ public class XMLTaskRepository implements TaskRepository {
     @Override
     public void initialize() {
         // Initialize component managers
-        taskXmlHandler = new TaskXmlHandler(FILE_NAME);
+        taskXmlHandler = new TaskStaxHandler(FILE_NAME);
+        fallbackXmlHandler = new TaskXmlHandler(FILE_NAME);
         reminderManager = new ReminderManager(REMINDER_FILE_NAME, FILE_NAME);
         checklistNameManager = new ChecklistNameManager(CHECKLIST_NAMES_FILE_NAME);
 
@@ -266,8 +297,13 @@ public class XMLTaskRepository implements TaskRepository {
             try {
                 // Ensure parent data directory exists and create an empty tasks document safely
                 ApplicationConfiguration.ensureDataDirectoryExists();
-                taskXmlHandler.ensureFileExists();
-            } catch (ParserConfigurationException | TransformerException | IOException e) {
+                try {
+                    taskXmlHandler.ensureFileExists();
+                } catch (Exception e) {
+                    // StAX handler failed to ensure file; try DOM fallback
+                    fallbackXmlHandler.ensureFileExists();
+                }
+            } catch (Exception e) {
                 // Show user-friendly error dialog and re-throw as runtime exception
                 if (parentComponent != null) {
                     ApplicationErrorHandler.showDataSaveError(parentComponent, "data file", e);
@@ -319,14 +355,26 @@ public class XMLTaskRepository implements TaskRepository {
             }
             ensureDataFileExists();
             try {
-                cachedTasks = taskXmlHandler.parseAllTasks();
+                try {
+                    cachedTasks = taskXmlHandler.parseAllTasks();
+                } catch (Exception e) {
+                    // Try DOM fallback when StAX parsing fails (migrate if possible)
+                    try {
+                        cachedTasks = fallbackXmlHandler.parseAllTasks();
+                        // Schedule a background migration to StAX format
+                        List<Task> migrated = new ArrayList<>(cachedTasks);
+                        submitWithRetriesQuiet("migrate-xml-to-stax", () -> taskXmlHandler.setAllTasks(migrated));
+                    } catch (Exception ex) {
+                        throw ex;
+                    }
+                }
                 // Memory safety check
                 if (MemorySafetyManager.checkTaskLimit(cachedTasks.size())) {
                     cachedTasks = cachedTasks.subList(0, Math.min(MemorySafetyManager.MAX_TASKS, cachedTasks.size()));
                 }
                 rebuildMapsFromCachedTasks();
                 tasksCacheDirty = false;
-            } catch (ParserConfigurationException | SAXException | IOException e) {
+            } catch (Exception e) {
                 if (parentComponent != null) {
                     ApplicationErrorHandler.showDataLoadError(parentComponent, "cached tasks", e);
                 }
@@ -420,7 +468,7 @@ public class XMLTaskRepository implements TaskRepository {
         }
 
         // Persist off the write lock to avoid blocking readers (with retries)
-        submitWithRetries("task-add", () -> taskXmlHandler.addTask(task));
+        submitWithRetries("task-add", () -> persistAdd(task));
     }
 
     @Override
@@ -524,7 +572,7 @@ public class XMLTaskRepository implements TaskRepository {
             // Persist asynchronously (with retries/backoff)
             submitWithRetries("tasks-update", () -> {
                 long start = System.nanoTime();
-                taskXmlHandler.updateTasks(tasks);
+                persistUpdateTasks(tasks);
                 long dur = System.nanoTime() - start;
                 MetricsCollector.record("updateTasks wrote " + tasks.size() + " tasks in " + (dur / 1_000_000.0) + " ms");
             });
@@ -561,7 +609,7 @@ public class XMLTaskRepository implements TaskRepository {
                 rwLock.writeLock().unlock();
             }
 
-            submitWithRetries("tasks-update-quiet", () -> taskXmlHandler.updateTasks(tasks));
+            submitWithRetries("tasks-update-quiet", () -> persistUpdateTasks(tasks));
             return true;
         } catch (Exception e) {
             return false;
@@ -582,7 +630,7 @@ public class XMLTaskRepository implements TaskRepository {
         }
 
         // Use the centralized retry/persist helper to remove the task
-        submitWithRetries("task-remove-" + task.getId(), () -> taskXmlHandler.removeTask(task));
+        submitWithRetries("task-remove-" + task.getId(), () -> persistRemove(task));
     }
 
     @Override
@@ -603,7 +651,7 @@ public class XMLTaskRepository implements TaskRepository {
             if (backupManager != null) {
                 backupManager.createBackup("before-set-all-tasks");
             }
-            taskXmlHandler.setAllTasks(tasks);
+            persistSetAllTasks(tasks);
             // Update in-memory representation immediately
             rwLock.writeLock().lock();
             try {
@@ -616,7 +664,7 @@ public class XMLTaskRepository implements TaskRepository {
 
             // After setting tasks, rebuild the checklist names registry from the new tasks
             rebuildChecklistNamesRegistry(tasks);
-        } catch (ParserConfigurationException | SAXException | IOException | TransformerException e) {
+        } catch (Exception e) {
             if (parentComponent != null) {
                 ApplicationErrorHandler.showDataSaveError(parentComponent, "tasks", e);
             }
