@@ -39,10 +39,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private boolean isWeekdayTask;
     private Font circleFont; // Font for the text inside the circle
     private String doneDate; // Timestamp when task was completed
-    // Reserved areas on the right for icons: reminder area + weekday area.
-    private static final int REMINDER_ICON_AREA = 80; // space reserved for reminder clock + optional time text
-    private static final int WEEKDAY_ICON_AREA = 40; // space reserved for weekday circle
-    private static final int RIGHT_ICON_SPACE = REMINDER_ICON_AREA + WEEKDAY_ICON_AREA + 12; // total reserved space
+    // Layout constants are centralized in UiLayout
     
     private boolean showChecklistInfo; // Whether to show checklist name in display
     private boolean isSubtask; // True if this task is a subtask (for indentation)
@@ -135,62 +132,71 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
     // Populate renderer state fields from the given Task (keeps getListCellRendererComponent small)
     private void populateFromTask(Task task) {
+        setBasicFields(task);
+        resolveReminderForTask(task);
+        resolveChecklistInfo(task);
+        resolveBreadcrumb(task);
+        resolveWeekday(task);
+    }
+
+    private void setBasicFields(Task task) {
         this.isChecked = task.isDone();
         this.taskName = task.getName();
         this.taskId = task.getId();
         this.taskReminder = null;
-
-        // Indentation for subtasks (one level) unless we're rendering breadcrumbs in search
         this.isSubtask = (task.getParentId() != null) && !this.showSubtaskBreadcrumb;
+        this.breadcrumbText = null;
+        this.doneDate = task.getDoneDate();
+    }
 
-        // Find a reminder that targets this specific task (task-level reminder)
+    private void resolveReminderForTask(Task task) {
         if (taskManager != null && this.taskId != null) {
             this.taskReminder = taskManager.getReminderForTask(this.taskId);
         }
+    }
 
-        // Resolve checklist name from ID if showing checklist info
+    private void resolveChecklistInfo(Task task) {
         if (showChecklistInfo && task.getChecklistId() != null && checklistNameManager != null) {
             String cname = checklistNameManager.getNameById(task.getChecklistId());
             if (cname != null && !cname.trim().isEmpty()) {
                 this.taskName = task.getName() + " (" + cname + ")";
             }
         }
+    }
 
-        // If we are showing subtask breadcrumbs, compute breadcrumb text for subtasks
-        this.breadcrumbText = null;
-        if (this.showSubtaskBreadcrumb && task.getParentId() != null) {
-            String parentName = null;
+    private void resolveBreadcrumb(Task task) {
+        if (!this.showSubtaskBreadcrumb || task.getParentId() == null) return;
+        String parentName = null;
+        if (taskManager != null) {
+            Task parent = taskManager.getTaskById(task.getParentId());
+            if (parent != null) parentName = parent.getName();
+        }
+        if (task.getType() == TaskType.CUSTOM) {
+            String checklistDisplay = null;
             if (taskManager != null) {
-                Task parent = taskManager.getTaskById(task.getParentId());
-                if (parent != null) parentName = parent.getName();
-            }
-            if (task.getType() == TaskType.CUSTOM) {
-                String checklistDisplay = null;
-                if (taskManager != null) {
-                    java.util.Set<Checklist> lists = taskManager.getCustomChecklists();
-                    for (Checklist c : lists) {
-                        if (c.getId() != null && c.getId().equals(task.getChecklistId())) {
-                            checklistDisplay = c.getName();
-                            break;
-                        }
+                java.util.Set<Checklist> lists = taskManager.getCustomChecklists();
+                for (Checklist c : lists) {
+                    if (c.getId() != null && c.getId().equals(task.getChecklistId())) {
+                        checklistDisplay = c.getName();
+                        break;
                     }
                 }
-                if (checklistDisplay != null && parentName != null) {
-                    breadcrumbText = checklistDisplay + " > " + parentName;
-                } else if (parentName != null) {
-                    breadcrumbText = parentName;
-                }
-            } else {
-                // Daily lists: only show parent task name
+            }
+            if (checklistDisplay != null && parentName != null) {
+                breadcrumbText = checklistDisplay + " > " + parentName;
+            } else if (parentName != null) {
                 breadcrumbText = parentName;
             }
+        } else {
+            breadcrumbText = parentName;
         }
+    }
 
+    private void resolveWeekday(Task task) {
         String weekdayKey = task.getWeekday() != null ? task.getWeekday().toLowerCase() : null;
         this.weekdayAbbreviation = WEEKDAY_ABBREVIATIONS.get(weekdayKey);
         this.weekdayColor = WEEKDAY_COLORS.get(weekdayKey);
         this.isWeekdayTask = task.getWeekday() != null && WEEKDAY_ABBREVIATIONS.containsKey(weekdayKey);
-        this.doneDate = task.getDoneDate();
     }
 
     private void buildToolTip(Task task) {
@@ -240,13 +246,13 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         int subtaskIndent = 24;
         int textStartX = baseIndent + (isSubtask ? subtaskIndent : 0); // Indent subtasks
 
-        int checkboxX = 10 + (isSubtask ? subtaskIndent : 0);
-        int checkboxY = getHeight() / 2 - 11, checkboxSize = 22;
+        int checkboxX = UiLayout.CHECKBOX_X + (isSubtask ? subtaskIndent : 0);
+        int checkboxY = getHeight() / 2 - UiLayout.CHECKBOX_SIZE / 2, checkboxSize = UiLayout.CHECKBOX_SIZE;
 
         drawCheckbox(g2, checkboxX, checkboxY, checkboxSize);
 
         int textY = getHeight() / 2 + 5;
-        int availableWidth = getWidth() - textStartX - RIGHT_ICON_SPACE - 6;
+        int availableWidth = getWidth() - textStartX - UiLayout.RIGHT_ICON_SPACE - 6;
         drawTaskText(g2, textStartX, textY, availableWidth);
         drawBreadcrumbIfNeeded(g2, textStartX, textY);
         drawDoneTimestampIfNeeded(g2, textStartX);
@@ -282,46 +288,52 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private void drawTaskText(Graphics2D g2, int textStartX, int textY, int availableWidth) {
         g2.setColor(getForeground());
         Font currentFont = getFont();
+        FontMetrics fmMain = ensureFontSetup(g2, currentFont);
+        String drawTaskName = taskName != null ? taskName : "";
+        if (availableWidth > 12 && fmMain.stringWidth(drawTaskName) > availableWidth) {
+            drawTaskName = computeDisplayedTaskName(drawTaskName, availableWidth, fmMain);
+        }
+        g2.drawString(drawTaskName, textStartX, textY);
+    }
+
+    private FontMetrics ensureFontSetup(Graphics2D g2, Font currentFont) {
         if (smallFont == null || !currentFont.equals(lastBaseFont)) {
             lastBaseFont = currentFont;
             smallFont = currentFont.deriveFont(Font.PLAIN, FontManager.SIZE_SMALL);
         }
         g2.setFont(currentFont);
-        FontMetrics fmMain = FontMetricsCache.get(currentFont);
-        String drawTaskName = taskName != null ? taskName : "";
-        if (availableWidth > 12 && fmMain.stringWidth(drawTaskName) > availableWidth) {
-            // Try to use precomputed per-task cumulative widths if available
-            Task backing = (taskManager != null && taskId != null) ? taskManager.getTaskById(taskId) : null;
-            if (backing != null && backing.cachedDisplayFullName != null && backing.cachedDisplayFullName.equals(drawTaskName) && backing.cachedCumulativeCharWidthsMain != null) {
-                int[] cum = backing.cachedCumulativeCharWidthsMain;
-                int ellWidth = fmMain.charWidth('…');
-                int allowed = Math.max(0, availableWidth - ellWidth);
-                // binary search last index with cum[idx] <= allowed
-                int lo = 0, hi = cum.length - 1, found = -1;
-                while (lo <= hi) {
-                    int mid = (lo + hi) >>> 1;
-                    if (cum[mid] <= allowed) { found = mid; lo = mid + 1; } else { hi = mid - 1; }
-                }
-                if (found >= 0) {
-                    drawTaskName = drawTaskName.substring(0, found + 1) + "…";
-                } else {
-                    // no chars fit, fallback to ellipsis only
-                    drawTaskName = "…";
-                }
-            } else {
-                // Fallback: binary-search on length using FontMetrics stringWidth
-                int lo = 0, hi = drawTaskName.length() - 1, best = -1;
-                int ellWidth = fmMain.charWidth('…');
-                int allowed = Math.max(0, availableWidth - ellWidth);
-                while (lo <= hi) {
-                    int mid = (lo + hi) >>> 1;
-                    String sub = drawTaskName.substring(0, mid + 1);
-                    if (fmMain.stringWidth(sub) <= allowed) { best = mid; lo = mid + 1; } else { hi = mid - 1; }
-                }
-                if (best >= 0) drawTaskName = drawTaskName.substring(0, best + 1) + "…"; else drawTaskName = "…";
+        return FontMetricsCache.get(currentFont);
+    }
+
+    private String computeDisplayedTaskName(String drawTaskName, int availableWidth, FontMetrics fmMain) {
+        // Try to use precomputed per-task cumulative widths if available
+        Task backing = (taskManager != null && taskId != null) ? taskManager.getTaskById(taskId) : null;
+        if (backing != null && backing.cachedDisplayFullName != null && backing.cachedDisplayFullName.equals(drawTaskName) && backing.cachedCumulativeCharWidthsMain != null) {
+            int[] cum = backing.cachedCumulativeCharWidthsMain;
+            int ellWidth = fmMain.charWidth('…');
+            int allowed = Math.max(0, availableWidth - ellWidth);
+            // binary search last index with cum[idx] <= allowed
+            int lo = 0, hi = cum.length - 1, found = -1;
+            while (lo <= hi) {
+                int mid = (lo + hi) >>> 1;
+                if (cum[mid] <= allowed) { found = mid; lo = mid + 1; } else { hi = mid - 1; }
             }
+            if (found >= 0) {
+                return drawTaskName.substring(0, found + 1) + "…";
+            }
+            return "…";
+        } else {
+            // Fallback: binary-search on length using FontMetrics stringWidth
+            int lo = 0, hi = drawTaskName.length() - 1, best = -1;
+            int ellWidth = fmMain.charWidth('…');
+            int allowed = Math.max(0, availableWidth - ellWidth);
+            while (lo <= hi) {
+                int mid = (lo + hi) >>> 1;
+                String sub = drawTaskName.substring(0, mid + 1);
+                if (fmMain.stringWidth(sub) <= allowed) { best = mid; lo = mid + 1; } else { hi = mid - 1; }
+            }
+            if (best >= 0) return drawTaskName.substring(0, best + 1) + "…"; else return "…";
         }
-        g2.drawString(drawTaskName, textStartX, textY);
     }
 
     private void drawBreadcrumbIfNeeded(Graphics2D g2, int textStartX, int textY) {
@@ -333,7 +345,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         }
         FontMetrics fmCrumb = fmSmallCached;
         int crumbWidth = fmCrumb.stringWidth(breadcrumbText) + 6;
-        int crumbX = getWidth() - RIGHT_ICON_SPACE - 6 - crumbWidth;
+        int crumbX = getWidth() - UiLayout.RIGHT_ICON_SPACE - 6 - crumbWidth;
         if (crumbX > textStartX + 10) {
             breadcrumbComponent.setFontToUse(smallFont);
             breadcrumbComponent.setText(breadcrumbText);
@@ -356,7 +368,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         g2.setFont(smallFont);
         if (fmSmallCached == null || !smallFont.equals(fmSmallCached.getFont())) fmSmallCached = g2.getFontMetrics(smallFont);
         FontMetrics fmSmall = fmSmallCached;
-        int availableWidthSmall = getWidth() - textStartX - RIGHT_ICON_SPACE - 6;
+        int availableWidthSmall = getWidth() - textStartX - UiLayout.RIGHT_ICON_SPACE - 6;
         String timeText = "✓ " + doneDate;
         if (availableWidthSmall > 12 && fmSmall.stringWidth(timeText) > availableWidthSmall) {
             int lt = timeText.length();
@@ -369,7 +381,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private void drawWeekdayCircleIfNeeded(Graphics2D g2) {
         if (!isWeekdayTask) return;
         int circleSize = 30;
-        int areaX = getWidth() - WEEKDAY_ICON_AREA;
+        int areaX = getWidth() - UiLayout.WEEKDAY_ICON_AREA;
         int circleX = areaX + (WEEKDAY_ICON_AREA - circleSize) / 2;
         int circleY = getHeight() / 2 - circleSize / 2;
         g2.setColor(weekdayColor != null ? weekdayColor : new Color(120, 120, 120));
@@ -391,7 +403,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         int iconW = icon.getIconWidth();
         int iconH = icon.getIconHeight();
         // reminder area is left of the weekday area
-        int areaX = getWidth() - WEEKDAY_ICON_AREA - REMINDER_ICON_AREA;
+        int areaX = getWidth() - UiLayout.WEEKDAY_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
         // center the icon (and its time text) within the reminder reserved area
         int iconX = areaX + Math.max(2, (REMINDER_ICON_AREA - iconW) / 2);
         int iconY = getHeight() / 2 - iconH / 2;
@@ -411,8 +423,8 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         int ah = add.getIconHeight();
         // Place it to the left of the reminder area
         int areaX = getWidth() - WEEKDAY_ICON_AREA - REMINDER_ICON_AREA;
-        int iconX = areaX - 36; // spacing
-        if (iconX < 0) iconX = Math.max(2, getWidth() - RIGHT_ICON_SPACE - aw - 6);
+        int iconX = areaX - UiLayout.ADD_SUBTASK_OFFSET; // spacing
+        if (iconX < 0) iconX = Math.max(2, getWidth() - UiLayout.RIGHT_ICON_SPACE - aw - 6);
         int iconY = getHeight() / 2 - ah / 2;
         add.paintIcon(this, g2, iconX, iconY);
     }
