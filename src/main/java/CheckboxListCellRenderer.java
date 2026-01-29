@@ -46,6 +46,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private ChecklistNameManager checklistNameManager; // Manager to resolve checklist IDs to names
     private transient TaskManager taskManager;
     private boolean showSubtaskBreadcrumb = false; // When true, subtasks are not indented and show breadcrumb text to the right
+    private boolean showAddSubtaskIcon = true; // Controls whether to draw the add-subtask icon
     private String breadcrumbText = null;
     private final SubtaskBreadcrumb breadcrumbComponent = new SubtaskBreadcrumb();
     private String taskId;
@@ -108,6 +109,10 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
     public void setShowSubtaskBreadcrumb(boolean show) {
         this.showSubtaskBreadcrumb = show;
+    }
+
+    public void setShowAddSubtaskIcon(boolean show) {
+        this.showAddSubtaskIcon = show;
     }
 
     public CheckboxListCellRenderer(TaskManager taskManager) {
@@ -417,6 +422,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     }
 
     private void drawAddSubtaskIfNeeded(Graphics2D g2) {
+        if (!showAddSubtaskIcon) return;
         // Show add-subtask icon for top-level tasks (parent == null)
         if (this.isSubtask) return; // only top-level
         if (this.taskId == null || this.taskManager == null) return;
