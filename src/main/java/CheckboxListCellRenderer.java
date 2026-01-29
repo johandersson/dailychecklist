@@ -219,6 +219,11 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
                 tip.append("Weekday: ").append(nice);
             }
         }
+        // If this is a top-level task, indicate add-subtask affordance in the tooltip
+        if (task.getParentId() == null) {
+            if (tip.length() > 0) tip.append(" — ");
+            tip.append("Add subtask");
+        }
         setToolTipText(tip.length() > 0 ? tip.toString() : null);
     }
 
@@ -257,6 +262,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         drawTaskText(g2, textStartX, textY, availableWidth);
         drawBreadcrumbIfNeeded(g2, textStartX, textY);
         drawDoneTimestampIfNeeded(g2, textStartX);
+        drawAddSubtaskIfNeeded(g2);
         drawWeekdayCircleIfNeeded(g2);
         drawReminderIfNeeded(g2);
     }
@@ -401,6 +407,25 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         int iconX = areaX + Math.max(2, (REMINDER_ICON_AREA - iconW) / 2);
         int iconY = getHeight() / 2 - iconH / 2;
         icon.paintIcon(this, g2, iconX, iconY);
+    }
+
+    private void drawAddSubtaskIfNeeded(Graphics2D g2) {
+        // Show add-subtask icon for top-level tasks (parent == null)
+        if (this.isSubtask) return; // only top-level
+        if (this.taskId == null || this.taskManager == null) return;
+        Task backing = taskManager.getTaskById(this.taskId);
+        if (backing == null) return;
+        if (backing.getParentId() != null) return; // not top-level
+
+        javax.swing.Icon add = IconCache.getAddSubtaskIcon();
+        int aw = add.getIconWidth();
+        int ah = add.getIconHeight();
+        // Place it to the left of the reminder area
+        int areaX = getWidth() - WEEKDAY_ICON_AREA - REMINDER_ICON_AREA;
+        int iconX = areaX - 36; // spacing
+        if (iconX < 0) iconX = Math.max(2, getWidth() - RIGHT_ICON_SPACE - aw - 6);
+        int iconY = getHeight() / 2 - ah / 2;
+        add.paintIcon(this, g2, iconX, iconY);
     }
 
     private ReminderClockIcon.State computeState(Reminder r) {
