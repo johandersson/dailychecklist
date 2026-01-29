@@ -191,51 +191,14 @@ public class TaskTransferHandler extends TransferHandler {
             int dropIndex = getDropIndex(support);
             DebugLog.d("importData: dropIndex=%d", dropIndex);
 
-            // Delegate drop-on-item handling to TaskDropHandler (keeps this class small)
+            // Delegate to helper that handles drop-on-item, insert-between and fallback moves
             JList.DropLocation dl = (JList.DropLocation) support.getDropLocation();
             boolean isInsert = dl.isInsert();
             Object comp = support.getComponent();
             if (comp instanceof JList) {
                 @SuppressWarnings("unchecked")
                 JList<Task> targetList = (JList<Task>) comp;
-                if (!isInsert && dropIndex >= 0 && dropIndex < targetList.getModel().getSize()) {
-                    // If user dropped onto an item, attempt drop on that item. If that item is a subtask
-                    // we want to insert the moved tasks at that subtask's position within its parent.
-                    Task modelTarget = targetList.getModel().getElementAt(dropIndex);
-                    DebugLog.d("importData: dropOnItem targetIndex=%d targetId=%s isInsert=%s", dropIndex, modelTarget == null ? "<null>" : modelTarget.getId(), isInsert);
-                    if (modelTarget != null && modelTarget.getParentId() == null) {
-                        // Dropped onto a top-level parent -> use default behavior (append to end of block)
-                        if (TaskDropHandler.handleDropOnItem(transferData, targetList, dropIndex, -1, taskManager, updateAllPanels)) {
-                            return true;
-                        }
-                    } else {
-                        // Dropped onto a subtask: find its parent and compute offset within block
-                        int parentIndexFallback = findNearestTopLevelParentIndex(targetList, dropIndex);
-                        DebugLog.d("importData: dropOnSubtask parentIndexFallback=%d", parentIndexFallback);
-                        if (parentIndexFallback != -1) {
-                            int offset = computeInsertOffsetWithinParent(targetList, parentIndexFallback, dropIndex);
-                            DebugLog.d("importData: computed offset within parent=%d", offset);
-                            if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndexFallback, offset, taskManager, updateAllPanels)) {
-                                return true;
-                            }
-                        }
-                    }
-                }
-
-                // If user dropped between items, try to interpret the drop as targeting the nearest
-                // top-level parent (preceding in the list). This lets users drop anywhere inside a
-                // parent's subtask block and have the item become a subtask of that parent.
-                if (isInsert) {
-                    int parentIndex = findNearestTopLevelParentIndex(targetList, dropIndex);
-                    DebugLog.d("importData: insertBetween parentIndex=%d", parentIndex);
-                    if (parentIndex != -1) {
-                        int offset = computeInsertOffsetWithinParent(targetList, parentIndex, dropIndex);
-                        DebugLog.d("importData: computed insert offset=%d", offset);
-                        if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndex, offset, taskManager, updateAllPanels)) {
-                            return true;
-                        }
-                    }
-                }
+                if (tryHandleDropOnItemCases(targetList, transferData, dropIndex, isInsert)) return true;
 
                 // Prioritize same-checklist reorders so users can reorder subtasks within a parent.
                 if (java.util.Objects.equals(transferData.sourceChecklistName, checklistName)) {
@@ -248,6 +211,37 @@ public class TaskTransferHandler extends TransferHandler {
             }
         } catch (UnsupportedFlavorException | IOException e) {
             return false;
+        }
+        return false;
+    }
+
+    private boolean tryHandleDropOnItemCases(JList<Task> targetList, TransferData transferData, int dropIndex, boolean isInsert) {
+        if (!isInsert && dropIndex >= 0 && dropIndex < targetList.getModel().getSize()) {
+            Task modelTarget = targetList.getModel().getElementAt(dropIndex);
+            DebugLog.d("importData: dropOnItem targetIndex=%d targetId=%s isInsert=%s", dropIndex, modelTarget == null ? "<null>" : modelTarget.getId(), isInsert);
+            if (modelTarget != null && modelTarget.getParentId() == null) {
+                // Dropped onto top-level parent
+                int parentIndex = dropIndex;
+                if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndex, -1, taskManager, updateAllPanels, checklistName)) return true;
+            } else {
+                int parentIndexFallback = findNearestTopLevelParentIndex(targetList, dropIndex);
+                DebugLog.d("importData: dropOnSubtask parentIndexFallback=%d", parentIndexFallback);
+                if (parentIndexFallback != -1) {
+                    int offset = computeInsertOffsetWithinParent(targetList, parentIndexFallback, dropIndex);
+                    DebugLog.d("importData: computed offset within parent=%d", offset);
+                    if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndexFallback, offset, taskManager, updateAllPanels, checklistName)) return true;
+                }
+            }
+        }
+
+        if (isInsert) {
+            int parentIndex = findNearestTopLevelParentIndex(targetList, dropIndex);
+            DebugLog.d("importData: insertBetween parentIndex=%d", parentIndex);
+            if (parentIndex != -1) {
+                int offset = computeInsertOffsetWithinParent(targetList, parentIndex, dropIndex);
+                DebugLog.d("importData: computed insert offset=%d", offset);
+                if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndex, offset, taskManager, updateAllPanels, checklistName)) return true;
+            }
         }
         return false;
     }

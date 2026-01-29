@@ -100,7 +100,6 @@ public class TaskReorderHandler {
             }
 
             DebugLog.d("performReorder: adjustedDropIndex=%d resultingSize=%d", adjustedDropIndex, listModel.getSize());
-            }
 
             // Persist the new order in the underlying data
             TaskOrderPersister.persist(listModel, checklistName, taskManager);
