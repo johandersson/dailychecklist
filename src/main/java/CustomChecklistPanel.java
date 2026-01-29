@@ -75,6 +75,15 @@ public class CustomChecklistPanel extends JPanel {
     private JList<Task> createTaskList(DefaultListModel<Task> listModel) {
         JList<Task> taskList = TaskListFactory.createTaskList(listModel, taskManager, checklist.getName(), updateAllPanels, null, null);
         installTaskListMouseListener(taskList);
+        // Allow deleting multiple selected tasks via Delete key
+        taskList.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                if (e.getKeyCode() == java.awt.event.KeyEvent.VK_DELETE) {
+                    deleteSelectedTasks(taskList);
+                }
+            }
+        });
         return taskList;
     }
 
@@ -194,6 +203,15 @@ public class CustomChecklistPanel extends JPanel {
 
     private void showContextMenu(MouseEvent e, JList<Task> list, int index) {
         JPopupMenu contextMenu = new JPopupMenu();
+        int[] selected = list.getSelectedIndices();
+        if (selected.length > 1) {
+            // When multiple items are selected, only show the multi-select delete option
+            addMultiSelectionMenuItems(contextMenu, list);
+            contextMenu.show(list, e.getX(), e.getY());
+            return;
+        }
+
+        // Single selection: show full context menu
         contextMenu.add(createAddSubtaskMenuItem(list, index));
         contextMenu.add(createEditMenuItem(list, index));
         contextMenu.add(createRemoveMenuItem(list, index));
@@ -202,6 +220,59 @@ public class CustomChecklistPanel extends JPanel {
         contextMenu.add(createRemoveTaskReminderItem(list, index));
         contextMenu.show(list, e.getX(), e.getY());
     }
+
+    // Adds delete selected when multiple items are selected
+    private void addMultiSelectionMenuItems(JPopupMenu menu, JList<Task> list) {
+        int[] selectedIndices = list.getSelectedIndices();
+        if (selectedIndices.length > 1) {
+            JMenuItem deleteSelectedItem = new JMenuItem("Delete Selected Tasks");
+            deleteSelectedItem.addActionListener(event -> deleteSelectedTasks(list));
+            menu.add(deleteSelectedItem);
+            menu.addSeparator();
+        }
+    }
+
+    private void deleteSelectedTasks(JList<Task> list) {
+        java.util.List<Task> tasksToDelete = getTasksFromSelection(list);
+        if (tasksToDelete.isEmpty()) return;
+
+        if (!DeleteConfirmationDialog.showConfirm(this, taskManager, tasksToDelete)) return;
+
+        java.util.List<Task> extraSubs = collectExtraSubtasks(tasksToDelete);
+        performDeletion(tasksToDelete, extraSubs);
+    }
+
+    private java.util.List<Task> getTasksFromSelection(JList<Task> list) {
+        int[] selectedIndices = list.getSelectedIndices();
+        java.util.List<Task> tasks = new java.util.ArrayList<>();
+        for (int index : selectedIndices) {
+            tasks.add(list.getModel().getElementAt(index));
+        }
+        return tasks;
+    }
+
+    private java.util.List<Task> collectExtraSubtasks(java.util.List<Task> tasksToDelete) {
+        java.util.Set<String> selectedIds = new java.util.HashSet<>();
+        for (Task t : tasksToDelete) selectedIds.add(t.getId());
+        java.util.List<Task> extraSubs = new java.util.ArrayList<>();
+        for (Task t : tasksToDelete) {
+            java.util.List<Task> subs = taskManager.getSubtasks(t.getId());
+            if (subs != null) {
+                for (Task s : subs) {
+                    if (!selectedIds.contains(s.getId())) extraSubs.add(s);
+                }
+            }
+        }
+        return extraSubs;
+    }
+
+    private void performDeletion(java.util.List<Task> tasksToDelete, java.util.List<Task> extraSubs) {
+        for (Task t : extraSubs) taskManager.removeTask(t);
+        for (Task task : tasksToDelete) taskManager.removeTask(task);
+        updateTasks();
+    }
+
+    // Confirmation handled by shared DeleteConfirmationDialog helper
 
     // Place at the end of the class, before the final closing brace
     private JMenuItem createAddSubtaskMenuItem(JList<Task> list, int index) {

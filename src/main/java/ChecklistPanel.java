@@ -206,37 +206,23 @@ public class ChecklistPanel extends JPanel {
     }
 
     private void deleteSelectedTasks(JList<Task> list) {
-        int[] selectedIndices = list.getSelectedIndices();
-        if (selectedIndices.length == 0) return;
-        java.util.List<Task> tasksToDelete = new java.util.ArrayList<>();
-        for (int index : selectedIndices) {
-            tasksToDelete.add(list.getModel().getElementAt(index));
-        }
+        java.util.List<Task> tasksToDelete = getTasksFromSelection(list);
+        if (tasksToDelete.isEmpty()) return;
 
-        if (confirmDeleteTasks(tasksToDelete)) {
-            // Also collect any subtasks of the selected parents that are not explicitly selected
-            java.util.Set<String> selectedIds = new java.util.HashSet<>();
-            for (Task t : tasksToDelete) selectedIds.add(t.getId());
-            java.util.List<Task> extraSubs = new java.util.ArrayList<>();
-            for (Task t : tasksToDelete) {
-                java.util.List<Task> subs = taskManager.getSubtasks(t.getId());
-                if (subs != null) {
-                    for (Task s : subs) {
-                        if (!selectedIds.contains(s.getId())) extraSubs.add(s);
-                    }
-                }
-            }
+        if (!DeleteConfirmationDialog.showConfirm(this, taskManager, tasksToDelete)) return;
 
-            // Remove extras first then the explicitly selected tasks
-            for (Task t : extraSubs) taskManager.removeTask(t);
-            for (Task task : tasksToDelete) taskManager.removeTask(task);
-            updateTasks();
-        }
+        java.util.List<Task> extraSubs = collectExtraSubtasks(tasksToDelete);
+        performDeletion(tasksToDelete, extraSubs);
     }
 
-    // Extracted confirmation dialog for deletion to keep deleteSelectedTasks concise
-    private boolean confirmDeleteTasks(java.util.List<Task> tasksToDelete) {
-        // Compute any subtasks that would also be affected but are not explicitly selected
+    private java.util.List<Task> getTasksFromSelection(JList<Task> list) {
+        int[] selectedIndices = list.getSelectedIndices();
+        java.util.List<Task> tasks = new java.util.ArrayList<>();
+        for (int index : selectedIndices) tasks.add(list.getModel().getElementAt(index));
+        return tasks;
+    }
+
+    private java.util.List<Task> collectExtraSubtasks(java.util.List<Task> tasksToDelete) {
         java.util.Set<String> selectedIds = new java.util.HashSet<>();
         for (Task t : tasksToDelete) selectedIds.add(t.getId());
         java.util.List<Task> extraSubs = new java.util.ArrayList<>();
@@ -248,61 +234,28 @@ public class ChecklistPanel extends JPanel {
                 }
             }
         }
-
-        javax.swing.JDialog dialog = new javax.swing.JDialog((java.awt.Frame) javax.swing.SwingUtilities.getWindowAncestor(this), "Confirm Deletion", true);
-        dialog.setLayout(new java.awt.BorderLayout());
-        dialog.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
-
-        javax.swing.JLabel label;
-        if (extraSubs.isEmpty()) {
-            label = new javax.swing.JLabel("Are you sure you want to delete the following tasks?");
-        } else {
-            StringBuilder sb = new StringBuilder();
-            sb.append("The selected tasks have ").append(extraSubs.size()).append(" additional subtask(s) that will also be deleted:\n");
-            int shown = 0;
-            for (Task s : extraSubs) {
-                if (shown++ >= 10) break;
-                sb.append(" - ").append(s.getName()).append("\n");
-            }
-            if (extraSubs.size() > 10) sb.append("... and ").append(extraSubs.size() - 10).append(" more\n");
-            sb.append("\nAre you sure you want to delete the following tasks?");
-            label = new javax.swing.JLabel("<html>" + sb.toString().replace("\n", "<br>") + "</html>");
-        }
-        label.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 6, 4, 6));
-        dialog.add(label, java.awt.BorderLayout.NORTH);
-
-        javax.swing.JList<Task> taskList = new javax.swing.JList<>(tasksToDelete.toArray(Task[]::new));
-        taskList.setCellRenderer(new CheckboxListCellRenderer(taskManager));
-        taskList.setEnabled(false);
-        javax.swing.JScrollPane scrollPane = new javax.swing.JScrollPane(taskList);
-        scrollPane.setPreferredSize(new java.awt.Dimension(300, 150));
-        dialog.add(scrollPane, java.awt.BorderLayout.CENTER);
-
-        javax.swing.JPanel buttonPanel = new javax.swing.JPanel(new java.awt.FlowLayout());
-        javax.swing.JButton yesButton = new javax.swing.JButton("Yes, Delete");
-        javax.swing.JButton noButton = new javax.swing.JButton("No, Cancel");
-        buttonPanel.add(yesButton);
-        buttonPanel.add(noButton);
-        dialog.add(buttonPanel, java.awt.BorderLayout.SOUTH);
-
-        final boolean[] confirmed = {false};
-        yesButton.addActionListener(e -> {
-            confirmed[0] = true;
-            dialog.dispose();
-        });
-        noButton.addActionListener(e -> dialog.dispose());
-
-        dialog.pack();
-        dialog.setLocationRelativeTo(this);
-        dialog.setVisible(true);
-
-        return confirmed[0];
+        return extraSubs;
     }
+
+    private void performDeletion(java.util.List<Task> tasksToDelete, java.util.List<Task> extraSubs) {
+        for (Task t : extraSubs) taskManager.removeTask(t);
+        for (Task task : tasksToDelete) taskManager.removeTask(task);
+        updateTasks();
+    }
+
+    // Confirmation handled by shared DeleteConfirmationDialog helper
 
     private void showContextMenu(MouseEvent e, JList<Task> list, int index) {
         JPopupMenu contextMenu = new JPopupMenu();
+        int[] selected = list.getSelectedIndices();
+        if (selected.length > 1) {
+            // Only show multi-select delete when multiple items are selected
+            addMultiSelectionMenuItems(contextMenu, list);
+            contextMenu.show(e.getComponent(), e.getX(), e.getY());
+            return;
+        }
 
-        addMultiSelectionMenuItems(contextMenu, list);
+        // Single selection: show full context menu
         contextMenu.add(createEditMenuItem(list, index));
         addTypeChangeMenu(contextMenu, list, index);
         addFrequencyMenuIfNeeded(contextMenu, list, index);
