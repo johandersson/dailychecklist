@@ -18,11 +18,9 @@
 import java.awt.BorderLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import javax.swing.DefaultListModel;
-import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -124,66 +122,7 @@ public class CustomChecklistPanel extends JPanel {
     // Helper: toggle done state for a task at the given index
     private void toggleTaskDone(JList<Task> list, int index, java.awt.Rectangle cellBounds) {
         Task task = list.getModel().getElementAt(index);
-        boolean newDone = !task.isDone();
-        System.out.println("[TRACE] CustomChecklistPanel.toggleTaskDone start id=" + task.getId() + ", parentId=" + task.getParentId() + ", newDone=" + newDone + ", thread=" + Thread.currentThread().getName());
-        task.setDone(newDone);
-        if (newDone) {
-            task.setDoneDate(new Date(System.currentTimeMillis()));
-        } else {
-            task.setDoneDate(null);
-        }
-
-        java.util.List<Task> subs = taskManager.getSubtasks(task.getId());
-        boolean batchPersistScheduled = false;
-        if (!subs.isEmpty() && newDone) {
-            java.util.List<Task> toUpdate = new java.util.ArrayList<>();
-            for (Task sub : subs) {
-                System.out.println("[TRACE] CustomChecklistPanel: parent->sub mark id=" + sub.getId());
-                sub.setDone(true);
-                sub.setDoneDate(new Date(System.currentTimeMillis()));
-                toUpdate.add(sub);
-            }
-            toUpdate.add(task);
-            boolean ok = taskManager.updateTasksQuiet(toUpdate);
-            System.out.println("[TRACE] CustomChecklistPanel: scheduled persist " + subs.size() + " subtasks for parent=" + task.getId() + ", ok=" + ok);
-            javax.swing.SwingUtilities.invokeLater(this::updateTasks);
-            batchPersistScheduled = true;
-        }
-
-        // If subtask, check if all siblings are done, then mark parent done/undone
-        if (task.getParentId() != null) {
-            java.util.List<Task> siblings = taskManager.getSubtasks(task.getParentId());
-            boolean allSiblingsDone = true;
-            if (siblings != null) {
-                for (Task sib : siblings) {
-                    if (!sib.isDone()) {
-                        allSiblingsDone = false;
-                        break;
-                    }
-                }
-            }
-            Task parent = taskManager.getTaskById(task.getParentId());
-            if (parent != null) {
-                // Only mark parent done when all siblings are done and the current subtask was just marked done.
-                if (allSiblingsDone && newDone) {
-                    System.out.println("[TRACE] CustomChecklistPanel: all siblings done -> mark parent id=" + parent.getId());
-                    parent.setDone(true);
-                    parent.setDoneDate(new Date(System.currentTimeMillis()));
-                    taskManager.updateTaskQuiet(parent);
-                }
-                // Do NOT unmark parent when a single subtask is unchecked.
-            }
-        }
-
-        System.out.println("[TRACE] CustomChecklistPanel: scheduling persist for clicked task id=" + task.getId());
-        // If we already scheduled a batch persist for parent+subtasks, skip the single-task persist
-        if (!batchPersistScheduled) {
-            boolean ok = taskManager.updateTaskQuiet(task);
-            javax.swing.SwingUtilities.invokeLater(this::updateTasks);
-            System.out.println("[TRACE] CustomChecklistPanel: scheduled persist clicked task id=" + task.getId() + ", ok=" + ok);
-        } else {
-            System.out.println("[TRACE] CustomChecklistPanel: skipped single-task persist because batch persist scheduled for parent=" + task.getId());
-        }
+        TaskDoneToggler.toggle(taskManager, task, this::updateTasks);
         list.repaint(cellBounds);
     }
 
@@ -287,7 +226,9 @@ public class CustomChecklistPanel extends JPanel {
             addSubtaskItem.addActionListener(event -> {
                 Task p = taskManager.getTaskById(modelParent.getId());
                 if (p == null) p = modelParent;
-                String subtaskName = JOptionPane.showInputDialog(this, "Enter subtask name:");
+                Task pForDialog = (p != null) ? p : modelParent;
+                String prompt = "Add subtask to " + (pForDialog != null ? pForDialog.getName() : "");
+                String subtaskName = JOptionPane.showInputDialog(this, prompt);
                 if (subtaskName != null && !subtaskName.trim().isEmpty()) {
                     Task subtask = new Task(subtaskName.trim(), p.getType(), p.getWeekday(), p.getChecklistId(), p.getId());
                     taskManager.addTask(subtask);
@@ -312,7 +253,7 @@ public class CustomChecklistPanel extends JPanel {
         });
         return editItem;
     }
-
+                
     private JMenuItem createRemoveMenuItem(JList<Task> list, int index) {
         JMenuItem removeItem = new JMenuItem("Remove task");
         removeItem.addActionListener(event -> removeTask(list, index));
@@ -409,137 +350,9 @@ public class CustomChecklistPanel extends JPanel {
 
     
 
-    private void populateReminderPanel(JPanel panel) {
-        panel.removeAll();
+    
 
-        // Separate data selection from UI building for improved SOC
-        ReminderDisplay display = findReminderToDisplay();
-        buildReminderPanelUI(panel, display);
-        panel.revalidate();
-        panel.repaint();
-    }
-
-    /**
-     * Holds the reminder and optional extra info (e.g., task name) to display.
-     */
-    private static final class ReminderDisplay {
-        final Reminder reminder;
-        final String extraInfo;
-        ReminderDisplay(Reminder r, String info) { this.reminder = r; this.extraInfo = info; }
-    }
-
-    /**
-     * Decide which reminder to show for this checklist: prefer checklist-level reminder,
-     * otherwise pick the earliest task-level reminder belonging to tasks in this checklist.
-     */
-    private ReminderDisplay findReminderToDisplay() {
-        java.util.List<Reminder> reminders = taskManager.getReminders();
-        // Checklist-level reminder
-        Reminder checklistReminder = reminders.stream()
-                .filter(r -> Objects.equals(r.getChecklistName(), checklist.getName()) && r.getTaskId() == null)
-                .findFirst().orElse(null);
-        if (checklistReminder != null) return new ReminderDisplay(checklistReminder, null);
-
-        // Task-level: find earliest upcoming/reminder for tasks in this checklist
-        java.util.List<Task> tasks = taskManager.getTasks(TaskType.CUSTOM, checklist);
-        java.util.Set<String> taskIds = new java.util.HashSet<>();
-        for (Task t : tasks) taskIds.add(t.getId());
-
-        Reminder best = null;
-        java.time.LocalDateTime bestTime = null;
-        String extraInfo = null;
-        for (Reminder r : reminders) {
-            if (r.getTaskId() == null) continue;
-            if (!taskIds.contains(r.getTaskId())) continue;
-            java.time.LocalDateTime rt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-            if (bestTime == null || rt.isBefore(bestTime)) {
-                bestTime = rt;
-                best = r;
-                Task t = tasks.stream().filter(x -> x.getId().equals(r.getTaskId())).findFirst().orElse(null);
-                extraInfo = t == null ? null : t.getName();
-            }
-        }
-        if (best == null) return null;
-        return new ReminderDisplay(best, extraInfo);
-    }
-
-    /**
-     * Build the UI for the reminder panel from the prepared display object.
-     */
-    private void buildReminderPanelUI(JPanel panel, ReminderDisplay display) {
-        if (display == null || display.reminder == null) {
-            JLabel noReminderLabel = new JLabel("No reminder set");
-            noReminderLabel.setFont(FontManager.getSmallFont());
-            noReminderLabel.setForeground(java.awt.Color.GRAY);
-            panel.add(noReminderLabel, BorderLayout.WEST);
-            return;
-        }
-
-        Reminder r = display.reminder;
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        java.time.LocalDateTime remTime = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-        ReminderClockIcon.State state;
-        if (remTime.isBefore(now)) {
-            state = java.time.Duration.between(remTime, now).toHours() > 1 ? ReminderClockIcon.State.VERY_OVERDUE : ReminderClockIcon.State.OVERDUE;
-        } else if (remTime.isBefore(now.plusMinutes(60))) {
-            state = ReminderClockIcon.State.DUE_SOON;
-        } else {
-            state = ReminderClockIcon.State.FUTURE;
-        }
-
-        String labelText = (display.extraInfo != null) ? ("Reminder for: " + display.extraInfo) : "Reminder set";
-        javax.swing.JLabel textLabel = new javax.swing.JLabel(labelText);
-        textLabel.setFont(FontManager.getSmallMediumFont());
-
-        java.awt.Color dueSoonColor = new java.awt.Color(204, 102, 0);
-        switch (state) {
-            case OVERDUE -> textLabel.setForeground(java.awt.Color.RED);
-            case DUE_SOON -> textLabel.setForeground(dueSoonColor);
-            default -> textLabel.setForeground(java.awt.Color.BLUE);
-        }
-
-        final Reminder rem = r;
-        MouseAdapter ma = new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e)) showReminderPopup(e, rem);
-            }
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e)) showReminderPopup(e, rem);
-            }
-        };
-        textLabel.addMouseListener(ma);
-        // Add a clock icon with its own tooltip alongside the text label
-        javax.swing.JPanel small = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 0));
-        small.setOpaque(false);
-        javax.swing.Icon icon = IconCache.getReminderClockIcon(r.getHour(), r.getMinute(), state, false);
-        javax.swing.JLabel iconLabel = new javax.swing.JLabel(icon);
-        // Small HTML tooltip matching help dialog paragraph text size
-        String tip = String.format("Reminder: %04d-%02d-%02d %02d:%02d", r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-        iconLabel.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + tip + "</p></html>");
-        // Ensure right-clicks on the icon open same popup
-        iconLabel.addMouseListener(ma);
-        textLabel.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + tip + "</p></html>");
-        small.add(iconLabel);
-        small.add(textLabel);
-        panel.add(small, BorderLayout.WEST);
-    }
-
-    private void showReminderPopup(MouseEvent e, Reminder reminder) {
-        JPopupMenu menu = new JPopupMenu();
-        JMenuItem removeItem = new JMenuItem("Remove reminder");
-        removeItem.addActionListener(ae -> {
-            int res = JOptionPane.showConfirmDialog(this, "Remove this reminder?", "Confirm", JOptionPane.YES_NO_OPTION);
-            if (res == JOptionPane.YES_OPTION) {
-                taskManager.removeReminder(reminder);
-                if (updateAllPanels != null) updateAllPanels.run();
-                updateTasks();
-            }
-        });
-        menu.add(removeItem);
-        menu.show(e.getComponent(), e.getX(), e.getY());
-    }
+    
 
     public void updateTasks() {
         scheduleUpdate();

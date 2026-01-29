@@ -81,7 +81,9 @@ public class TaskListMouseHandler extends MouseAdapter {
         int aw = addIcon.getIconWidth();
 
         if (relX >= addIconX && relX <= addIconX + aw) {
-            String name = javax.swing.JOptionPane.showInputDialog(taskList, "Subtask name:", "Add Subtask", javax.swing.JOptionPane.PLAIN_MESSAGE);
+            Task parentForDialog = (taskManager != null) ? taskManager.getTaskById(t.getId()) : t;
+            String prompt = "Subtask name for parent: '" + (parentForDialog != null ? parentForDialog.getName() : t.getName()) + "'";
+            String name = javax.swing.JOptionPane.showInputDialog(taskList, prompt, "Add Subtask", javax.swing.JOptionPane.PLAIN_MESSAGE);
             if (name != null) {
                 name = name.trim();
                 if (!name.isEmpty()) {
