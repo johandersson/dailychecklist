@@ -273,10 +273,17 @@ public class CustomChecklistPanel extends JPanel {
                 if (s.getType() == TaskType.HEADING) { alreadyHasHeading = true; break; }
             }
         } catch (Exception ignored) {}
-        boolean disabled = parent.getType() == TaskType.HEADING || alreadyHasHeading;
+        boolean isSubtask = parent.getParentId() != null;
+        boolean disabled = parent.getType() == TaskType.HEADING || alreadyHasHeading || isSubtask;
         if (disabled) {
             item.setEnabled(false);
-            item.setToolTipText(parent.getType() == TaskType.HEADING ? "Cannot create a heading above a heading" : "A heading already exists for this parent");
+            if (parent.getType() == TaskType.HEADING) {
+                item.setToolTipText("Cannot create a heading above a heading");
+            } else if (isSubtask) {
+                item.setToolTipText("Cannot create a heading above a subtask");
+            } else {
+                item.setToolTipText("A heading already exists for this parent");
+            }
             return item;
         }
 
