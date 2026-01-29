@@ -53,8 +53,11 @@ public class HtmlErrorDialog extends JDialog {
         if (t != null) {
             StringWriter sw = new StringWriter();
             t.printStackTrace(new PrintWriter(sw));
-            trace.setText(sw.toString());
+            String stack = sw.toString();
+            trace.setText(stack);
             trace.setCaretPosition(0);
+            // Also write the stack trace to the debug log file for offline diagnosis
+            DebugLog.d("Exception shown to user: %s", stack);
         }
 
         JScrollPane scroll = new JScrollPane(trace);
