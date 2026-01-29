@@ -187,6 +187,15 @@ public class TaskTransferHandler extends TransferHandler {
             }
 
             int dropIndex = getDropIndex(support);
+            // If this is a move within the same checklist, prefer a plain reorder
+            // before interpreting the drop as "make a subtask". This lets users
+            // drag childless tasks up/down in the same daily/custom list without
+            // accidentally nesting them under a parent.
+            boolean isSameChecklist = java.util.Objects.equals(transferData.sourceChecklistName, checklistName);
+            if (isSameChecklist) {
+                if (handleSameChecklistReorder(transferData, dropIndex)) return true;
+            }
+
             // Delegate drop-on-item handling to TaskDropHandler (keeps this class small)
             JList.DropLocation dl = (JList.DropLocation) support.getDropLocation();
             boolean isInsert = dl.isInsert();
