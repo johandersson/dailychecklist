@@ -129,7 +129,8 @@ public class CustomChecklistPanel extends JPanel {
     // Helper: rename a task using the existing inline prompt
     private void renameTaskInline(JList<Task> list, int index, java.awt.Rectangle cellBounds) {
         Task task = list.getModel().getElementAt(index);
-        String rawNewName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for task:", task.getName());
+        String prompt = (task.getParentId() != null) ? "Enter new name for subtask:" : "Enter new name for task:";
+        String rawNewName = JOptionPane.showInputDialog(CustomChecklistPanel.this, prompt, task.getName());
         String newName = TaskManager.validateInputWithError(rawNewName, "Task name");
         if (newName != null) {
             task.setName(newName);
@@ -243,7 +244,8 @@ public class CustomChecklistPanel extends JPanel {
         JMenuItem editItem = new JMenuItem("Rename task");
         editItem.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
-            String rawNewName = JOptionPane.showInputDialog(CustomChecklistPanel.this, "Enter new name for task:", task.getName());
+            String prompt = (task.getParentId() != null) ? "Enter new name for subtask:" : "Enter new name for task:";
+            String rawNewName = JOptionPane.showInputDialog(CustomChecklistPanel.this, prompt, task.getName());
             String newName = TaskManager.validateInputWithError(rawNewName, "Task name");
             if (newName != null) {
                 task.setName(newName);

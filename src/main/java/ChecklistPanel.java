@@ -215,7 +215,8 @@ public class ChecklistPanel extends JPanel {
         JMenuItem editItem = new JMenuItem("Rename task");
         editItem.addActionListener(event -> {
             Task task = list.getModel().getElementAt(index);
-            String rawNewName = javax.swing.JOptionPane.showInputDialog(this, "Enter new name for task:", task.getName());
+            String prompt = (task.getParentId() != null) ? "Enter new name for subtask:" : "Enter new name for task:";
+            String rawNewName = javax.swing.JOptionPane.showInputDialog(this, prompt, task.getName());
             String newName = TaskManager.validateInputWithError(rawNewName, "Task name");
             if (newName != null) {
                 task.setName(newName);
