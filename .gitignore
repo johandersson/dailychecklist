@@ -50,6 +50,7 @@ tasks.xml
 
 # Log files
 *.log
+logs/
 
 # Test coverage reports
 coverage-report/
