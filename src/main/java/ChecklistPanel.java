@@ -113,11 +113,9 @@ public class ChecklistPanel extends JPanel {
 
         java.awt.Rectangle cellBounds = list.getCellBounds(index, index);
         Task task = list.getModel().getElementAt(index);
-        int baseIndent = 10;
-        int subtaskIndent = 24;
-        int checkboxX = cellBounds.x + baseIndent + (task.getParentId() != null ? subtaskIndent : 0);
-        int checkboxY = cellBounds.y + cellBounds.height / 2 - 10;
-        int checkboxSize = 22;
+        int checkboxX = cellBounds.x + UiLayout.CHECKBOX_X + (task.getParentId() != null ? UiLayout.SUBTASK_INDENT : 0);
+        int checkboxY = cellBounds.y + cellBounds.height / 2 - UiLayout.CHECKBOX_SIZE / 2;
+        int checkboxSize = UiLayout.CHECKBOX_SIZE;
         boolean onCheckbox = e.getPoint().x >= checkboxX && e.getPoint().x <= checkboxX + checkboxSize &&
                             e.getPoint().y >= checkboxY && e.getPoint().y <= checkboxY + checkboxSize;
 

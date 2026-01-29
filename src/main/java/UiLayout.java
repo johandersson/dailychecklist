@@ -28,4 +28,7 @@ public final class UiLayout {
     // Checkbox constants
     public static final int CHECKBOX_X = 10;
     public static final int CHECKBOX_SIZE = 22;
+    // Text/list indentation
+    public static final int BASE_INDENT = 40;
+    public static final int SUBTASK_INDENT = 24;
 }

@@ -38,7 +38,7 @@ public abstract class IconListCellRenderer<T> extends JPanel implements ListCell
     protected Icon icon;
     protected Icon rightIcon;
     // Reserve a fixed space on the right so rows align whether or not a right-side icon is present
-    protected static final int RIGHT_ICON_SPACE = 46;
+    protected static final int RIGHT_ICON_SPACE = UiLayout.RIGHT_ICON_SPACE;
 
     @SuppressWarnings("this-escape")
     public IconListCellRenderer() {
