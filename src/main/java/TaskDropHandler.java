@@ -61,13 +61,31 @@ public final class TaskDropHandler {
     }
 
     private static boolean persistUsingModel(javax.swing.DefaultListModel<Task> model, List<Task> toPersist, Task target, int insertOffset, TaskManager taskManager, Runnable updateAllPanels, String checklistName) {
-        // Remove moved tasks from the UI model if they exist
+        // Determine insertion index based on the current model BEFORE removals,
+        // then remove moved items and adjust the insertion index for those removals.
+        int parentModelIndexOrig = findModelIndex(model, target.getId());
+        int modelInsertIndexOrig = computeModelInsertIndex(model, parentModelIndexOrig, insertOffset, target);
+
+        // Count how many of the moved items are located before the original insert index
+        int removedBefore = 0;
+        for (Task t : toPersist) {
+            for (int i = 0; i < model.getSize(); i++) {
+                if (model.get(i).getId().equals(t.getId())) {
+                    if (i < modelInsertIndexOrig) removedBefore++;
+                    break;
+                }
+            }
+        }
+
+        DebugLog.d("persistUsingModel: parentModelIndexOrig=%d modelInsertIndexOrig=%d removedBefore=%d toPersist=%s", parentModelIndexOrig, modelInsertIndexOrig, removedBefore, toPersist.toString());
+
+        // Remove moved tasks from the UI model
         removeMovedFromModel(model, toPersist);
 
-        int parentModelIndex = findModelIndex(model, target.getId());
-        int modelInsertIndex = computeModelInsertIndex(model, parentModelIndex, insertOffset, target);
-
-        DebugLog.d("persistUsingModel: parentModelIndex=%d modelInsertIndex=%d toPersist=%s", parentModelIndex, modelInsertIndex, toPersist.toString());
+        // Adjust insert index after removals
+        int modelInsertIndex = modelInsertIndexOrig - removedBefore;
+        if (modelInsertIndex < 0) modelInsertIndex = 0;
+        if (modelInsertIndex > model.getSize()) modelInsertIndex = model.getSize();
 
         // Insert into model
         for (int i = 0; i < toPersist.size(); i++) {

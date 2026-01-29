@@ -241,11 +241,9 @@ public class TaskManager {
                 map.computeIfAbsent(pid, k -> new java.util.ArrayList<>()).add(t);
             }
         }
-        // Sort each parent's list once using a case-insensitive comparator
-        java.util.Comparator<Task> cmp = java.util.Comparator.comparing(Task::getName, String.CASE_INSENSITIVE_ORDER);
+        // Preserve persisted ordering for subtasks (use global task order)
         for (java.util.Map.Entry<String, java.util.List<Task>> e : map.entrySet()) {
             java.util.List<Task> list = e.getValue();
-            list.sort(cmp);
             cachedSubtasksByParent.put(e.getKey(), java.util.Collections.unmodifiableList(list));
         }
         subtasksCacheValid = true;

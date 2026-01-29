@@ -264,6 +264,23 @@ public class TaskTransferHandler extends TransferHandler {
             if (parentIndex != -1) {
                 int offset = computeInsertOffsetWithinParent(targetList, parentIndex, dropIndex);
                 DebugLog.d("importData: computed insert offset=%d", offset);
+                // If this insertion point is actually between two top-level parents (or at ends),
+                // interpret as a top-level reorder (make moved tasks top-level) and delegate to the
+                // reorder handler which can set parentId=null.
+                int size = targetList.getModel().getSize();
+                boolean insertAtTopLevel = false;
+                if (dropIndex == 0 || dropIndex == size) insertAtTopLevel = true;
+                else {
+                    Task prev = targetList.getModel().getElementAt(Math.max(0, dropIndex - 1));
+                    Task next = targetList.getModel().getElementAt(Math.min(size - 1, dropIndex));
+                    if (prev != null && next != null && prev.getParentId() == null && next.getParentId() == null) insertAtTopLevel = true;
+                }
+
+                if (insertAtTopLevel) {
+                    // Delegate to reorder handler which will update parentId (to null) and persist order
+                    if (TaskReorderHandler.performReorder((DefaultListModel<Task>) targetList.getModel(), taskManager, checklistName, transferData.tasks, dropIndex)) return true;
+                }
+
                 // For same-checklist drags of top-level tasks, prefer reorder semantics.
                 if (!(sameChecklist && movedAllTopLevel)) {
                     if (TaskDropHandler.handleDropOnItem(transferData, targetList, parentIndex, offset, taskManager, updateAllPanels, checklistName)) return true;
