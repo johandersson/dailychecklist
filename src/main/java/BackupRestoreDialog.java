@@ -66,12 +66,13 @@ public class BackupRestoreDialog {
         Map<String,String> checklistsCopy = new LinkedHashMap<>(checklists);
 
         RestoreContext restoreCtx = new RestoreContext(parent, taskManager, updateTasks, checklistsCopy, customTasks, morningTasks, eveningTasks, currentTasks);
-        Runnable onRestore = createOnRestoreRunnable(restoreCtx);
+        Runnable onMerge = createOnRestoreRunnable(restoreCtx);
+        Runnable onReplace = createOnReplaceRunnable(restoreCtx, backupTasks);
 
         int morningImportCount = (int) morningTasks.stream().filter(t -> !existingIds.contains(t.getId())).count();
         int eveningImportCount = (int) eveningTasks.stream().filter(t -> !existingIds.contains(t.getId())).count();
         RestorePreview preview = new RestorePreview(checklistsCopy, checklistTaskCounts, newChecklistCount, morningImportCount, eveningImportCount);
-        RestorePreviewDialog.showDialog(parent, currentTasks, backupTasksCopy, chosen, onRestore, preview);
+        RestorePreviewDialog.showDialog(parent, currentTasks, backupTasksCopy, chosen, onMerge, onReplace, preview);
     }
 
     private static File chooseBackupFile(Component parent) {
@@ -161,6 +162,20 @@ public class BackupRestoreDialog {
                 JOptionPane.showMessageDialog(ctx.parent, "Imported tasks and merged checklists." + (liveBackup!=null?" (backup created)":""), "Import Complete", JOptionPane.INFORMATION_MESSAGE);
             } catch (RuntimeException e) {
                 ErrorDialog.showError(ctx.parent, "Failed to import tasks", e);
+            }
+        };
+    }
+
+    private static Runnable createOnReplaceRunnable(RestoreContext ctx, List<Task> backupTasks) {
+        return () -> {
+            File liveBackup = backupLiveData();
+            if (!ctx.checklistsCopy.isEmpty()) mergeChecklistsToLive(ctx.checklistsCopy);
+            try {
+                ctx.taskManager.setTasks(new ArrayList<>(backupTasks));
+                ctx.updateTasks.run();
+                JOptionPane.showMessageDialog(ctx.parent, "Replaced current tasks with backup." + (liveBackup!=null?" (backup created)":""), "Restore Complete", JOptionPane.INFORMATION_MESSAGE);
+            } catch (RuntimeException e) {
+                ErrorDialog.showError(ctx.parent, "Failed to restore tasks", e);
             }
         };
     }

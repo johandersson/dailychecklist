@@ -22,50 +22,65 @@ import javax.swing.DefaultListModel;
 
 public class TaskReorderHandler {
     public static boolean performReorder(DefaultListModel<Task> listModel, TaskManager taskManager, String checklistName, List<Task> tasks, int dropIndex) {
-        // Ensure drop index is within valid bounds
-        int originalSize = listModel.getSize();
-        if (dropIndex > originalSize) {
-            DebugLog.d("performReorder: checklist=%s dropIndex=%d tasks=%s", checklistName, dropIndex, tasks.toString());
-            dropIndex = originalSize;
-        }
-        if (dropIndex < 0) {
-            dropIndex = 0;
-        }
+        dropIndex = clampDropIndex(listModel, dropIndex);
+        sortTasksByModelPosition(listModel, tasks);
+        int removedBefore = countRemovedBefore(listModel, tasks, dropIndex);
+        int adjustedIndex = dropIndex - removedBefore;
 
-        // Sort tasks by their current position in the list for proper insertion order
+        String targetParentId = determineTargetParentId(listModel, dropIndex);
+        if (wouldCreateGrandchildren(taskManager, targetParentId, tasks)) return false;
+
+        final int finalDrop = Math.max(0, adjustedIndex);
+        executeReorderOnEdt(listModel, taskManager, checklistName, tasks, finalDrop, targetParentId);
+        return true;
+    }
+
+    private static int clampDropIndex(DefaultListModel<Task> model, int dropIndex) {
+        int size = model.getSize();
+        if (dropIndex > size) dropIndex = size;
+        if (dropIndex < 0) dropIndex = 0;
+        return dropIndex;
+    }
+
+    private static void sortTasksByModelPosition(DefaultListModel<Task> model, List<Task> tasks) {
         tasks.sort((t1, t2) -> {
             int idx1 = -1, idx2 = -1;
-            for (int i = 0; i < listModel.getSize(); i++) {
-                if (listModel.get(i).getId().equals(t1.getId())) idx1 = i;
-                if (listModel.get(i).getId().equals(t2.getId())) idx2 = i;
+            for (int i = 0; i < model.getSize(); i++) {
+                if (model.get(i).getId().equals(t1.getId())) idx1 = i;
+                if (model.get(i).getId().equals(t2.getId())) idx2 = i;
             }
             return Integer.compare(idx1, idx2);
         });
+    }
 
-        // Calculate how many items will be removed before the drop position
-        int itemsRemovedBeforeDrop = 0;
+    private static int countRemovedBefore(DefaultListModel<Task> model, List<Task> tasks, int dropIndex) {
+        int count = 0;
         for (Task task : tasks) {
-            for (int i = 0; i < listModel.getSize(); i++) {
-                if (listModel.get(i).getId().equals(task.getId())) {
-                    if (i < dropIndex) {
-                        itemsRemovedBeforeDrop++;
-                    }
+            for (int i = 0; i < model.getSize(); i++) {
+                if (model.get(i).getId().equals(task.getId())) {
+                    if (i < dropIndex) count++;
                     break;
                 }
             }
         }
+        return count;
+    }
 
-        // Adjust drop index for removals that occur before it
-        dropIndex -= itemsRemovedBeforeDrop;
+    private static boolean wouldCreateGrandchildren(TaskManager taskManager, String targetParentId, List<Task> tasks) {
+        if (targetParentId == null) return false;
+        boolean targetHasSubs = !taskManager.getSubtasks(targetParentId).isEmpty();
+        if (!targetHasSubs) return false;
+        for (Task t : tasks) {
+            java.util.List<Task> movedSubs = taskManager.getSubtasks(t.getId());
+            if (movedSubs != null && !movedSubs.isEmpty()) return true;
+        }
+        return false;
+    }
 
-        // Determine target parent based on drop location in the model so we can
-        // update moved tasks' parentId before persisting the new order.
-        final int finalDropIndex = dropIndex;
-        final String targetParentId = determineTargetParentId(listModel, dropIndex);
-
+    private static void executeReorderOnEdt(DefaultListModel<Task> listModel, TaskManager taskManager, String checklistName, List<Task> tasks, int finalDropIndex, String targetParentId) {
         javax.swing.SwingUtilities.invokeLater(() -> {
             DebugLog.d("performReorder (invokeLater): finalDropIndex=%d", finalDropIndex);
-            // Update parentId for moved tasks to reflect intended placement
+
             List<Task> toPersistParentChange = new ArrayList<>();
             for (Task t : tasks) {
                 Task authoritative = taskManager.getTaskById(t.getId());
@@ -73,39 +88,26 @@ public class TaskReorderHandler {
                 authoritative.setParentId(targetParentId);
                 toPersistParentChange.add(authoritative);
             }
-            // Persist parent changes first so TaskOrderPersister sees authoritative state
             taskManager.updateTasks(toPersistParentChange);
-            // Remove all tasks from their current positions
+
+            // Remove moved tasks from the model
             for (Task task : tasks) {
                 for (int i = 0; i < listModel.getSize(); i++) {
-                    if (listModel.get(i).getId().equals(task.getId())) {
-                        listModel.remove(i);
-                        break;
-                    }
+                    if (listModel.get(i).getId().equals(task.getId())) { listModel.remove(i); break; }
                 }
             }
 
-            // Ensure drop index is still valid after all removals
-            int adjustedDropIndex = finalDropIndex;
-            if (adjustedDropIndex < 0) {
-                adjustedDropIndex = 0;
-            }
-            if (adjustedDropIndex > listModel.getSize()) {
-                adjustedDropIndex = listModel.getSize();
-            }
+            int adjusted = finalDropIndex;
+            if (adjusted < 0) adjusted = 0;
+            if (adjusted > listModel.getSize()) adjusted = listModel.getSize();
 
-            // Insert all tasks at the drop position
             for (int i = 0; i < tasks.size(); i++) {
-                listModel.add(adjustedDropIndex + i, tasks.get(i));
+                listModel.add(adjusted + i, tasks.get(i));
             }
 
-            DebugLog.d("performReorder: adjustedDropIndex=%d resultingSize=%d", adjustedDropIndex, listModel.getSize());
-
-            // Persist the new order in the underlying data
+            DebugLog.d("performReorder: adjustedDropIndex=%d resultingSize=%d", adjusted, listModel.getSize());
             TaskOrderPersister.persist(listModel, checklistName, taskManager);
         });
-
-        return true;
     }
 
     // Persisting logic moved to TaskOrderPersister for clarity and testability.
