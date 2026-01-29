@@ -620,17 +620,22 @@ public class XMLTaskRepository implements TaskRepository {
     public synchronized void removeTask(Task task) {
         // Remove from in-memory cache then persist asynchronously
         rwLock.writeLock().lock();
+        List<Task> snapshot = null;
         try {
             if (cachedTasks == null) getCachedTasks();
             cachedTasks.removeIf(t -> t.getId().equals(task.getId()));
             rebuildMapsFromCachedTasks();
             tasksCacheDirty = false;
+            // Capture a snapshot to persist without re-reading the file
+            snapshot = new ArrayList<>(cachedTasks);
         } finally {
             rwLock.writeLock().unlock();
         }
 
-        // Use the centralized retry/persist helper to remove the task
-        submitWithRetries("task-remove-" + task.getId(), () -> persistRemove(task));
+        // Persist the full snapshot to avoid parse+partial-write on each removal.
+        // This reduces I/O when many deletes happen in succession.
+        final List<Task> toPersist = snapshot;
+        submitWithRetries("task-remove-" + task.getId(), () -> persistSetAllTasks(toPersist));
     }
 
     @Override
