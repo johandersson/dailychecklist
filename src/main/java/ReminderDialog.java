@@ -52,24 +52,38 @@ public class ReminderDialog extends JDialog {
         this.onRemindTomorrow = onRemindTomorrow;
         this.onMarkAsDone = onMarkAsDone;
 
-        setAlwaysOnTop(true);
-        setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-        setResizable(false);
+        initDialogSettings(parent);
 
         String checklistName = displayTitle != null ? displayTitle : reminder.getChecklistName();
         if (checklistName == null || checklistName.trim().isEmpty()) {
             checklistName = "Unknown Checklist";
         }
 
-        // Format the reminder time nicely
         String timeString = String.format("%02d:%02d", reminder.getHour(), reminder.getMinute());
         String dateString = String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
 
-        // Top panel: title + checklist/task name + optional breadcrumb for subtasks
+        JPanel topPanel = buildTopPanel(checklistName, breadcrumbText, timeString, dateString);
+        JLabel messageLabel = buildMessageLabel();
+        JPanel buttonPanel = buildButtonPanel(reminder);
+
+        setLayout(new BorderLayout());
+        add(topPanel, BorderLayout.NORTH);
+        add(messageLabel, BorderLayout.CENTER);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        pack();
+        setLocationRelativeTo(parent);
+    }
+
+    private void initDialogSettings(JFrame parent) {
+        setAlwaysOnTop(true);
+        setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+        setResizable(false);
+    }
+
+    private JPanel buildTopPanel(String checklistName, String breadcrumbText, String timeString, String dateString) {
         JPanel topPanel = new JPanel(new BorderLayout());
-        String titleHtml = "<html><div style='text-align:center;padding:6px;'><h2 style='color: #2E86AB;margin:0 0 4px 0;font-size:16px;'>⏰ Reminder</h2>" +
-                "<div style='font-size:14px;font-weight:bold;color:#333;margin-bottom:4px;'>" + checklistName + "</div>" +
-                "<div style='color:#666;font-size:11px;'>Scheduled for: " + timeString + " on " + dateString + "</div></div></html>";
+        String titleHtml = formatTitleHtml(checklistName, timeString, dateString);
         JLabel titleLabel = new JLabel(titleHtml);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         titleLabel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
@@ -84,11 +98,23 @@ public class ReminderDialog extends JDialog {
             crumbWrap.add(crumb);
             topPanel.add(crumbWrap, BorderLayout.SOUTH);
         }
+        return topPanel;
+    }
 
+    private String formatTitleHtml(String checklistName, String timeString, String dateString) {
+        return "<html><div style='text-align:center;padding:6px;'><h2 style='color: #2E86AB;margin:0 0 4px 0;font-size:16px;'>⏰ Reminder</h2>" +
+                "<div style='font-size:14px;font-weight:bold;color:#333;margin-bottom:4px;'>" + checklistName + "</div>" +
+                "<div style='color:#666;font-size:11px;'>Scheduled for: " + timeString + " on " + dateString + "</div></div></html>";
+    }
+
+    private JLabel buildMessageLabel() {
         JLabel messageLabel = new JLabel("<html><div style='text-align:center;color:#555;font-style:italic;padding:8px;'>It's time to check your tasks!</div></html>");
         messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         messageLabel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+        return messageLabel;
+    }
 
+    private JPanel buildButtonPanel(Reminder reminder) {
         JButton openButton = new JButton("Open Checklist");
         openButton.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Open the checklist in the application</p></html>");
         JButton dismissButton = new JButton("Remove Reminders");
@@ -128,21 +154,12 @@ public class ReminderDialog extends JDialog {
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         buttonPanel.add(openButton);
-        // Only show mark-as-done button for task-level reminders; for checklist-level reminders
-        // we intentionally omit this button to avoid ambiguity as requested.
         if (isTaskLevel) {
             buttonPanel.add(markAsDoneButton);
         }
         buttonPanel.add(remindLaterButton);
         buttonPanel.add(remindTomorrowButton);
         buttonPanel.add(dismissButton);
-
-        setLayout(new BorderLayout());
-        add(topPanel, BorderLayout.NORTH);
-        add(messageLabel, BorderLayout.CENTER);
-        add(buttonPanel, BorderLayout.SOUTH);
-
-        pack();
-        setLocationRelativeTo(parent);
+        return buttonPanel;
     }
 }
