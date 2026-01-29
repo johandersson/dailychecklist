@@ -262,7 +262,7 @@ public class ChecklistPanel extends JPanel {
         if (parent.getParentId() != null) {
             // Disable adding a subtask to a subtask (one-level only)
             addSubtaskItem.setEnabled(false);
-            addSubtaskItem.setToolTipText("Cannot add a subtask to a subtask");
+            addSubtaskItem.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Cannot add a subtask to a subtask</p></html>");
         } else {
             addSubtaskItem.addActionListener(event -> {
                 Task p = taskManager.getTaskById(modelParent.getId());

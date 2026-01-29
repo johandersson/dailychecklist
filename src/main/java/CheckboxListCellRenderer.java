@@ -219,13 +219,8 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             tip.append("Add subtask");
         }
         if (tip.length() > 0) {
-            // Use slightly smaller tooltip font for subtasks to reduce visual weight
-            if (task.getParentId() != null) {
-                String html = "<html><p style='font-family:Arial,sans-serif;font-size:" + FontManager.SIZE_SMALL + "px;margin:0;'>" + tip.toString() + "</p></html>";
-                setToolTipText(html);
-            } else {
-                setToolTipText(tip.toString());
-            }
+            String html = "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + tip.toString() + "</p></html>";
+            setToolTipText(html);
         } else {
             setToolTipText(null);
         }

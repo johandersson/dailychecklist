@@ -31,7 +31,7 @@ public class SearchPanel extends JPanel {
         searchButton = new JButton("Search");
         searchButton.setFont(FontManager.getButtonFont());
         searchAllWeekdayBox = new JCheckBox("Include all weekday tasks");
-        searchAllWeekdayBox.setToolTipText("When checked, weekday-specific tasks for any weekday will be included in results.");
+        searchAllWeekdayBox.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>When checked, weekday-specific tasks for any weekday will be included in results.</p></html>");
         add(new JLabel("Search:"));
         add(searchField);
         add(searchButton);
