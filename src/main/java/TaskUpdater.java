@@ -58,15 +58,33 @@ public class TaskUpdater {
         List<Task> desiredMorning = new ArrayList<>();
         for (Task parent : morningParents) {
             desiredMorning.add(parent);
-            java.util.List<Task> subs = taskManager.getSubtasksSorted(parent.getId());
-            if (subs != null && !subs.isEmpty()) desiredMorning.addAll(subs);
+            if (taskManager != null) {
+                java.util.List<Task> subs = taskManager.getSubtasksSorted(parent.getId());
+                if (subs != null && !subs.isEmpty()) {
+                    for (Task s : subs) {
+                        boolean showSub;
+                        if (s.getWeekday() == null) showSub = true;
+                        else showSub = showAllWeekdaySpecificTasks || s.getWeekday().toLowerCase().equals(currentWeekday);
+                        if (showSub) desiredMorning.add(s);
+                    }
+                }
+            }
         }
 
         List<Task> desiredEvening = new ArrayList<>();
         for (Task parent : eveningParents) {
             desiredEvening.add(parent);
-            java.util.List<Task> subs = taskManager.getSubtasksSorted(parent.getId());
-            if (subs != null && !subs.isEmpty()) desiredEvening.addAll(subs);
+            if (taskManager != null) {
+                java.util.List<Task> subs = taskManager.getSubtasksSorted(parent.getId());
+                if (subs != null && !subs.isEmpty()) {
+                    for (Task s : subs) {
+                        boolean showSub;
+                        if (s.getWeekday() == null) showSub = true;
+                        else showSub = showAllWeekdaySpecificTasks || s.getWeekday().toLowerCase().equals(currentWeekday);
+                        if (showSub) desiredEvening.add(s);
+                    }
+                }
+            }
         }
 
         // Precompute display data for renderer (no checklist info for daily lists)
