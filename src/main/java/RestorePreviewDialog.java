@@ -28,7 +28,7 @@ import javax.swing.JPanel;
  * Dialog that shows restore preview and diff; confirmation triggers restore action.
  */
 public class RestorePreviewDialog {
-    public static void showDialog(Component parent, List<Task> currentTasks, List<Task> backupTasks, File backupFile, Runnable onRestore, RestorePreview preview) {
+    public static void showDialog(Component parent, List<Task> currentTasks, List<Task> backupTasks, File backupFile, Runnable onMerge, Runnable onReplace, RestorePreview preview) {
         JDialog dialog = new JDialog((java.awt.Frame) parent, "Restore from Backup", true);
         dialog.setLayout(new BorderLayout());
         dialog.setSize(900, 700);
@@ -84,7 +84,7 @@ public class RestorePreviewDialog {
         JPanel buttonPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 20, 10));
         buttonPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 8, 8, 8));
 
-        JButton restoreButton = new JButton("Restore from Backup");
+        JButton restoreButton = new JButton("Merge from Backup");
         restoreButton.setFont(restoreButton.getFont().deriveFont(java.awt.Font.BOLD, 12.0f));
         restoreButton.setBackground(new java.awt.Color(200, 50, 50));
         restoreButton.setForeground(java.awt.Color.BLACK);
@@ -96,15 +96,21 @@ public class RestorePreviewDialog {
         cancelButton.setFocusPainted(false);
         cancelButton.setPreferredSize(new java.awt.Dimension(100, 35));
 
-        restoreButton.addActionListener(e -> {
-            dialog.dispose();
-            onRestore.run();
-        });
+        JButton replaceButton = new JButton("Replace with Backup");
+        replaceButton.setFont(replaceButton.getFont().deriveFont(java.awt.Font.BOLD, 12.0f));
+        replaceButton.setBackground(new java.awt.Color(200, 50, 50));
+        replaceButton.setForeground(java.awt.Color.BLACK);
+        replaceButton.setFocusPainted(false);
+        replaceButton.setPreferredSize(new java.awt.Dimension(160, 35));
+
+        restoreButton.addActionListener(e -> { dialog.dispose(); onMerge.run(); });
+        replaceButton.addActionListener(e -> { dialog.dispose(); int ok = javax.swing.JOptionPane.showConfirmDialog(parent, "This will completely replace your current tasks with the backup. Continue?", "Confirm Replace", javax.swing.JOptionPane.YES_NO_OPTION); if (ok == javax.swing.JOptionPane.YES_OPTION) onReplace.run(); });
 
         cancelButton.addActionListener(e -> dialog.dispose());
 
         buttonPanel.add(cancelButton);
         buttonPanel.add(restoreButton);
+        buttonPanel.add(replaceButton);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
         dialog.setVisible(true);

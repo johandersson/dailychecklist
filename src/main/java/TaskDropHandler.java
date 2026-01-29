@@ -48,6 +48,13 @@ public final class TaskDropHandler {
 
         if (wouldCreateSelfParenting(transferData, target)) return false;
 
+        // Prevent creating grandchildren: do not allow moving a task that has subtasks
+        // into a target that already has subtasks (would create nested subtasks).
+        if (wouldCreateGrandchildren(transferData, target, taskManager)) {
+            DebugLog.d("handleDropOnItem: reject - would create grandchildren target=%s", target.getId());
+            return false;
+        }
+
         List<Task> toPersist = prepareMovedTasks(transferData, taskManager, target);
 
         // Prefer operating on the mutable UI model and then persist ordering centrally.
@@ -169,6 +176,17 @@ public final class TaskDropHandler {
             toPersist.add(authoritative);
         }
         return toPersist;
+    }
+
+    private static boolean wouldCreateGrandchildren(TransferData transferData, Task target, TaskManager taskManager) {
+        if (transferData == null || target == null || taskManager == null) return false;
+        java.util.List<Task> targetSubs = taskManager.getSubtasks(target.getId());
+        if (targetSubs == null || targetSubs.isEmpty()) return false;
+        for (Task moved : transferData.tasks) {
+            java.util.List<Task> movedSubs = taskManager.getSubtasks(moved.getId());
+            if (movedSubs != null && !movedSubs.isEmpty()) return true;
+        }
+        return false;
     }
 
     private static void adjustChecklistAndTypeIfNeeded(Task t, String sourceChecklistName, Task target) {
