@@ -676,6 +676,28 @@ public class XMLTaskRepository implements TaskRepository {
             if (backupManager != null) {
                 backupManager.createBackup("before-set-all-tasks");
             }
+            // Normalize checklist identifiers: older backups may have stored the checklist NAME
+            // in the task.checklistId field. Convert those to stable checklist IDs so the UI
+            // can match tasks to checklists.
+            if (tasks != null) {
+                for (Task t : tasks) {
+                    String cid = t.getChecklistId();
+                    if (cid == null) continue;
+                    String trimmed = cid.trim();
+                    if (trimmed.isEmpty()) continue;
+                    if (!looksLikeUuid(trimmed)) {
+                        // treat as name: find or create checklist and replace id
+                        Checklist existing = checklistNameManager.getChecklistByName(trimmed);
+                        if (existing == null) {
+                            Checklist created = new Checklist(trimmed);
+                            checklistNameManager.addChecklist(created);
+                            t.setChecklistId(created.getId());
+                        } else {
+                            t.setChecklistId(existing.getId());
+                        }
+                    }
+                }
+            }
             persistSetAllTasks(tasks);
             // Update in-memory representation immediately
             rwLock.writeLock().lock();
