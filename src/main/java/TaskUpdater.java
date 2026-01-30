@@ -17,8 +17,12 @@
  */
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import javax.swing.DefaultListModel;
 
 public class TaskUpdater {
@@ -93,18 +97,23 @@ public class TaskUpdater {
      * add/remove/move operations. Uses equality via Objects.equals.
      */
     public static <T> void syncModel(DefaultListModel<T> model, List<T> desired) {
-        // Remove items that are not desired
+        // Create fast lookup set for O(1) containment checks - eliminates O(n²) nested loops
+        Set<T> desiredSet = new HashSet<>(desired);
+        
+        // Remove items that are not desired - O(n) instead of O(n²)
         for (int i = model.getSize() - 1; i >= 0; i--) {
             T current = model.getElementAt(i);
-            boolean found = false;
-            for (T d : desired) {
-                if (Objects.equals(current, d)) { found = true; break; }
-            }
-            if (!found) {
+            if (!desiredSet.contains(current)) {
                 model.removeElementAt(i);
             }
         }
 
+        // Create position map for O(1) lookups of existing elements - eliminates O(n²) position tracking
+        Map<T, Integer> currentPositions = new HashMap<>();
+        for (int i = 0; i < model.getSize(); i++) {
+            currentPositions.put(model.getElementAt(i), i);
+        }
+        
         // Ensure order and add missing items
         for (int i = 0; i < desired.size(); i++) {
             T want = desired.get(i);
@@ -118,18 +127,31 @@ public class TaskUpdater {
                     continue;
                 }
                 // If the desired element exists later in the model, remove it from there and insert the fresh instance here
-                int foundIndex = -1;
-                for (int j = i + 1; j < model.getSize(); j++) {
-                    if (Objects.equals(model.getElementAt(j), want)) { foundIndex = j; break; }
-                }
-                if (foundIndex != -1) {
+                Integer foundIndex = currentPositions.get(want);
+                if (foundIndex != null && foundIndex > i) {
                     model.removeElementAt(foundIndex);
                     model.add(i, want);
+                    // Update positions for elements that shifted due to the removal
+                    currentPositions.remove(want);
+                    for (Map.Entry<T, Integer> entry : currentPositions.entrySet()) {
+                        if (entry.getValue() > foundIndex) {
+                            entry.setValue(entry.getValue() - 1);
+                        }
+                    }
+                    currentPositions.put(want, i);
                 } else {
                     model.add(i, want);
+                    // Update positions for elements that shifted due to the insertion
+                    for (Map.Entry<T, Integer> entry : currentPositions.entrySet()) {
+                        if (entry.getValue() >= i) {
+                            entry.setValue(entry.getValue() + 1);
+                        }
+                    }
+                    currentPositions.put(want, i);
                 }
             } else {
                 model.add(i, want);
+                currentPositions.put(want, i);
             }
         }
     }

@@ -29,6 +29,7 @@ public final class DisplayPrecomputer {
     /**
      * Precompute for the provided list of tasks. If showChecklistInfo is true, the checklist
      * name is appended in parentheses where applicable (uses TaskManager to resolve names).
+     * Only recomputes for tasks marked as dirty to avoid unnecessary work.
      */
     public static void precomputeForList(List<Task> tasks, TaskManager taskManager, boolean showChecklistInfo) {
         if (tasks == null || tasks.isEmpty()) return;
@@ -36,6 +37,9 @@ public final class DisplayPrecomputer {
         FontMetrics fm = FontMetricsCache.get(font);
 
         for (Task t : tasks) {
+            // Skip if not dirty (already computed)
+            if (!t.isDisplayDirty()) continue;
+            
             String base = t.getName() != null ? t.getName() : "";
             if (showChecklistInfo && t.getChecklistId() != null && taskManager != null) {
                 String cname = taskManager.getChecklistNameById(t.getChecklistId());
@@ -53,6 +57,9 @@ public final class DisplayPrecomputer {
                 cum[i] = (i == 0) ? w : (cum[i - 1] + w);
             }
             t.cachedCumulativeCharWidthsMain = cum;
+            
+            // Mark as clean after computation
+            t.markDisplayClean();
         }
     }
 }

@@ -180,14 +180,13 @@ public class TaskManager {
 
     /**
      * Returns direct subtasks (one level) for the given parent id.
+     * Uses cached version for better performance.
      */
     public List<Task> getSubtasks(String parentId) {
-        List<Task> out = new ArrayList<>();
-        if (parentId == null) return out;
-        for (Task t : getAllTasks()) {
-            if (parentId.equals(t.getParentId())) out.add(t);
-        }
-        return out;
+        if (parentId == null) return new ArrayList<>();
+        rebuildSubtasksCacheIfNeeded();
+        java.util.List<Task> list = cachedSubtasksByParent.get(parentId);
+        return list == null ? new ArrayList<>() : new ArrayList<>(list); // Return mutable copy
     }
 
     /**
