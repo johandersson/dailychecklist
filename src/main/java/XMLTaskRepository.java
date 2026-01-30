@@ -672,6 +672,26 @@ public class XMLTaskRepository implements TaskRepository {
     @Override
     public synchronized void setTasks(List<Task> tasks) {
         try {
+            // Log incoming restore payload for debugging (append mode)
+            java.util.logging.Logger _log = java.util.logging.Logger.getLogger(XMLTaskRepository.class.getName());
+            try {
+                File logFile = new File(ApplicationConfiguration.APPLICATION_DATA_DIR, "restore-debug.log");
+                if (logFile.getParentFile() != null) logFile.getParentFile().mkdirs();
+                try (java.io.PrintWriter pw = new java.io.PrintWriter(new java.io.FileWriter(logFile, true))) {
+                    pw.println("=== restore setTasks at " + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()));
+                    pw.println("incoming tasks: " + (tasks == null ? 0 : tasks.size()));
+                    if (tasks != null) {
+                        int _i = 0;
+                        for (Task _t : tasks) {
+                            _i++;
+                            pw.println(String.format("%d id=%s checklistId=%s type=%s name=%s", _i, _t.getId(), _t.getChecklistId(), _t.getType(), _t.getName()));
+                        }
+                    }
+                    pw.println();
+                }
+            } catch (Exception ex) {
+                _log.log(java.util.logging.Level.WARNING, "Failed to write restore debug log", ex);
+            }
             // Create a backup before replacing all tasks
             if (backupManager != null) {
                 backupManager.createBackup("before-set-all-tasks");

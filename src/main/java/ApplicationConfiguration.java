@@ -35,7 +35,7 @@ public final class ApplicationConfiguration {
     public static final String CHECKLIST_NAMES_FILE_NAME = "checklist-names.properties";
 
     // Backup configuration
-    public static final int MAX_BACKUP_FILES = 30;
+    public static final int MAX_BACKUP_FILES = 10;
     public static final long BACKUP_INTERVAL_MINUTES = 5;
     public static final long BACKUP_INTERVAL_MILLIS = BACKUP_INTERVAL_MINUTES * 60 * 1000;
 

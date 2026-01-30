@@ -28,6 +28,7 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
@@ -46,7 +47,13 @@ public class BackupRestoreDialog {
         if (chosen == null) return;
 
         Map<String,String> checklists = readChecklistsFromZip(chosen);
-        List<Task> backupTasks = loadBackupTasks(chosen);
+        List<Task> backupTasks;
+        try {
+            backupTasks = loadBackupTasks(chosen);
+        } catch (Exception e) {
+            ErrorDialog.showError(parent, "Failed to load backup tasks", e);
+            return;
+        }
         if (backupTasks == null) {
             ErrorDialog.showError(parent, "Failed to load backup tasks.");
             return;
@@ -149,34 +156,48 @@ public class BackupRestoreDialog {
 
     private static Runnable createOnRestoreRunnable(RestoreContext ctx) {
         return () -> {
+            // Run restore in background with progress dialog so UI remains responsive
             File liveBackup = backupLiveData();
-            if (!ctx.checklistsCopy.isEmpty()) mergeChecklistsToLive(ctx.checklistsCopy);
-            List<Task> merged = new ArrayList<>(ctx.currentTasks);
-            java.util.Set<String> mergedIds = merged.stream().map(Task::getId).collect(Collectors.toSet());
-            for (Task t : ctx.customTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
-            for (Task t : ctx.morningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
-            for (Task t : ctx.eveningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
-            try {
-                ctx.taskManager.setTasks(merged);
-                ctx.updateTasks.run();
-                JOptionPane.showMessageDialog(ctx.parent, "Imported tasks and merged checklists." + (liveBackup!=null?" (backup created)":""), "Import Complete", JOptionPane.INFORMATION_MESSAGE);
-            } catch (RuntimeException e) {
-                ErrorDialog.showError(ctx.parent, "Failed to import tasks", e);
-            }
+            Runnable work = () -> {
+                try {
+                    if (!ctx.checklistsCopy.isEmpty()) mergeChecklistsToLive(ctx.checklistsCopy);
+                    List<Task> merged = new ArrayList<>(ctx.currentTasks);
+                    java.util.Set<String> mergedIds = merged.stream().map(Task::getId).collect(Collectors.toSet());
+                    for (Task t : ctx.customTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
+                    for (Task t : ctx.morningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
+                    for (Task t : ctx.eveningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
+                    ctx.taskManager.setTasks(merged);
+                    SwingUtilities.invokeLater(() -> {
+                        ctx.updateTasks.run();
+                        JOptionPane.showMessageDialog(ctx.parent, "Imported tasks and merged checklists." + (liveBackup!=null?" (backup created)":""), "Import Complete", JOptionPane.INFORMATION_MESSAGE);
+                    });
+                } catch (RuntimeException e) {
+                    SwingUtilities.invokeLater(() -> ErrorDialog.showError(ctx.parent, "Failed to import tasks", e));
+                }
+            };
+            RestoreProgressDialog dlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Importing backup");
+            dlg.runTask(work);
         };
     }
 
     private static Runnable createOnReplaceRunnable(RestoreContext ctx, List<Task> backupTasks) {
         return () -> {
+            // Run replace in background with progress dialog so UI remains responsive
             File liveBackup = backupLiveData();
-            if (!ctx.checklistsCopy.isEmpty()) mergeChecklistsToLive(ctx.checklistsCopy);
-            try {
-                ctx.taskManager.setTasks(new ArrayList<>(backupTasks));
-                ctx.updateTasks.run();
-                JOptionPane.showMessageDialog(ctx.parent, "Replaced current tasks with backup." + (liveBackup!=null?" (backup created)":""), "Restore Complete", JOptionPane.INFORMATION_MESSAGE);
-            } catch (RuntimeException e) {
-                ErrorDialog.showError(ctx.parent, "Failed to restore tasks", e);
-            }
+            Runnable work = () -> {
+                try {
+                    if (!ctx.checklistsCopy.isEmpty()) mergeChecklistsToLive(ctx.checklistsCopy);
+                    ctx.taskManager.setTasks(new ArrayList<>(backupTasks));
+                    SwingUtilities.invokeLater(() -> {
+                        ctx.updateTasks.run();
+                        JOptionPane.showMessageDialog(ctx.parent, "Replaced current tasks with backup." + (liveBackup!=null?" (backup created)":""), "Restore Complete", JOptionPane.INFORMATION_MESSAGE);
+                    });
+                } catch (RuntimeException e) {
+                    SwingUtilities.invokeLater(() -> ErrorDialog.showError(ctx.parent, "Failed to restore tasks", e));
+                }
+            };
+            RestoreProgressDialog dlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Restoring backup");
+            dlg.runTask(work);
         };
     }
 
@@ -192,6 +213,26 @@ public class BackupRestoreDialog {
                 // ensure directory exists
                 new File(ApplicationConfiguration.APPLICATION_DATA_DIR).mkdirs();
             }
+            // Log merge activity for diagnostics (UTF-8)
+            try {
+                java.nio.file.Path logPath = java.nio.file.Paths.get(ApplicationConfiguration.APPLICATION_DATA_DIR, "restore-merge.log");
+                java.nio.file.Files.createDirectories(logPath.getParent());
+                try (java.io.OutputStreamWriter lw = new java.io.OutputStreamWriter(new java.io.FileOutputStream(logPath.toFile(), true), StandardCharsets.UTF_8)) {
+                    lw.write("=== mergeChecklistsToLive at " + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()) + "\n");
+                    lw.write("Incoming checklist entries (from backup):\n");
+                    for (Map.Entry<String,String> e : checklists.entrySet()) {
+                        lw.write(e.getKey() + "=" + e.getValue() + "\n");
+                    }
+                    lw.write("Live registry before merge:\n");
+                    for (String k : live.stringPropertyNames()) {
+                        lw.write(k + "=" + live.getProperty(k) + "\n");
+                    }
+                    lw.write("---\n");
+                    lw.flush();
+                }
+            } catch (Exception logEx) {
+                java.util.logging.Logger.getLogger(BackupRestoreDialog.class.getName()).log(java.util.logging.Level.WARNING, "Failed to write restore merge log", logEx);
+            }
             boolean changed = false;
             for (Map.Entry<String,String> e : checklists.entrySet()) {
                 if (!live.containsKey(e.getKey())) {
@@ -202,6 +243,20 @@ public class BackupRestoreDialog {
             if (changed) {
                 try (java.io.OutputStreamWriter w = new java.io.OutputStreamWriter(new java.io.FileOutputStream(f), StandardCharsets.UTF_8)) {
                     live.store(w, "Merged from backup on " + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()));
+                }
+                // Append resulting registry to the merge log
+                try {
+                    java.nio.file.Path logPath = java.nio.file.Paths.get(ApplicationConfiguration.APPLICATION_DATA_DIR, "restore-merge.log");
+                    try (java.io.OutputStreamWriter lw = new java.io.OutputStreamWriter(new java.io.FileOutputStream(logPath.toFile(), true), StandardCharsets.UTF_8)) {
+                        lw.write("Live registry after merge:\n");
+                        for (String k : live.stringPropertyNames()) {
+                            lw.write(k + "=" + live.getProperty(k) + "\n");
+                        }
+                        lw.write("=== end merge\n\n");
+                        lw.flush();
+                    }
+                } catch (Exception logEx) {
+                    java.util.logging.Logger.getLogger(BackupRestoreDialog.class.getName()).log(java.util.logging.Level.WARNING, "Failed to append restore merge log", logEx);
                 }
             }
         } catch (java.io.IOException ex) {
@@ -250,7 +305,7 @@ public class BackupRestoreDialog {
 
     // findLatestBackup removed: unused helper
 
-    private static List<Task> loadBackupTasks(File backupFile) {
+    private static List<Task> loadBackupTasks(File backupFile) throws Exception {
         try (java.util.zip.ZipFile zipFile = new java.util.zip.ZipFile(backupFile)) {
             java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zipFile.entries();
             while (entries.hasMoreElements()) {
@@ -273,8 +328,6 @@ public class BackupRestoreDialog {
                     return tasks;
                 }
             }
-            return null;
-        } catch (javax.xml.parsers.ParserConfigurationException | org.xml.sax.SAXException | java.io.IOException e) {
             return null;
         }
     }

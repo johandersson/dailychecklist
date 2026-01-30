@@ -57,6 +57,23 @@ public class Main {
             // Update the repository parent component for error dialogs
             ((XMLTaskRepository) checklist.getRepository()).setParentComponent(checklist.getFrame());
 
+            // Write test logs for debugging (immediate on startup)
+            try {
+                java.nio.file.Path mergeLog = java.nio.file.Paths.get(ApplicationConfiguration.APPLICATION_DATA_DIR, "restore-merge.log");
+                java.nio.file.Files.createDirectories(mergeLog.getParent());
+                try (java.io.OutputStreamWriter w = new java.io.OutputStreamWriter(new java.io.FileOutputStream(mergeLog.toFile(), true), java.nio.charset.StandardCharsets.UTF_8)) {
+                    w.write("=== TEST startup merge log at " + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()) + "\n");
+                    w.flush();
+                }
+                java.nio.file.Path debugLog = java.nio.file.Paths.get(ApplicationConfiguration.APPLICATION_DATA_DIR, "restore-debug.log");
+                try (java.io.OutputStreamWriter w = new java.io.OutputStreamWriter(new java.io.FileOutputStream(debugLog.toFile(), true), java.nio.charset.StandardCharsets.UTF_8)) {
+                    w.write("=== TEST startup debug log at " + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()) + "\n");
+                    w.flush();
+                }
+            } catch (Exception ex) {
+                // ignore test log failures
+            }
+
             // Start background services
             lifecycleManager.start();
 

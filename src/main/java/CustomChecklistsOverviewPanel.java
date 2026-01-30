@@ -534,44 +534,32 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             java.util.Set<String> names = new java.util.HashSet<>();
             for (Checklist c : selected) { if (c != null) { ids.add(c.getId()); names.add(c.getName()); } }
 
-            boolean hasTasks = taskManager.getAllTasks().stream().anyMatch(t -> t.getChecklistId() != null && ids.contains(t.getChecklistId()));
+                // Always delete tasks belonging to the selected custom checklists.
+                // Do not offer options to move tasks to Morning/Evening when deleting custom lists.
+                boolean single = selected.size() == 1;
+                String title = single ? "Delete Checklist" : "Delete Checklists";
+                String prompt = single
+                    ? "Delete the selected checklist. Tasks contained in it will also be deleted."
+                    : "Delete the selected checklists. Tasks contained in them will also be deleted.";
+                String deleteLabel = single ? "Delete list" : "Delete lists";
+                int choice = JOptionPane.showOptionDialog(this,
+                    prompt,
+                    title,
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    new Object[] { deleteLabel, "Cancel" },
+                    "Cancel");
+                if (choice != 0) return;
 
-            Object[] options;
-            if (hasTasks) {
-                options = new Object[]{"Delete lists", "Move to morning", "Move to evening", "Cancel"};
-            } else {
-                options = new Object[]{"Delete lists", "Cancel"};
-            }
-            int defaultOption = options.length - 1;
-            int choice = JOptionPane.showOptionDialog(this, "What to do with the tasks in the selected checklist(s)?", "Delete Checklists", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[defaultOption]);
-            if (choice < 0 || choice == defaultOption) return;
-
-            if (!hasTasks) {
-                List<Task> allTasks = taskManager.getAllTasks();
-                java.util.List<Task> toRemove = new java.util.ArrayList<>();
-                for (Task task : allTasks) {
-                    if (task.getChecklistId() != null && ids.contains(task.getChecklistId())) {
-                        toRemove.add(task);
-                    }
-                }
-                for (Task t : toRemove) taskManager.removeTask(t);
-            } else {
-                switch (choice) {
-                    case 0 -> {
-                        List<Task> allTasks = taskManager.getAllTasks();
-                        java.util.List<Task> toRemove = new java.util.ArrayList<>();
-                        for (Task task : allTasks) {
-                            if (task.getChecklistId() != null && ids.contains(task.getChecklistId())) {
-                                toRemove.add(task);
-                            }
-                        }
-                        for (Task t : toRemove) taskManager.removeTask(t);
-                    }
-                    case 1 -> moveTasksToTypeMultiple(ids, TaskType.MORNING);
-                    case 2 -> moveTasksToTypeMultiple(ids, TaskType.EVENING);
-                    default -> { return; }
+            List<Task> allTasks = taskManager.getAllTasks();
+            java.util.List<Task> toRemove = new java.util.ArrayList<>();
+            for (Task task : allTasks) {
+                if (task.getChecklistId() != null && ids.contains(task.getChecklistId())) {
+                    toRemove.add(task);
                 }
             }
+            for (Task t : toRemove) taskManager.removeTask(t);
 
             // Remove reminders for deleted checklists
             removeRemindersForChecklists(names);
