@@ -46,19 +46,28 @@ public class BackupRestoreDialog {
         File chosen = chooseBackupFile(parent);
         if (chosen == null) return;
 
-        Map<String,String> checklists = readChecklistsFromZip(chosen);
-        List<Task> backupTasks;
-        try {
-            backupTasks = loadBackupTasks(chosen);
-        } catch (Exception e) {
-            ErrorDialog.showError(parent, "Failed to load backup tasks", e);
-            return;
-        }
-        if (backupTasks == null) {
-            ErrorDialog.showError(parent, "Failed to load backup tasks.");
-            return;
-        }
+        // Load backup data with progress dialog
+        RestoreProgressDialog loadDlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(parent), "Loading backup file");
+        loadDlg.runTask(() -> {
+            Map<String,String> checklists = readChecklistsFromZip(chosen);
+            List<Task> backupTasks;
+            try {
+                backupTasks = loadBackupTasks(chosen);
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> ErrorDialog.showError(parent, "Failed to load backup tasks", e));
+                return;
+            }
+            if (backupTasks == null) {
+                SwingUtilities.invokeLater(() -> ErrorDialog.showError(parent, "Failed to load backup tasks."));
+                return;
+            }
 
+            // Continue on EDT with loaded data
+            SwingUtilities.invokeLater(() -> showRestorePreview(parent, taskManager, updateTasks, chosen, checklists, backupTasks));
+        });
+    }
+
+    private static void showRestorePreview(Component parent, TaskManager taskManager, Runnable updateTasks, File chosen, Map<String,String> checklists, List<Task> backupTasks) {
         List<Task> morningTasks = backupTasks.stream().filter(t -> t.getType() == TaskType.MORNING).collect(Collectors.toList());
         List<Task> eveningTasks = backupTasks.stream().filter(t -> t.getType() == TaskType.EVENING).collect(Collectors.toList());
         List<Task> customTasks = backupTasks.stream().filter(t -> t.getType() == TaskType.CUSTOM).collect(Collectors.toList());
