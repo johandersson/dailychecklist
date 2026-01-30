@@ -57,3 +57,6 @@ coverage-report/
 jacoco.exec
 coverage.csv
 codestandards/
+
+# Local files (large datasets and generation scripts)
+local/
