@@ -425,8 +425,14 @@ public class CustomChecklistPanel extends JPanel {
         java.awt.Cursor normalCursor = getCursor();
         setCursor(busyCursor);
 
-        // Load and update tasks directly without progress dialog for better responsiveness
-        loadAndUpdateTasks(selectedTasks, () -> setCursor(normalCursor));
+        try {
+            // Load and update tasks directly without progress dialog for better responsiveness
+            loadAndUpdateTasks(selectedTasks, () -> setCursor(normalCursor));
+        } catch (Exception e) {
+            // Ensure cursor is reset even if setup fails
+            setCursor(normalCursor);
+            throw e;
+        }
     }
 
     private void loadAndUpdateTasks(java.util.List<Task> selectedTasks, Runnable onComplete) {
@@ -444,7 +450,11 @@ public class CustomChecklistPanel extends JPanel {
             }
             return bundle;
         }).thenAccept(bundle -> {
-            if (bundle == null) return;
+            if (bundle == null) {
+                // Ensure callback is called even on error
+                if (onComplete != null) onComplete.run();
+                return;
+            }
             
             // Continue on EDT with loaded data
             final List<Task> finalTasks = bundle.customs;
@@ -506,6 +516,11 @@ public class CustomChecklistPanel extends JPanel {
                     if (onComplete != null) onComplete.run();
                 }
             });
+        }).exceptionally(throwable -> {
+            // Ensure callback is called even on async failure
+            java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Async task loading failed", throwable);
+            if (onComplete != null) onComplete.run();
+            return null;
         });
     }
 
