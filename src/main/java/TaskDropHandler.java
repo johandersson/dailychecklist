@@ -100,12 +100,22 @@ public final class TaskDropHandler {
         }
 
         // Persist parent/type/checklist changes first
-        taskManager.updateTasks(toPersist);
+        // Do persistence in background to avoid blocking EDT
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                taskManager.updateTasks(toPersist);
+                // Persist full checklist ordering using the model
+                TaskOrderPersister.persist(model, checklistName, taskManager);
+            } catch (Exception e) {
+                DebugLog.d("Error during drop persistence: %s", e.getMessage());
+            }
+        }).thenRun(() -> {
+            // Update all panels after persistence completes
+            if (updateAllPanels != null) {
+                javax.swing.SwingUtilities.invokeLater(updateAllPanels);
+            }
+        });
 
-        // Persist full checklist ordering using the model
-        TaskOrderPersister.persist(model, checklistName, taskManager);
-
-        if (updateAllPanels != null) updateAllPanels.run();
         return true;
     }
 

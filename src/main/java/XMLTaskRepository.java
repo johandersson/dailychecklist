@@ -557,17 +557,34 @@ public class XMLTaskRepository implements TaskRepository {
             rwLock.writeLock().lock();
             try {
                 if (cachedTasks == null) getCachedTasks();
-                // Replace or add each task
+                // Replace or add each task - use taskMap for O(1) lookup when available
                 for (Task t : tasks) {
-                    boolean found = false;
-                    for (int i = 0; i < cachedTasks.size(); i++) {
-                        if (cachedTasks.get(i).getId().equals(t.getId())) {
-                            cachedTasks.set(i, t);
-                            found = true;
-                            break;
+                    if (taskMap != null) {
+                        // Use map for fast lookup
+                        Task existing = taskMap.get(t.getId());
+                        if (existing != null) {
+                            // Update in cachedTasks list
+                            for (int i = 0; i < cachedTasks.size(); i++) {
+                                if (cachedTasks.get(i).getId().equals(t.getId())) {
+                                    cachedTasks.set(i, t);
+                                    break;
+                                }
+                            }
+                        } else {
+                            cachedTasks.add(t);
                         }
+                    } else {
+                        // Fallback to linear search
+                        boolean found = false;
+                        for (int i = 0; i < cachedTasks.size(); i++) {
+                            if (cachedTasks.get(i).getId().equals(t.getId())) {
+                                cachedTasks.set(i, t);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) cachedTasks.add(t);
                     }
-                    if (!found) cachedTasks.add(t);
                 }
                 rebuildMapsFromCachedTasks();
                 tasksCacheDirty = false;
@@ -599,15 +616,32 @@ public class XMLTaskRepository implements TaskRepository {
             try {
                 if (cachedTasks == null) getCachedTasks();
                 for (Task t : tasks) {
-                    boolean found = false;
-                    for (int i = 0; i < cachedTasks.size(); i++) {
-                        if (cachedTasks.get(i).getId().equals(t.getId())) {
-                            cachedTasks.set(i, t);
-                            found = true;
-                            break;
+                    if (taskMap != null) {
+                        // Use map for fast lookup
+                        Task existing = taskMap.get(t.getId());
+                        if (existing != null) {
+                            // Update in cachedTasks list
+                            for (int i = 0; i < cachedTasks.size(); i++) {
+                                if (cachedTasks.get(i).getId().equals(t.getId())) {
+                                    cachedTasks.set(i, t);
+                                    break;
+                                }
+                            }
+                        } else {
+                            cachedTasks.add(t);
                         }
+                    } else {
+                        // Fallback to linear search
+                        boolean found = false;
+                        for (int i = 0; i < cachedTasks.size(); i++) {
+                            if (cachedTasks.get(i).getId().equals(t.getId())) {
+                                cachedTasks.set(i, t);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) cachedTasks.add(t);
                     }
-                    if (!found) cachedTasks.add(t);
                 }
                 rebuildMapsFromCachedTasks();
                 tasksCacheDirty = false;
