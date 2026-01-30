@@ -524,36 +524,54 @@ public class ChecklistPanel extends JPanel {
         java.util.List<Task> selectedMorningTasks = morningTaskList.getSelectedValuesList();
         java.util.List<Task> selectedEveningTasks = eveningTaskList.getSelectedValuesList();
 
-        // Show progress dialog for loading and updating large task lists
-        RestoreProgressDialog progressDlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(this), "Loading tasks");
-        progressDlg.runTask(() -> {
-            // Load tasks off the EDT
-            List<Task> allTasks = null;
+        // Check if we need a progress dialog (only for large task sets)
+        boolean showProgress = false;
+        try {
+            List<Task> existingTasks = taskManager.getAllTasks();
+            showProgress = existingTasks != null && existingTasks.size() > 500; // Only show for very large datasets
+        } catch (Exception e) {
+            // If we can't check, assume small
+        }
+
+        Runnable backgroundTask = () -> loadAndUpdateTasks(selectedMorningTasks, selectedEveningTasks);
+
+        if (showProgress) {
+            // Show progress dialog for loading and updating large task lists
+            RestoreProgressDialog progressDlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(this), "Loading tasks");
+            progressDlg.runTask(backgroundTask);
+        } else {
+            // Load directly without progress dialog for small task sets
+            backgroundTask.run();
+        }
+    }
+
+    private void loadAndUpdateTasks(java.util.List<Task> selectedMorningTasks, java.util.List<Task> selectedEveningTasks) {
+        // Load tasks off the EDT
+        List<Task> allTasks = null;
+        try {
+            allTasks = taskManager.getAllTasks();
+        } catch (Exception e) {
+            java.util.logging.Logger.getLogger(ChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading tasks in background", e);
+            return;
+        }
+
+        // Continue on EDT with loaded data
+        final List<Task> finalAllTasks = allTasks;
+        SwingUtilities.invokeLater(() -> {
             try {
-                allTasks = taskManager.getAllTasks();
+                taskUpdater.updateTasks(finalAllTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected(), taskManager);
+
+                // Restore selections after updating
+                restoreSelections(morningTaskList, morningListModel, selectedMorningTasks);
+                restoreSelections(eveningTaskList, eveningListModel, selectedEveningTasks);
+
+                morningTaskList.revalidate();
+                morningTaskList.repaint();
+                eveningTaskList.revalidate();
+                eveningTaskList.repaint();
             } catch (Exception e) {
-                java.util.logging.Logger.getLogger(ChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading tasks in background", e);
-                return;
+                java.util.logging.Logger.getLogger(ChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating task lists", e);
             }
-
-            // Continue on EDT with loaded data
-            final List<Task> finalAllTasks = allTasks;
-            SwingUtilities.invokeLater(() -> {
-                try {
-                    taskUpdater.updateTasks(finalAllTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected(), taskManager);
-
-                    // Restore selections after updating
-                    restoreSelections(morningTaskList, morningListModel, selectedMorningTasks);
-                    restoreSelections(eveningTaskList, eveningListModel, selectedEveningTasks);
-
-                    morningTaskList.revalidate();
-                    morningTaskList.repaint();
-                    eveningTaskList.revalidate();
-                    eveningTaskList.repaint();
-                } catch (Exception e) {
-                    java.util.logging.Logger.getLogger(ChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating task lists", e);
-                }
-            });
         });
     }
 
