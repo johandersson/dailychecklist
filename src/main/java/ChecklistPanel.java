@@ -524,11 +524,11 @@ public class ChecklistPanel extends JPanel {
         java.util.List<Task> selectedMorningTasks = morningTaskList.getSelectedValuesList();
         java.util.List<Task> selectedEveningTasks = eveningTaskList.getSelectedValuesList();
 
-        // Check if we need a progress dialog (only for very large task sets)
+        // Check if we need a progress dialog (only for extremely large task sets)
         boolean showProgress = false;
         try {
             List<Task> existingTasks = taskManager.getAllTasks();
-            showProgress = existingTasks != null && existingTasks.size() > 2000; // Only show for very large datasets
+            showProgress = existingTasks != null && existingTasks.size() > 50000; // Only show for extremely large datasets
         } catch (Exception e) {
             // If we can't check, don't show progress
         }
