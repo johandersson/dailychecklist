@@ -87,14 +87,20 @@ public class TaskMoveHandler {
                 retryTimer.addActionListener(evt -> {
                     attempts[0]++;
                     try {
+                        // Build HashMap for O(1) task ID to model index lookup
+                        java.util.Map<String, Integer> taskIdToIndex = new java.util.HashMap<>();
+                        for (int i = 0; i < listModel.getSize(); i++) {
+                            Task modelTask = listModel.get(i);
+                            if (modelTask != null) {
+                                taskIdToIndex.put(modelTask.getId(), i);
+                            }
+                        }
+                        
                         java.util.List<Integer> indices = new java.util.ArrayList<>();
                         for (Task t : tasks) {
-                            for (int i = 0; i < listModel.getSize(); i++) {
-                                Task modelTask = listModel.get(i);
-                                if (modelTask != null && modelTask.getId().equals(t.getId())) {
-                                    indices.add(i);
-                                    break;
-                                }
+                            Integer index = taskIdToIndex.get(t.getId());
+                            if (index != null) {
+                                indices.add(index);
                             }
                         }
                         if (!indices.isEmpty()) {
@@ -121,14 +127,20 @@ public class TaskMoveHandler {
                 retryTimer.setRepeats(true);
                 retryTimer.start();
             } else {
+                // Build HashMap for O(1) task ID to model index lookup
+                java.util.Map<String, Integer> taskIdToIndex = new java.util.HashMap<>();
+                for (int i = 0; i < listModel.getSize(); i++) {
+                    Task modelTask = listModel.get(i);
+                    if (modelTask != null) {
+                        taskIdToIndex.put(modelTask.getId(), i);
+                    }
+                }
+                
                 java.util.List<Integer> indices = new java.util.ArrayList<>();
                 for (Task t : tasks) {
-                    for (int i = 0; i < listModel.getSize(); i++) {
-                        Task modelTask = listModel.get(i);
-                        if (modelTask != null && modelTask.getId().equals(t.getId())) {
-                            indices.add(i);
-                            break;
-                        }
+                    Integer index = taskIdToIndex.get(t.getId());
+                    if (index != null) {
+                        indices.add(index);
                     }
                 }
                 if (!indices.isEmpty()) {

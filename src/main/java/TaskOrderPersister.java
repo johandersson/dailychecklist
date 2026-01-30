@@ -9,9 +9,8 @@ public final class TaskOrderPersister {
     private TaskOrderPersister() {}
 
     public static void persist(DefaultListModel<Task> listModel, String checklistName, TaskManager taskManager) {
-        List<Task> allTasks = new ArrayList<>(taskManager.getAllTasks());
-
-        List<Task> checklistTasks = collectChecklistTasks(allTasks, checklistName, taskManager);
+        // Get only tasks for this checklist instead of copying all tasks
+        List<Task> checklistTasks = collectChecklistTasks(checklistName, taskManager);
         DebugLog.d("TaskOrderPersister.persist: checklist=%s checklistTasksCount=%d", checklistName, checklistTasks.size());
         StringBuilder ctIds = new StringBuilder();
         for (int i = 0; i < checklistTasks.size(); i++) ctIds.append(i == 0 ? "" : ",").append(checklistTasks.get(i).getId());
@@ -23,6 +22,8 @@ public final class TaskOrderPersister {
         for (int i = 0; i < reorderedTasks.size(); i++) rtIds.append(i == 0 ? "" : ",").append(reorderedTasks.get(i).getId());
         DebugLog.d("TaskOrderPersister.persist: reorderedTasksIds=%s", rtIds.toString());
 
+        // Get all tasks only when we need to merge the reordered tasks back
+        List<Task> allTasks = new ArrayList<>(taskManager.getAllTasks());
         int startIndex = findChecklistStartIndex(allTasks, checklistName, taskManager);
         DebugLog.d("TaskOrderPersister.persist: startIndex=%d allTasksSize=%d", startIndex, allTasks.size());
 
@@ -51,8 +52,10 @@ public final class TaskOrderPersister {
         taskManager.setTasks(allTasks);
     }
 
-    private static List<Task> collectChecklistTasks(List<Task> allTasks, String checklistName, TaskManager taskManager) {
+    private static List<Task> collectChecklistTasks(String checklistName, TaskManager taskManager) {
         List<Task> checklistTasks = new ArrayList<>();
+        List<Task> allTasks = taskManager.getAllTasks(); // Get reference, don't copy
+        
         for (Task t : allTasks) {
             boolean belongsToChecklist = false;
             if (t.getType() == TaskType.HEADING) {
