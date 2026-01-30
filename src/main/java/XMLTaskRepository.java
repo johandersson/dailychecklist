@@ -453,22 +453,6 @@ public class XMLTaskRepository implements TaskRepository {
         return taskMap.get(id);
     }
 
-    /**
-     * Gets tasks by type using the pre-grouped map.
-     */
-    public List<Task> getTasksByType(TaskType type) {
-        getCachedTasks(); // Ensure cache is loaded
-        return new ArrayList<>(tasksByType.getOrDefault(type, new ArrayList<>()));
-    }
-
-    /**
-     * Gets tasks by checklist name using the pre-grouped map.
-     */
-    public List<Task> getTasksByChecklist(String checklistName) {
-        getCachedTasks(); // Ensure cache is loaded
-        return new ArrayList<>(tasksByChecklist.getOrDefault(checklistName, new ArrayList<>()));
-    }
-
     @Override
     public synchronized void addTask(Task task) {
         // Validate task before saving
