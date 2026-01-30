@@ -420,22 +420,11 @@ public class CustomChecklistPanel extends JPanel {
         // Preserve selections before updating
         java.util.List<Task> selectedTasks = customTaskList.getSelectedValuesList();
 
-        // Show busy cursor during async update
-        java.awt.Cursor busyCursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.WAIT_CURSOR);
-        java.awt.Cursor normalCursor = getCursor();
-        setCursor(busyCursor);
-
-        try {
-            // Load and update tasks directly without progress dialog for better responsiveness
-            loadAndUpdateTasks(selectedTasks, () -> setCursor(normalCursor));
-        } catch (Exception e) {
-            // Ensure cursor is reset even if setup fails
-            setCursor(normalCursor);
-            throw e;
-        }
+        // Load and update tasks directly without progress dialog for better responsiveness
+        loadAndUpdateTasks(selectedTasks);
     }
 
-    private void loadAndUpdateTasks(java.util.List<Task> selectedTasks, Runnable onComplete) {
+    private void loadAndUpdateTasks(java.util.List<Task> selectedTasks) {
         // Load checklist tasks (and headings) in background to avoid blocking EDT
         java.util.concurrent.CompletableFuture.supplyAsync(() -> {
             class ChecklistBundle { List<Task> customs; List<Task> headings; ChecklistBundle(List<Task> c, List<Task> h) { this.customs = c; this.headings = h; } }
@@ -452,12 +441,6 @@ public class CustomChecklistPanel extends JPanel {
         }).thenAccept(bundle -> {
             try {
                 if (bundle == null) {
-                    // Ensure callback is called even on error
-                    try {
-                        if (onComplete != null) onComplete.run();
-                    } catch (Exception e) {
-                        java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error in update completion callback", e);
-                    }
                     return;
                 }
                 
@@ -517,26 +500,14 @@ public class CustomChecklistPanel extends JPanel {
                         customTaskList.repaint();
                     } catch (Exception e) {
                         java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating custom checklist", e);
-                    } finally {
-                        try {
-                            if (onComplete != null) onComplete.run();
-                        } catch (Exception e) {
-                            java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error in update completion callback", e);
-                        }
                     }
                 });
             } catch (Exception e) {
                 java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error in async update", e);
-                try {
-                    if (onComplete != null) onComplete.run();
-                } catch (Exception ex) {
-                    java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error in update completion callback", ex);
-                }
             }
         }).exceptionally(throwable -> {
-            // Ensure callback is called even on async failure
+            // Log async failure
             java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Async task loading failed", throwable);
-            if (onComplete != null) onComplete.run();
             return null;
         });
     }
