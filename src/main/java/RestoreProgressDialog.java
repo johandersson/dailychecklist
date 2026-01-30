@@ -22,14 +22,14 @@ public class RestoreProgressDialog extends JDialog {
         setModal(false); // non-blocking
         initComponents();
         // Timer updates the progress animation and time label
-        tick = new Timer(200, new ActionListener() {
+        tick = new Timer(100, new ActionListener() {
             private int simulated = 0;
             @Override
             public void actionPerformed(ActionEvent e) {
                 long elapsed = System.currentTimeMillis() - startMillis;
                 // Simple simulated progress: ramp up to 95% while not done
                 if (!done) {
-                    simulated = Math.min(95, simulated + Math.max(1, 200 / 200));
+                    simulated = Math.min(95, simulated + 5);
                     progressBar.setValue(simulated);
                 }
                 // If done, ensure completion
@@ -88,8 +88,10 @@ public class RestoreProgressDialog extends JDialog {
                 backgroundTask.run();
             } finally {
                 done = true;
-                // allow a short delay so user sees 100%
-                try { Thread.sleep(300); } catch (InterruptedException ignored) {}
+                // Ensure dialog is visible for at least 500ms
+                long elapsed = System.currentTimeMillis() - startMillis;
+                long remaining = Math.max(0, 500 - elapsed);
+                try { Thread.sleep(remaining); } catch (InterruptedException ignored) {}
                 SwingUtilities.invokeLater(() -> {
                     tick.stop();
                     setVisible(false);
