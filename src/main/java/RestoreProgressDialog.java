@@ -74,6 +74,7 @@ public class RestoreProgressDialog extends JDialog {
     }
 
     private volatile Runnable completionRunnable;
+    private volatile boolean timedOut = false;
 
     /**
      * Run the provided background task while showing this dialog.
@@ -91,6 +92,7 @@ public class RestoreProgressDialog extends JDialog {
         this.completionRunnable = completionRunnable;
         startMillis = System.currentTimeMillis();
         done = false;
+        timedOut = false;
         tick.start();
         setVisible(true);
         // Run background task off the EDT
@@ -104,16 +106,34 @@ public class RestoreProgressDialog extends JDialog {
                 long remaining = Math.max(0, 500 - elapsed);
                 try { Thread.sleep(remaining); } catch (InterruptedException ignored) {}
                 SwingUtilities.invokeLater(() -> {
-                    tick.stop();
-                    setVisible(false);
-                    dispose();
-                    if (completionRunnable != null) {
-                        completionRunnable.run();
+                    if (!timedOut) {
+                        tick.stop();
+                        setVisible(false);
+                        dispose();
+                        if (completionRunnable != null) {
+                            completionRunnable.run();
+                        }
                     }
                 });
             }
         }, "RestoreProgressWorker");
         worker.setDaemon(true);
         worker.start();
+
+        // Add timeout to prevent stuck dialogs
+        Timer timeoutTimer = new Timer(30000, e -> { // 30 seconds timeout
+            timedOut = true;
+            SwingUtilities.invokeLater(() -> {
+                tick.stop();
+                setVisible(false);
+                dispose();
+                System.err.println("[RestoreProgressDialog] Task timed out after 30 seconds");
+                if (completionRunnable != null) {
+                    completionRunnable.run();
+                }
+            });
+        });
+        timeoutTimer.setRepeats(false);
+        timeoutTimer.start();
     }
 }
