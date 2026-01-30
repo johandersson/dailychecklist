@@ -558,6 +558,9 @@ public class ChecklistPanel extends JPanel {
                     java.util.logging.Logger.getLogger(ChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating task lists", e);
                 }
             });
+        }).exceptionally(throwable -> {
+            java.util.logging.Logger.getLogger(ChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Async task loading failed", throwable);
+            return null;
         });
     }
 
