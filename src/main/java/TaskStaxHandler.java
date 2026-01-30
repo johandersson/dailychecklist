@@ -121,7 +121,7 @@ public class TaskStaxHandler {
     }
 
     public void checkAndResetPastDoneDate(Task task, String today) throws java.text.ParseException {
-        if (task.isDone() && task.getDoneDate() != null) {
+        if (task.isDone() && task.getDoneDate() != null && !task.getDoneDate().trim().isEmpty()) {
             java.util.Date doneDate = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(task.getDoneDate());
             java.util.Date todayDate = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(today);
             if (doneDate.before(todayDate)) {

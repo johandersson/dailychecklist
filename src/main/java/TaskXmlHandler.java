@@ -56,6 +56,9 @@ public class TaskXmlHandler {
      * Gets the parsed Date for a date string, using cache to avoid repeated parsing.
      */
     private java.util.Date getParsedDate(String dateStr) throws ParseException {
+        if (dateStr == null || dateStr.trim().isEmpty()) {
+            return null;
+        }
         if (!dateCache.containsKey(dateStr)) {
             dateCache.put(dateStr, new SimpleDateFormat("yyyy-MM-dd").parse(dateStr));
         }
