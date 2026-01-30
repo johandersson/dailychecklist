@@ -450,72 +450,89 @@ public class CustomChecklistPanel extends JPanel {
             }
             return bundle;
         }).thenAccept(bundle -> {
-            if (bundle == null) {
-                // Ensure callback is called even on error
-                if (onComplete != null) onComplete.run();
-                return;
-            }
-            
-            // Continue on EDT with loaded data
-            final List<Task> finalTasks = bundle.customs;
-            final List<Task> finalHeadings = bundle.headings;
-            SwingUtilities.invokeLater(() -> {
-                try {
-                    List<Task> tasks = finalTasks;
-                    List<Task> headings = finalHeadings;
-                    java.util.Map<String, Task> headingByParent = new java.util.HashMap<>();
-                    if (headings != null) {
-                        for (Task h : headings) {
-                            if (h.getParentId() != null) headingByParent.put(h.getParentId(), h);
-                        }
+            try {
+                if (bundle == null) {
+                    // Ensure callback is called even on error
+                    try {
+                        if (onComplete != null) onComplete.run();
+                    } catch (Exception e) {
+                        java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error in update completion callback", e);
                     }
+                    return;
+                }
+                
+                // Continue on EDT with loaded data
+                final List<Task> finalTasks = bundle.customs;
+                final List<Task> finalHeadings = bundle.headings;
+                SwingUtilities.invokeLater(() -> {
+                    try {
+                        List<Task> tasks = finalTasks;
+                        List<Task> headings = finalHeadings;
+                        java.util.Map<String, Task> headingByParent = new java.util.HashMap<>();
+                        if (headings != null) {
+                            for (Task h : headings) {
+                                if (h.getParentId() != null) headingByParent.put(h.getParentId(), h);
+                            }
+                        }
 
-                    // For custom checklists we want parents followed by their direct subtasks.
-                    java.util.List<Task> parents = new java.util.ArrayList<>();
-                    for (Task t : tasks) {
-                        if (t.getParentId() == null) {
-                            parents.add(t);
+                        // For custom checklists we want parents followed by their direct subtasks.
+                        java.util.List<Task> parents = new java.util.ArrayList<>();
+                        for (Task t : tasks) {
+                            if (t.getParentId() == null) {
+                                parents.add(t);
+                            }
                         }
-                    }
-                    java.util.List<Task> desired = new java.util.ArrayList<>();
-                    for (Task p : parents) {
-                        Task heading = headingByParent.get(p.getId());
-                        if (heading != null) desired.add(heading);
-                        desired.add(p);
-                        java.util.List<Task> subs = taskManager.getSubtasksSorted(p.getId());
-                        if (subs != null && !subs.isEmpty()) {
-                            for (Task s : subs) {
-                                if (p.getChecklistId() == null) {
-                                    if (s.getChecklistId() == null) desired.add(s);
-                                } else if (p.getChecklistId().equals(s.getChecklistId())) {
-                                    desired.add(s);
+                        java.util.List<Task> desired = new java.util.ArrayList<>();
+                        for (Task p : parents) {
+                            Task heading = headingByParent.get(p.getId());
+                            if (heading != null) desired.add(heading);
+                            desired.add(p);
+                            java.util.List<Task> subs = taskManager.getSubtasksSorted(p.getId());
+                            if (subs != null && !subs.isEmpty()) {
+                                for (Task s : subs) {
+                                    if (p.getChecklistId() == null) {
+                                        if (s.getChecklistId() == null) desired.add(s);
+                                    } else if (p.getChecklistId().equals(s.getChecklistId())) {
+                                        desired.add(s);
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    // Precompute display strings (include checklist info for custom lists)
-                    DisplayPrecomputer.precomputeForList(desired, taskManager, true);
-                    TaskUpdater.syncModel(customListModel, desired);
+                        // Precompute display strings (include checklist info for custom lists)
+                        DisplayPrecomputer.precomputeForList(desired, taskManager, true);
+                        TaskUpdater.syncModel(customListModel, desired);
 
-                    // Restore selections after updating
-                    for (Task selectedTask : selectedTasks) {
-                        for (int i = 0; i < customListModel.getSize(); i++) {
-                            if (customListModel.getElementAt(i).equals(selectedTask)) {
-                                customTaskList.addSelectionInterval(i, i);
-                                break;
+                        // Restore selections after updating
+                        for (Task selectedTask : selectedTasks) {
+                            for (int i = 0; i < customListModel.getSize(); i++) {
+                                if (customListModel.getElementAt(i).equals(selectedTask)) {
+                                    customTaskList.addSelectionInterval(i, i);
+                                    break;
+                                }
                             }
                         }
-                    }
 
-                    customTaskList.revalidate();
-                    customTaskList.repaint();
-                } catch (Exception e) {
-                    java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating custom checklist", e);
-                } finally {
+                        customTaskList.revalidate();
+                        customTaskList.repaint();
+                    } catch (Exception e) {
+                        java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating custom checklist", e);
+                    } finally {
+                        try {
+                            if (onComplete != null) onComplete.run();
+                        } catch (Exception e) {
+                            java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error in update completion callback", e);
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error in async update", e);
+                try {
                     if (onComplete != null) onComplete.run();
+                } catch (Exception ex) {
+                    java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error in update completion callback", ex);
                 }
-            });
+            }
         }).exceptionally(throwable -> {
             // Ensure callback is called even on async failure
             java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Async task loading failed", throwable);
