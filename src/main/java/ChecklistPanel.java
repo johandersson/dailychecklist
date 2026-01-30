@@ -189,9 +189,25 @@ public class ChecklistPanel extends JPanel {
     }
 
     private void performDeletion(java.util.List<Task> tasksToDelete, java.util.List<Task> extraSubs) {
+        // Preserve selections before updating
+        java.util.List<Task> selectedMorningTasks = morningTaskList.getSelectedValuesList();
+        java.util.List<Task> selectedEveningTasks = eveningTaskList.getSelectedValuesList();
+
         for (Task t : extraSubs) taskManager.removeTask(t);
         for (Task task : tasksToDelete) taskManager.removeTask(task);
-        updateTasks();
+
+        // Update synchronously
+        List<Task> allTasks = taskManager.getAllTasks();
+        taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected(), taskManager);
+
+        // Restore selections after updating
+        restoreSelections(morningTaskList, morningListModel, selectedMorningTasks);
+        restoreSelections(eveningTaskList, eveningListModel, selectedEveningTasks);
+
+        morningTaskList.revalidate();
+        morningTaskList.repaint();
+        eveningTaskList.revalidate();
+        eveningTaskList.repaint();
     }
 
     // Confirmation handled by shared DeleteConfirmationDialog helper
