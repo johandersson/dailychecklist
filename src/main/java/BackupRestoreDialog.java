@@ -176,12 +176,15 @@ public class BackupRestoreDialog {
                     for (Task t : ctx.morningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
                     for (Task t : ctx.eveningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
                     ctx.taskManager.setTasks(merged);
-                    SwingUtilities.invokeLater(() -> {
-                        ctx.updateTasks.run();
-                        JOptionPane.showMessageDialog(ctx.parent, "Imported tasks and merged checklists." + (liveBackup!=null?" (backup created)":""), "Import Complete", JOptionPane.INFORMATION_MESSAGE);
+                    // Show progress during GUI update
+                    Runnable guiUpdate = () -> ctx.updateTasks.run();
+                    RestoreProgressDialog guiProgress = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Updating display");
+                    guiProgress.runTask(() -> {
+                        guiUpdate.run();
                     });
                 } catch (RuntimeException e) {
                     SwingUtilities.invokeLater(() -> ErrorDialog.showError(ctx.parent, "Failed to import tasks", e));
+                    return;
                 }
             };
             RestoreProgressDialog dlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Importing backup");
@@ -197,12 +200,15 @@ public class BackupRestoreDialog {
                 try {
                     if (!ctx.checklistsCopy.isEmpty()) mergeChecklistsToLive(ctx.checklistsCopy);
                     ctx.taskManager.setTasks(new ArrayList<>(backupTasks));
-                    SwingUtilities.invokeLater(() -> {
-                        ctx.updateTasks.run();
-                        JOptionPane.showMessageDialog(ctx.parent, "Replaced current tasks with backup." + (liveBackup!=null?" (backup created)":""), "Restore Complete", JOptionPane.INFORMATION_MESSAGE);
+                    // Show progress during GUI update
+                    Runnable guiUpdate = () -> ctx.updateTasks.run();
+                    RestoreProgressDialog guiProgress = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Updating display");
+                    guiProgress.runTask(() -> {
+                        guiUpdate.run();
                     });
                 } catch (RuntimeException e) {
                     SwingUtilities.invokeLater(() -> ErrorDialog.showError(ctx.parent, "Failed to restore tasks", e));
+                    return;
                 }
             };
             RestoreProgressDialog dlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Restoring backup");

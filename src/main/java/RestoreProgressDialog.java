@@ -27,9 +27,9 @@ public class RestoreProgressDialog extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 long elapsed = System.currentTimeMillis() - startMillis;
-                // Simple simulated progress: ramp up to 95% while not done
+                // Simple simulated progress: ramp up to 95% while not done (slower for large backups)
                 if (!done) {
-                    simulated = Math.min(95, simulated + 5);
+                    simulated = Math.min(95, simulated + 1);
                     progressBar.setValue(simulated);
                 }
                 // If done, ensure completion
@@ -73,11 +73,22 @@ public class RestoreProgressDialog extends JDialog {
         return String.format("%02d:%02d:%02d", hh, mm, ss);
     }
 
+    private volatile Runnable completionRunnable;
+
     /**
      * Run the provided background task while showing this dialog.
      * The dialog is modeless and will not block the EDT.
      */
     public void runTask(Runnable backgroundTask) {
+        runTask(backgroundTask, null);
+    }
+
+    /**
+     * Run the provided background task while showing this dialog, then run completionRunnable after dialog closes.
+     * The dialog is modeless and will not block the EDT.
+     */
+    public void runTask(Runnable backgroundTask, Runnable completionRunnable) {
+        this.completionRunnable = completionRunnable;
         startMillis = System.currentTimeMillis();
         done = false;
         tick.start();
@@ -96,6 +107,9 @@ public class RestoreProgressDialog extends JDialog {
                     tick.stop();
                     setVisible(false);
                     dispose();
+                    if (completionRunnable != null) {
+                        completionRunnable.run();
+                    }
                 });
             }
         }, "RestoreProgressWorker");

@@ -420,22 +420,28 @@ public class CustomChecklistPanel extends JPanel {
         // Preserve selections before updating
         java.util.List<Task> selectedTasks = customTaskList.getSelectedValuesList();
 
-        // Load checklist tasks (and headings) off the EDT and sync model incrementally
-        class ChecklistBundle { List<Task> customs; List<Task> headings; ChecklistBundle(List<Task> c, List<Task> h) { this.customs = c; this.headings = h; } }
-        javax.swing.SwingWorker<ChecklistBundle, Void> worker = new javax.swing.SwingWorker<>() {
-            @Override
-            protected ChecklistBundle doInBackground() throws Exception {
+        // Show progress dialog for loading and updating large checklists
+        RestoreProgressDialog progressDlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(this), "Loading checklist");
+        progressDlg.runTask(() -> {
+            // Load checklist tasks (and headings) off the EDT
+            class ChecklistBundle { List<Task> customs; List<Task> headings; ChecklistBundle(List<Task> c, List<Task> h) { this.customs = c; this.headings = h; } }
+            ChecklistBundle bundle = null;
+            try {
                 List<Task> customs = taskManager.getTasks(TaskType.CUSTOM, checklist);
                 List<Task> headings = taskManager.getTasks(TaskType.HEADING, checklist);
-                return new ChecklistBundle(customs, headings);
+                bundle = new ChecklistBundle(customs, headings);
+            } catch (Exception e) {
+                java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading custom checklist tasks", e);
+                return;
             }
 
-            @Override
-            protected void done() {
+            // Continue on EDT with loaded data
+            final List<Task> finalTasks = bundle.customs;
+            final List<Task> finalHeadings = bundle.headings;
+            SwingUtilities.invokeLater(() -> {
                 try {
-                    ChecklistBundle bundle = get();
-                    List<Task> tasks = bundle.customs;
-                    List<Task> headings = bundle.headings;
+                    List<Task> tasks = finalTasks;
+                    List<Task> headings = finalHeadings;
                     java.util.Map<String, Task> headingByParent = new java.util.HashMap<>();
                     if (headings != null) {
                         for (Task h : headings) {
@@ -483,12 +489,11 @@ public class CustomChecklistPanel extends JPanel {
 
                     customTaskList.revalidate();
                     customTaskList.repaint();
-                } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
-                    java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading custom checklist tasks", e);
+                } catch (Exception e) {
+                    java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating custom checklist", e);
                 }
-            }
-        };
-        worker.execute();
+            });
+        });
     }
 
     /**

@@ -524,18 +524,23 @@ public class ChecklistPanel extends JPanel {
         java.util.List<Task> selectedMorningTasks = morningTaskList.getSelectedValuesList();
         java.util.List<Task> selectedEveningTasks = eveningTaskList.getSelectedValuesList();
 
-        // Load tasks off the EDT to avoid blocking UI; update models on EDT when ready
-        javax.swing.SwingWorker<List<Task>, Void> worker = new javax.swing.SwingWorker<>() {
-            @Override
-            protected List<Task> doInBackground() throws Exception {
-                return taskManager.getAllTasks();
+        // Show progress dialog for loading and updating large task lists
+        RestoreProgressDialog progressDlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(this), "Loading tasks");
+        progressDlg.runTask(() -> {
+            // Load tasks off the EDT
+            List<Task> allTasks = null;
+            try {
+                allTasks = taskManager.getAllTasks();
+            } catch (Exception e) {
+                java.util.logging.Logger.getLogger(ChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading tasks in background", e);
+                return;
             }
 
-            @Override
-            protected void done() {
+            // Continue on EDT with loaded data
+            final List<Task> finalAllTasks = allTasks;
+            SwingUtilities.invokeLater(() -> {
                 try {
-                    List<Task> allTasks = get();
-                    taskUpdater.updateTasks(allTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected(), taskManager);
+                    taskUpdater.updateTasks(finalAllTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected(), taskManager);
 
                     // Restore selections after updating
                     restoreSelections(morningTaskList, morningListModel, selectedMorningTasks);
@@ -546,11 +551,10 @@ public class ChecklistPanel extends JPanel {
                     eveningTaskList.revalidate();
                     eveningTaskList.repaint();
                 } catch (Exception e) {
-                    java.util.logging.Logger.getLogger(ChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading tasks in background", e);
+                    java.util.logging.Logger.getLogger(ChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating task lists", e);
                 }
-            }
-        };
-        worker.execute();
+            });
+        });
     }
 
     private void restoreSelections(JList<Task> taskList, DefaultListModel<Task> listModel, java.util.List<Task> selectedTasks) {
