@@ -38,28 +38,46 @@ public class TaskMoveHandler {
         final int finalDropIndex = dropIndex;
         javax.swing.SwingUtilities.invokeLater(() -> {
             DebugLog.d("performMove (invokeLater): finalDropIndex=%d", finalDropIndex);
-            // Update the properties for all tasks and persist them in one batch
+            // Update the properties for all tasks
             java.util.List<Task> toPersist = new java.util.ArrayList<>();
             for (Task task : tasks) {
                 updateTaskPropertiesForMove(task, task.getChecklistId(), checklistName, taskManager);
                 toPersist.add(task);
             }
-            // Persist atomically so UI changes are not lost by the coalescer
-            taskManager.updateTasks(toPersist);
 
-            // For daily checklists, reorder the tasks to place moved tasks at the correct position
-            if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
-                reorderTasksForDailyList(checklistName, tasks, finalDropIndex, taskManager);
-            }
+            // Do persistence in background to avoid blocking EDT
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    // Persist atomically so UI changes are not lost by the coalescer
+                    taskManager.updateTasks(toPersist);
 
+                    // For daily checklists, reorder the tasks to place moved tasks at the correct position
+                    if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
+                        reorderTasksForDailyList(checklistName, tasks, finalDropIndex, taskManager);
+                    }
+                } catch (Exception e) {
+                    DebugLog.d("Error during drag-and-drop persistence: %s", e.getMessage());
+                }
+            }).thenRun(() -> {
+                // Update all panels after persistence completes
+                if (updateAllPanels != null) {
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        updateAllPanels.run();
+                        // After panels are updated, ensure the moved tasks are selected in the target list
+                        // and scrolled into view. Delegate to helper to keep performMove concise.
+                        handlePostMoveSelection(list, listModel, checklistName, tasks, isTargetDaily);
+                    });
+                } else {
+                    // If no updateAllPanels, still do the selection
+                    javax.swing.SwingUtilities.invokeLater(() -> 
+                        handlePostMoveSelection(list, listModel, checklistName, tasks, isTargetDaily));
+                }
+            });
+
+            // Do immediate UI updates on EDT
             // Restore focus to the target list for custom checklists
             if (!isTargetDaily) {
                 list.requestFocusInWindow();
-            }
-
-            // Update all panels to reflect the changes
-            if (updateAllPanels != null) {
-                updateAllPanels.run();
             }
 
             // Ensure the custom checklist is visible in the UI so jump/scroll can occur
@@ -69,10 +87,6 @@ public class TaskMoveHandler {
                     if (app != null) app.showCustomChecklist(checklistName);
                 }
             } catch (Exception ignore) {}
-
-            // After panels are updated, ensure the moved tasks are selected in the target list
-            // and scrolled into view. Delegate to helper to keep performMove concise.
-            handlePostMoveSelection(list, listModel, checklistName, tasks, isTargetDaily);
         });
 
         return true;

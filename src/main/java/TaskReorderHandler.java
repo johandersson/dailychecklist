@@ -88,8 +88,8 @@ public class TaskReorderHandler {
                 authoritative.setParentId(targetParentId);
                 toPersistParentChange.add(authoritative);
             }
-            taskManager.updateTasks(toPersistParentChange);
 
+            // Update UI model immediately
             // Remove moved tasks from the model
             for (Task task : tasks) {
                 for (int i = 0; i < listModel.getSize(); i++) {
@@ -106,7 +106,16 @@ public class TaskReorderHandler {
             }
 
             DebugLog.d("performReorder: adjustedDropIndex=%d resultingSize=%d", adjusted, listModel.getSize());
-            TaskOrderPersister.persist(listModel, checklistName, taskManager);
+
+            // Do persistence in background to avoid blocking EDT
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    taskManager.updateTasks(toPersistParentChange);
+                    TaskOrderPersister.persist(listModel, checklistName, taskManager);
+                } catch (Exception e) {
+                    DebugLog.d("Error during reorder persistence: %s", e.getMessage());
+                }
+            });
         });
     }
 
