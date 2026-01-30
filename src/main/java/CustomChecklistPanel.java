@@ -420,11 +420,16 @@ public class CustomChecklistPanel extends JPanel {
         // Preserve selections before updating
         java.util.List<Task> selectedTasks = customTaskList.getSelectedValuesList();
 
+        // Show busy cursor during async update
+        java.awt.Cursor busyCursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.WAIT_CURSOR);
+        java.awt.Cursor normalCursor = getCursor();
+        setCursor(busyCursor);
+
         // Load and update tasks directly without progress dialog for better responsiveness
-        loadAndUpdateTasks(selectedTasks);
+        loadAndUpdateTasks(selectedTasks, () -> setCursor(normalCursor));
     }
 
-    private void loadAndUpdateTasks(java.util.List<Task> selectedTasks) {
+    private void loadAndUpdateTasks(java.util.List<Task> selectedTasks, Runnable onComplete) {
         // Load checklist tasks (and headings) in background to avoid blocking EDT
         java.util.concurrent.CompletableFuture.supplyAsync(() -> {
             class ChecklistBundle { List<Task> customs; List<Task> headings; ChecklistBundle(List<Task> c, List<Task> h) { this.customs = c; this.headings = h; } }
@@ -497,6 +502,8 @@ public class CustomChecklistPanel extends JPanel {
                     customTaskList.repaint();
                 } catch (Exception e) {
                     java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error updating custom checklist", e);
+                } finally {
+                    if (onComplete != null) onComplete.run();
                 }
             });
         });
