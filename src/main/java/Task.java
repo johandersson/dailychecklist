@@ -36,6 +36,12 @@ public class Task {
     // Transient, runtime-only caches to avoid repeated work during painting
     transient String cachedDisplayFullName;
     transient int[] cachedCumulativeCharWidthsMain;
+    
+    // Dirty flags for caching optimization
+    transient boolean displayDirty = true;
+    
+    // Lazy date parsing cache
+    transient java.util.Date cachedParsedDoneDate;
 
     // Constructor when loading from file (ID provided)
     public Task(String id, String name, TaskType type, String weekday, boolean done, String doneDate, String checklistId, String parentId) {
@@ -125,6 +131,7 @@ public class Task {
     }
     public void setName(String name) {
         this.name = name;
+        this.displayDirty = true; // Mark dirty when name changes
     }
     public TaskType getType() {
         return type;
@@ -173,6 +180,7 @@ public class Task {
 
     public void setChecklistId(String checklistId) {
         this.checklistId = checklistId != null ? checklistId.trim() : null;
+        this.displayDirty = true; // Mark dirty when checklist changes
     }
 
     public String getDoneDate() {
@@ -186,6 +194,37 @@ public class Task {
             this.doneDate = String.format("%tY-%<tm-%<td", doneDate);
         } else {
             this.doneDate = null;
+        }
+        // Invalidate cached parsed date
+        this.cachedParsedDoneDate = null;
+    }
+    
+    // Cache management methods
+    public boolean isDisplayDirty() {
+        return displayDirty;
+    }
+    
+    public void markDisplayClean() {
+        this.displayDirty = false;
+    }
+    
+    public void markDisplayDirty() {
+        this.displayDirty = true;
+    }
+    
+    /**
+     * Get the parsed done date, parsing lazily only when needed.
+     * Returns null if doneDate is null or cannot be parsed.
+     */
+    public java.util.Date getParsedDoneDate() {
+        if (doneDate == null) return null;
+        if (cachedParsedDoneDate != null) return cachedParsedDoneDate;
+        
+        try {
+            cachedParsedDoneDate = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(doneDate);
+            return cachedParsedDoneDate;
+        } catch (java.text.ParseException e) {
+            return null;
         }
     }
 }

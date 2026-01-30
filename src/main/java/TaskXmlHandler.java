@@ -490,8 +490,9 @@ public class TaskXmlHandler {
      */
     public void checkAndResetPastDoneDate(Task task, String today) throws ParseException {
         if (task.isDone() && task.getDoneDate() != null) {
-            java.util.Date doneDate = getParsedDate(task.getDoneDate());
-            java.util.Date todayDate = getParsedDate(today);
+            java.util.Date doneDate = task.getParsedDoneDate(); // Use lazy parsing from Task
+            if (doneDate == null) return; // Skip if parsing failed
+            java.util.Date todayDate = getParsedDate(today); // Still need to parse today
             if (doneDate.before(todayDate)) {
                 task.setDone(false);
                 task.setDoneDate(null);
