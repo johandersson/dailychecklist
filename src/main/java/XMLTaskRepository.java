@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,6 +52,10 @@ public class XMLTaskRepository implements TaskRepository {
     private Map<TaskType, List<Task>> tasksByType = null;
     private Map<String, List<Task>> tasksByChecklist = null;
     private boolean tasksCacheDirty = true;
+    // Cache display computation state to avoid recomputing on reload
+    private Map<String, Boolean> taskDisplayDirtyState = new HashMap<>();
+    private Map<String, String> taskCachedDisplayFullName = new HashMap<>();
+    private Map<String, int[]> taskCachedCumulativeCharWidths = new HashMap<>();
     // Single-threaded executor for all writes to avoid concurrent DOM writes and to perform persistence off the EDT
     private final ExecutorService writeExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "xml-persist-worker");
@@ -423,6 +428,21 @@ public class XMLTaskRepository implements TaskRepository {
             if (task.getType() == TaskType.CUSTOM && task.getChecklistId() != null) {
                 tasksByChecklist.computeIfAbsent(task.getChecklistId(), k -> new ArrayList<>()).add(task);
             }
+            // Restore display computation state if we have it cached
+            String taskId = task.getId();
+            Boolean wasDirty = taskDisplayDirtyState.get(taskId);
+            if (wasDirty != null && !wasDirty) {
+                // Task was previously computed, restore its state
+                task.markDisplayClean();
+                String cachedName = taskCachedDisplayFullName.get(taskId);
+                if (cachedName != null) {
+                    task.cachedDisplayFullName = cachedName;
+                }
+                int[] cachedWidths = taskCachedCumulativeCharWidths.get(taskId);
+                if (cachedWidths != null) {
+                    task.cachedCumulativeCharWidthsMain = cachedWidths;
+                }
+            }
         }
     }
 
@@ -442,6 +462,41 @@ public class XMLTaskRepository implements TaskRepository {
         }
 
         return tasks;
+    }
+
+    /**
+     * Gets tasks by type and checklist efficiently using pre-built maps.
+     * For CUSTOM tasks, filters by checklist ID if checklist is provided.
+     * For other task types, checklist parameter is ignored.
+     */
+    public List<Task> getTasks(TaskType type, Checklist checklist) {
+        // Ensure cache is loaded
+        getCachedTasks();
+        
+        rwLock.readLock().lock();
+        try {
+            List<Task> tasksOfType = tasksByType.get(type);
+            if (tasksOfType == null) {
+                return new ArrayList<>();
+            }
+            
+            if (type != TaskType.CUSTOM || checklist == null) {
+                // Return all tasks of this type
+                return new ArrayList<>(tasksOfType);
+            } else {
+                // For CUSTOM tasks, filter by checklist ID
+                String checklistId = checklist.getId();
+                List<Task> filtered = new ArrayList<>();
+                for (Task task : tasksOfType) {
+                    if (Objects.equals(checklistId, task.getChecklistId())) {
+                        filtered.add(task);
+                    }
+                }
+                return filtered;
+            }
+        } finally {
+            rwLock.readLock().unlock();
+        }
     }
 
     /**

@@ -26,6 +26,9 @@ import java.util.List;
 public final class DisplayPrecomputer {
     private DisplayPrecomputer() {}
 
+    // Cache for character widths to avoid repeated FontMetrics.charWidth() calls
+    private static final java.util.Map<java.awt.Font, int[]> charWidthCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     /**
      * Precompute for the provided list of tasks. If showChecklistInfo is true, the checklist
      * name is appended in parentheses where applicable (uses TaskManager to resolve names).
@@ -35,6 +38,15 @@ public final class DisplayPrecomputer {
         if (tasks == null || tasks.isEmpty()) return;
         java.awt.Font font = FontManager.getTaskListFont();
         FontMetrics fm = FontMetricsCache.get(font);
+
+        // Get or create character width cache for this font
+        int[] charWidths = charWidthCache.computeIfAbsent(font, f -> {
+            int[] widths = new int[256]; // ASCII range
+            for (int i = 0; i < 256; i++) {
+                widths[i] = fm.charWidth((char) i);
+            }
+            return widths;
+        });
 
         for (Task t : tasks) {
             // Skip if not dirty (already computed)
@@ -53,7 +65,8 @@ public final class DisplayPrecomputer {
             int n = base.length();
             int[] cum = new int[n];
             for (int i = 0; i < n; i++) {
-                int w = fm.charWidth(base.charAt(i));
+                char c = base.charAt(i);
+                int w = (c < 256) ? charWidths[c] : fm.charWidth(c); // Use cache for ASCII, fallback for others
                 cum[i] = (i == 0) ? w : (cum[i - 1] + w);
             }
             t.cachedCumulativeCharWidthsMain = cum;

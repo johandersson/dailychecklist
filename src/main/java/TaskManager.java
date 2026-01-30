@@ -76,8 +76,8 @@ public class TaskManager {
                     "Invalid Heading", javax.swing.JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            for (Task t : getAllTasks()) {
-                if (t.getType() == TaskType.HEADING && pid.equals(t.getParentId())) {
+            for (Task t : getTasks(TaskType.HEADING, null)) {  // Use efficient method
+                if (pid.equals(t.getParentId())) {
                     javax.swing.JOptionPane.showMessageDialog(null,
                         "A heading already exists for the selected parent.",
                         "Duplicate Heading", javax.swing.JOptionPane.ERROR_MESSAGE);
@@ -86,7 +86,10 @@ public class TaskManager {
             }
         }
         repository.addTask(task);
-        invalidateSubtasksCache();
+        // Incrementally update subtask cache
+        if (task.getParentId() != null && task.getType() != TaskType.HEADING) {
+            cachedSubtasksByParent.computeIfAbsent(task.getParentId(), k -> new ArrayList<>()).add(task);
+        }
         notifyListeners();
     }
 
@@ -160,11 +163,25 @@ public class TaskManager {
 
     public void removeTask(Task task) {
         repository.removeTask(task);
-        invalidateSubtasksCache();
+        // Incrementally update subtask cache
+        if (task.getParentId() != null && task.getType() != TaskType.HEADING) {
+            List<Task> subtasks = cachedSubtasksByParent.get(task.getParentId());
+            if (subtasks != null) {
+                subtasks.remove(task);
+                if (subtasks.isEmpty()) {
+                    cachedSubtasksByParent.remove(task.getParentId());
+                }
+            }
+        }
         notifyListeners();
     }
 
     public List<Task> getTasks(TaskType type, Checklist checklist) {
+        // Use optimized method if available
+        if (repository instanceof XMLTaskRepository xmlRepo) {
+            return xmlRepo.getTasks(type, checklist);
+        }
+        // Fallback: linear search
         List<Task> allTasks = repository.getAllTasks();
         List<Task> filtered = new ArrayList<>();
         for (Task task : allTasks) {
