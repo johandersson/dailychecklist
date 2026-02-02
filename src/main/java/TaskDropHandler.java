@@ -139,9 +139,15 @@ public final class TaskDropHandler {
     }
 
     private static void removeMovedFromModel(javax.swing.DefaultListModel<Task> model, List<Task> toPersist) {
+        // Collect all task IDs to remove (including subtasks that will move with parents)
+        java.util.Set<String> idsToRemove = new java.util.HashSet<>();
         for (Task t : toPersist) {
-            for (int i = 0; i < model.getSize(); i++) {
-                if (model.get(i).getId().equals(t.getId())) { model.remove(i); break; }
+            idsToRemove.add(t.getId());
+        }
+        // Remove ALL occurrences (not just first) by iterating backwards
+        for (int i = model.getSize() - 1; i >= 0; i--) {
+            if (idsToRemove.contains(model.get(i).getId())) {
+                model.remove(i);
             }
         }
     }

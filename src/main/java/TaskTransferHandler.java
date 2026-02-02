@@ -212,7 +212,16 @@ public class TaskTransferHandler extends TransferHandler {
                     // If reorder didn't handle it, continue to normal handling below
                 }
 
-                if (tryHandleDropOnItemCases(targetList, transferData, dropIndex, isInsert)) return true;
+                // For cross-daily-list moves (MORNING <-> EVENING), skip subtask creation logic
+                // and directly move tasks to the target list
+                boolean sourceIsDaily = transferData.sourceChecklistName != null && 
+                    ("MORNING".equals(transferData.sourceChecklistName) || "EVENING".equals(transferData.sourceChecklistName));
+                boolean targetIsDaily = "MORNING".equals(checklistName) || "EVENING".equals(checklistName);
+                boolean isCrossDailyMove = sourceIsDaily && targetIsDaily && !sameChecklist;
+                
+                if (!isCrossDailyMove) {
+                    if (tryHandleDropOnItemCases(targetList, transferData, dropIndex, isInsert)) return true;
+                }
 
                 // If same-checklist reorder did not run or did not handle it, fall back to cross-checklist move
                 return handleCrossChecklistMove(transferData, dropIndex);

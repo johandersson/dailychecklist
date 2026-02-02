@@ -164,6 +164,7 @@ public class TaskManager {
     public void removeTask(Task task) {
         repository.removeTask(task);
         // Incrementally update subtask cache
+        // If the task being removed is a subtask, remove it from its parent's subtask list
         if (task.getParentId() != null && task.getType() != TaskType.HEADING) {
             List<Task> subtasks = cachedSubtasksByParent.get(task.getParentId());
             if (subtasks != null) {
@@ -173,6 +174,10 @@ public class TaskManager {
                 }
             }
         }
+        // If the task being removed is a parent (has subtasks), remove its entry from the cache
+        // This ensures that if subtasks were already deleted separately, we don't keep stale data
+        cachedSubtasksByParent.remove(task.getId());
+        
         notifyListeners();
     }
 
