@@ -132,8 +132,8 @@ import javax.swing.Timer;
                 }
                 timerLabel.setText(formatTime(timeRemaining));
                 taskLabel.setText(taskName);
-                // store the total duration so circles reflect the chosen length
-                totalDurationSeconds = Math.max(1, totalDurationSeconds == 0 ? timeRemaining : totalDurationSeconds);
+                // Store the total duration so circles reflect the chosen length
+                totalDurationSeconds = timeRemaining;
                 updateCircles();
 
                 // Timer setup

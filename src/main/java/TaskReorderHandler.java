@@ -90,10 +90,23 @@ public class TaskReorderHandler {
             }
 
             // Update UI model immediately
-            // Remove moved tasks from the model
+            // Remove moved tasks from the model (and their subtasks)
+            // Collect all task IDs to remove (parent tasks + their subtasks)
+            java.util.Set<String> idsToRemove = new java.util.HashSet<>();
             for (Task task : tasks) {
-                for (int i = 0; i < listModel.getSize(); i++) {
-                    if (listModel.get(i).getId().equals(task.getId())) { listModel.remove(i); break; }
+                idsToRemove.add(task.getId());
+                // Also collect subtasks of moved tasks
+                java.util.List<Task> subtasks = taskManager.getSubtasks(task.getId());
+                if (subtasks != null) {
+                    for (Task sub : subtasks) {
+                        idsToRemove.add(sub.getId());
+                    }
+                }
+            }
+            // Remove ALL occurrences (not just first) of tasks to be moved
+            for (int i = listModel.getSize() - 1; i >= 0; i--) {
+                if (idsToRemove.contains(listModel.get(i).getId())) {
+                    listModel.remove(i);
                 }
             }
 
@@ -101,8 +114,32 @@ public class TaskReorderHandler {
             if (adjusted < 0) adjusted = 0;
             if (adjusted > listModel.getSize()) adjusted = listModel.getSize();
 
-            for (int i = 0; i < tasks.size(); i++) {
-                listModel.add(adjusted + i, tasks.get(i));
+            // Re-add parent tasks and their subtasks in the correct order
+            // Filter out subtasks from the tasks list - they'll be added with their parents
+            java.util.Set<String> parentIdsInSelection = new java.util.HashSet<>();
+            for (Task task : tasks) {
+                if (task.getParentId() == null) {
+                    parentIdsInSelection.add(task.getId());
+                }
+            }
+            
+            int insertPos = adjusted;
+            for (Task task : tasks) {
+                // Skip subtasks whose parent is also in the selection - they'll be added with their parent
+                if (task.getParentId() != null && parentIdsInSelection.contains(task.getParentId())) {
+                    continue;
+                }
+                
+                listModel.add(insertPos++, task);
+                // Re-add subtasks immediately after their parent (only if this is a parent task)
+                if (task.getParentId() == null) {
+                    java.util.List<Task> subtasks = taskManager.getSubtasks(task.getId());
+                    if (subtasks != null) {
+                        for (Task sub : subtasks) {
+                            listModel.add(insertPos++, sub);
+                        }
+                    }
+                }
             }
 
             DebugLog.d("performReorder: adjustedDropIndex=%d resultingSize=%d", adjusted, listModel.getSize());
