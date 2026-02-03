@@ -121,13 +121,13 @@ public class RestoreProgressDialog extends JDialog {
         worker.start();
 
         // Add timeout to prevent stuck dialogs
-        Timer timeoutTimer = new Timer(30000, e -> { // 30 seconds timeout
+        Timer timeoutTimer = new Timer(60000, e -> { // 60 seconds timeout (increased from 30s for large operations)
             timedOut = true;
             SwingUtilities.invokeLater(() -> {
                 tick.stop();
                 setVisible(false);
                 dispose();
-                System.err.println("[RestoreProgressDialog] Task timed out after 30 seconds");
+                System.err.println("[RestoreProgressDialog] Task timed out after 60 seconds");
                 if (completionRunnable != null) {
                     completionRunnable.run();
                 }

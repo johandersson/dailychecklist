@@ -37,6 +37,7 @@ public class CustomChecklistPanel extends JPanel {
     private transient TaskManager taskManager;
     private Checklist checklist;
     private transient Runnable updateAllPanels;
+    private volatile boolean suppressTaskChangeListener = false;
     
 
     public CustomChecklistPanel(TaskManager taskManager, Checklist checklist) {
@@ -51,6 +52,9 @@ public class CustomChecklistPanel extends JPanel {
         initialize();
         // Listen for model changes and refresh UI
         taskManager.addTaskChangeListener(() -> {
+            // Skip update if we've already handled it optimally
+            if (suppressTaskChangeListener) return;
+            
             java.awt.Component focused = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
             boolean wasListFocused = focused == customTaskList;
             updateTasks();
@@ -287,8 +291,48 @@ public class CustomChecklistPanel extends JPanel {
                 String subtaskName = JOptionPane.showInputDialog(this, prompt);
                 if (subtaskName != null && !subtaskName.trim().isEmpty()) {
                     Task subtask = new Task(subtaskName.trim(), p.getType(), p.getWeekday(), p.getChecklistId(), p.getId());
-                    taskManager.addTask(subtask);
-                    updateTasks();
+                    
+                    try {
+                        // Suppress TaskChangeListener to avoid full reload
+                        suppressTaskChangeListener = true;
+                        
+                        // Add to TaskManager (persists to repository)
+                        taskManager.addTask(subtask);
+                        
+                        // Optimize: directly insert into model instead of full reload
+                        int parentIndex = list.locationToIndex(new java.awt.Point(0, 0));
+                        for (int i = 0; i < customListModel.getSize(); i++) {
+                            Task cand = customListModel.get(i);
+                            if (cand != null && cand.getId().equals(p.getId())) {
+                                parentIndex = i;
+                                break;
+                            }
+                        }
+                        
+                        // Find insertion point: after parent and existing subtasks
+                        int insertIndex = parentIndex + 1;
+                        while (insertIndex < customListModel.getSize()) {
+                            Task candidate = customListModel.get(insertIndex);
+                            if (candidate.getParentId() == null || !candidate.getParentId().equals(p.getId())) {
+                                break;
+                            }
+                            insertIndex++;
+                        }
+                        
+                        // Precompute display data for the new subtask
+                        java.util.List<Task> singleTask = new java.util.ArrayList<>();
+                        singleTask.add(subtask);
+                        DisplayPrecomputer.precomputeForList(singleTask, taskManager, true);
+                        
+                        // Insert at the correct position
+                        customListModel.add(insertIndex, subtask);
+                        customTaskList.setSelectedIndex(insertIndex);
+                        customTaskList.ensureIndexIsVisible(insertIndex);
+                        list.repaint();
+                    } finally {
+                        // Re-enable TaskChangeListener after direct insertion
+                        suppressTaskChangeListener = false;
+                    }
                 }
             });
         }
@@ -477,7 +521,7 @@ public class CustomChecklistPanel extends JPanel {
         boolean showProgress = false;
         try {
             List<Task> existingTasks = taskManager.getTasks(TaskType.CUSTOM, checklist);
-            showProgress = existingTasks != null && existingTasks.size() > 100; // Only show for large checklists
+            showProgress = existingTasks != null && existingTasks.size() > 30; // Show progress for lists with 30+ items
         } catch (Exception e) {
             // If we can't check, assume small
         }

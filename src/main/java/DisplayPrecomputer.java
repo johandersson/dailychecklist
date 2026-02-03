@@ -48,6 +48,17 @@ public final class DisplayPrecomputer {
             return widths;
         });
 
+        // Count tasks that need recomputation to optimize for small updates
+        int dirtyCount = 0;
+        for (Task t : tasks) {
+            if (t.isDisplayDirty()) dirtyCount++;
+        }
+        
+        // For large lists with many dirty tasks, process in batches to remain responsive
+        final int BATCH_SIZE = 50;
+        boolean shouldBatch = dirtyCount > BATCH_SIZE;
+        int processed = 0;
+
         for (Task t : tasks) {
             // Skip if not dirty (already computed)
             if (!t.isDisplayDirty()) continue;
@@ -73,6 +84,11 @@ public final class DisplayPrecomputer {
             
             // Mark as clean after computation
             t.markDisplayClean();
+            
+            // Yield to EDT periodically for large batch operations to keep UI responsive
+            if (shouldBatch && ++processed % BATCH_SIZE == 0) {
+                Thread.yield();
+            }
         }
     }
 }
