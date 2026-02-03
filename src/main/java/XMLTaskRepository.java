@@ -446,6 +446,40 @@ public class XMLTaskRepository implements TaskRepository {
         }
     }
 
+    /**
+     * Incrementally adds a single task to the lookup maps. Caller must hold write lock.
+     * This avoids O(n) iteration when adding to large lists.
+     */
+    private void addTaskToMaps(Task task) {
+        // If maps don't exist yet, just rebuild them all
+        if (taskMap == null || tasksByType == null || tasksByChecklist == null) {
+            rebuildMapsFromCachedTasks();
+            return;
+        }
+        
+        // Incrementally add to maps
+        taskMap.put(task.getId(), task);
+        tasksByType.computeIfAbsent(task.getType(), k -> new ArrayList<>()).add(task);
+        if (task.getType() == TaskType.CUSTOM && task.getChecklistId() != null) {
+            tasksByChecklist.computeIfAbsent(task.getChecklistId(), k -> new ArrayList<>()).add(task);
+        }
+        
+        // Restore display computation state if we have it cached
+        String taskId = task.getId();
+        Boolean wasDirty = taskDisplayDirtyState.get(taskId);
+        if (wasDirty != null && !wasDirty) {
+            task.markDisplayClean();
+            String cachedName = taskCachedDisplayFullName.get(taskId);
+            if (cachedName != null) {
+                task.cachedDisplayFullName = cachedName;
+            }
+            int[] cachedWidths = taskCachedCumulativeCharWidths.get(taskId);
+            if (cachedWidths != null) {
+                task.cachedCumulativeCharWidthsMain = cachedWidths;
+            }
+        }
+    }
+
     @Override
     public List<Task> getAllTasks() {
         List<Task> tasks = getCachedTasks();
@@ -521,7 +555,8 @@ public class XMLTaskRepository implements TaskRepository {
         try {
             if (cachedTasks == null) cachedTasks = new ArrayList<>();
             cachedTasks.add(task);
-            rebuildMapsFromCachedTasks();
+            // Use incremental update instead of full rebuild for better performance
+            addTaskToMaps(task);
             tasksCacheDirty = false;
         } finally {
             rwLock.writeLock().unlock();
