@@ -98,16 +98,44 @@ public class TaskListMouseHandler extends MouseAdapter {
         if (parent == null) parent = t;
         Task newTask = new Task(name, parent.getType(), parent.getWeekday(), parent.getChecklistId());
         newTask.setParentId(parent.getId());
-        taskManager.addTask(newTask);
-        if (updateCallback != null) updateCallback.run();
-        // Select new task in list
+        
+        // Find the parent's position in the list
+        int parentIndex = -1;
         for (int i = 0; i < listModel.getSize(); i++) {
             Task cand = listModel.get(i);
-            if (cand != null && cand.getId().equals(newTask.getId())) {
-                taskList.setSelectedIndex(i);
-                taskList.ensureIndexIsVisible(i);
+            if (cand != null && cand.getId().equals(parent.getId())) {
+                parentIndex = i;
                 break;
             }
+        }
+        
+        // Add to TaskManager (persists to repository)
+        taskManager.addTask(newTask);
+        
+        // Optimize: directly insert into model instead of full reload
+        if (parentIndex >= 0) {
+            // Find position: after parent and after any existing subtasks
+            int insertIndex = parentIndex + 1;
+            while (insertIndex < listModel.getSize()) {
+                Task candidate = listModel.get(insertIndex);
+                if (candidate.getParentId() == null || !candidate.getParentId().equals(parent.getId())) {
+                    break;
+                }
+                insertIndex++;
+            }
+            
+            // Precompute display data for the new task
+            java.util.List<Task> singleTask = new java.util.ArrayList<>();
+            singleTask.add(newTask);
+            DisplayPrecomputer.precomputeForList(singleTask, taskManager, true);
+            
+            // Insert at the correct position
+            listModel.add(insertIndex, newTask);
+            taskList.setSelectedIndex(insertIndex);
+            taskList.ensureIndexIsVisible(insertIndex);
+        } else {
+            // Fallback: full reload if parent not found
+            if (updateCallback != null) updateCallback.run();
         }
     }
 

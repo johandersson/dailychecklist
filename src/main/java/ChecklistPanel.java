@@ -45,12 +45,16 @@ public class ChecklistPanel extends JPanel {
     private final transient TaskManager taskManager;
     private final transient TaskUpdater taskUpdater;
     private JCheckBox showWeekdayTasksCheckbox;
+    private volatile boolean suppressTaskChangeListener = false;
 
     @SuppressWarnings("this-escape")
     public ChecklistPanel(TaskManager taskManager, TaskUpdater taskUpdater) {
         this.taskManager = taskManager;
         this.taskUpdater = taskUpdater;
         taskManager.addTaskChangeListener(() -> {
+            // Skip update if we've already handled it optimally
+            if (suppressTaskChangeListener) return;
+            
             java.awt.Component focused = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
             updateTasks();
             if (focused != null && focused.isShowing() && focused.isFocusable()) {
@@ -344,8 +348,57 @@ public class ChecklistPanel extends JPanel {
                 String subtaskName = javax.swing.JOptionPane.showInputDialog(this, prompt);
                 if (subtaskName != null && !subtaskName.trim().isEmpty()) {
                     Task subtask = new Task(subtaskName.trim(), p.getType(), p.getWeekday(), p.getChecklistId(), p.getId());
-                    taskManager.addTask(subtask);
-                    updateTasks();
+                    
+                    try {
+                        // Suppress TaskChangeListener to avoid full reload
+                        suppressTaskChangeListener = true;
+                        
+                        // Add to TaskManager (persists to repository)
+                        taskManager.addTask(subtask);
+                        
+                        // Optimize: directly insert into the appropriate model
+                        DefaultListModel<Task> targetModel = (p.getType() == TaskType.MORNING) ? morningListModel : eveningListModel;
+                        JList<Task> targetList = (p.getType() == TaskType.MORNING) ? morningTaskList : eveningTaskList;
+                        
+                        // Find parent position
+                        int parentIndex = -1;
+                        for (int i = 0; i < targetModel.getSize(); i++) {
+                            Task cand = targetModel.get(i);
+                            if (cand != null && cand.getId().equals(p.getId())) {
+                                parentIndex = i;
+                                break;
+                            }
+                        }
+                        
+                        if (parentIndex >= 0) {
+                            // Find insertion point: after parent and existing subtasks
+                            int insertIndex = parentIndex + 1;
+                            while (insertIndex < targetModel.getSize()) {
+                                Task candidate = targetModel.get(insertIndex);
+                                if (candidate.getParentId() == null || !candidate.getParentId().equals(p.getId())) {
+                                    break;
+                                }
+                                insertIndex++;
+                            }
+                            
+                            // Precompute display data for the new subtask
+                            java.util.List<Task> singleTask = new java.util.ArrayList<>();
+                            singleTask.add(subtask);
+                            DisplayPrecomputer.precomputeForList(singleTask, taskManager, false);
+                            
+                            // Insert at the correct position
+                            targetModel.add(insertIndex, subtask);
+                            targetList.setSelectedIndex(insertIndex);
+                            targetList.ensureIndexIsVisible(insertIndex);
+                            targetList.repaint();
+                        } else {
+                            // Fallback to full reload if parent not found
+                            updateTasks();
+                        }
+                    } finally {
+                        // Re-enable TaskChangeListener
+                        suppressTaskChangeListener = false;
+                    }
                 }
             });
         }
@@ -544,7 +597,7 @@ public class ChecklistPanel extends JPanel {
         boolean showProgress = false;
         try {
             List<Task> existingTasks = taskManager.getAllTasks();
-            showProgress = existingTasks != null && existingTasks.size() > 500; // Only show for very large datasets
+            showProgress = existingTasks != null && existingTasks.size() > 100; // Show progress for 100+ tasks
         } catch (Exception e) {
             // If we can't check, assume small
         }
