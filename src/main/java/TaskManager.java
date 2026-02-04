@@ -26,6 +26,8 @@ public class TaskManager {
     // Cache of subtasks grouped by parentId; rebuilt when tasks change to avoid repeated sorting
     private volatile java.util.Map<String, java.util.List<Task>> cachedSubtasksByParent = new java.util.concurrent.ConcurrentHashMap<>();
     private volatile boolean subtasksCacheValid = false;
+    // Batch operation support to prevent race conditions during multi-task operations
+    private volatile boolean suppressNotifications = false;
 
     public TaskManager(TaskRepository repository) {
         this.repository = repository;
@@ -37,7 +39,28 @@ public class TaskManager {
 
     public void addTaskChangeListener(TaskChangeListener l) { if (l != null) listeners.add(l); }
     public void removeTaskChangeListener(TaskChangeListener l) { if (l != null) listeners.remove(l); }
-    private void notifyListeners() { for (TaskChangeListener l : listeners) { try { l.onChange(); } catch (Exception ignore) {} } }
+    
+    /**
+     * Begin a batch operation. Suppresses listener notifications until endBatchOperation() is called.
+     * This prevents race conditions when multiple tasks are being added/updated.
+     */
+    public void beginBatchOperation() {
+        suppressNotifications = true;
+    }
+    
+    /**
+     * End a batch operation and trigger a single listener notification.
+     * Must be called after beginBatchOperation() to resume normal notifications.
+     */
+    public void endBatchOperation() {
+        suppressNotifications = false;
+        notifyListeners();
+    }
+    
+    private void notifyListeners() {
+        if (suppressNotifications) return;
+        for (TaskChangeListener l : listeners) { try { l.onChange(); } catch (Exception ignore) {} }
+    }
 
     /**
      * Public helper to notify registered task-change listeners.

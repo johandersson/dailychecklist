@@ -44,6 +44,7 @@ public class DailyChecklist {
     private ChecklistPanel checklistPanel;
     private AddTaskPanel addTaskPanel;
     private CustomChecklistsOverviewPanel customChecklistsOverviewPanel;
+    private TodayPanel todayPanel;
     private JTabbedPane tabbedPane;
     private ReminderQueue reminderQueue;
     private final java.util.Set<String> openedChecklists = new java.util.HashSet<>();
@@ -105,6 +106,7 @@ public class DailyChecklist {
         customChecklistsOverviewPanel = new CustomChecklistsOverviewPanel(checklistManager, () -> {
             checklistPanel.updateTasks();
         });
+        todayPanel = new TodayPanel(checklistManager);
         if (!GraphicsEnvironment.isHeadless()) {
             addTabbedPane();
             frame.setJMenuBar(MenuBarBuilder.build(frame, checklistManager, () -> {
@@ -463,6 +465,7 @@ public class DailyChecklist {
         dailySplit.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
         tabbedPane.add("Checklist", dailySplit);
         tabbedPane.add("Custom checklists", customChecklistsOverviewPanel);
+        tabbedPane.add("Today", new javax.swing.JScrollPane(todayPanel));
         frame.add(tabbedPane);
         // (No forced white backgrounds here) keep platform defaults for window backgrounds.
     }

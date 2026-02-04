@@ -18,6 +18,8 @@
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,12 +43,14 @@ public class TodayPanel extends JPanel {
     private LocalDate today;
     private List<Reminder> todaysReminders;
     private Map<String, Task> taskCache;
+    private Map<Rectangle, Reminder> reminderBlockBounds; // Track click regions
 
     public TodayPanel(TaskManager taskManager) {
         this.taskManager = taskManager;
         this.today = LocalDate.now();
         this.todaysReminders = new ArrayList<>();
         this.taskCache = new HashMap<>();
+        this.reminderBlockBounds = new HashMap<>();
 
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -57,6 +61,29 @@ public class TodayPanel extends JPanel {
             public void componentResized(ComponentEvent e) {
                 refreshData();
                 repaint();
+            }
+        });
+        
+        // Add mouse listener for clicking reminder blocks
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                handleReminderClick(e.getPoint());
+            }
+        });
+        
+        // Add cursor change on hover
+        addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                boolean overReminder = false;
+                for (Rectangle bounds : reminderBlockBounds.keySet()) {
+                    if (bounds.contains(e.getPoint())) {
+                        overReminder = true;
+                        break;
+                    }
+                }
+                setCursor(overReminder ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
             }
         });
 
@@ -70,6 +97,7 @@ public class TodayPanel extends JPanel {
         this.today = LocalDate.now();
         this.todaysReminders = getTodaysReminders();
         this.taskCache.clear();
+        this.reminderBlockBounds.clear();
 
         // Cache tasks for reminders
         for (Reminder reminder : todaysReminders) {
@@ -82,6 +110,38 @@ public class TodayPanel extends JPanel {
         }
 
         repaint();
+    }
+    
+    /**
+     * Handle clicks on reminder blocks to jump to the task.
+     */
+    private void handleReminderClick(Point clickPoint) {
+        for (Map.Entry<Rectangle, Reminder> entry : reminderBlockBounds.entrySet()) {
+            if (entry.getKey().contains(clickPoint)) {
+                Reminder reminder = entry.getValue();
+                jumpToReminder(reminder);
+                break;
+            }
+        }
+    }
+    
+    /**
+     * Jump to the task or checklist associated with a reminder.
+     */
+    private void jumpToReminder(Reminder reminder) {
+        DailyChecklist app = DailyChecklist.getInstance();
+        if (app == null) return;
+        
+        if (reminder.getTaskId() != null) {
+            // Jump to specific task
+            Task task = taskManager.getTaskById(reminder.getTaskId());
+            if (task != null) {
+                app.jumpToTask(task);
+            }
+        } else if (reminder.getChecklistName() != null) {
+            // Jump to checklist
+            app.showCustomChecklist(reminder.getChecklistName());
+        }
     }
 
     /**
@@ -110,6 +170,9 @@ public class TodayPanel extends JPanel {
 
         int width = getWidth();
         int height = getHeight();
+        
+        // Clear previous bounds before redrawing
+        reminderBlockBounds.clear();
 
         // Draw timeline background
         g2d.setColor(Color.WHITE);
@@ -171,6 +234,9 @@ public class TodayPanel extends JPanel {
      * Draw a single reminder block.
      */
     private void drawReminderBlock(Graphics2D g2d, Reminder reminder, int x, int y) {
+        // Track bounds for click detection
+        reminderBlockBounds.put(new Rectangle(x, y, reminderBlockWidth, reminderBlockHeight), reminder);
+        
         // Draw reminder block background
         g2d.setColor(new Color(70, 130, 180)); // Steel blue
         g2d.fillRoundRect(x, y, reminderBlockWidth, reminderBlockHeight, 8, 8);
