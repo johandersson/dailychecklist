@@ -87,57 +87,76 @@ public class TaskListMouseHandler extends MouseAdapter {
             java.util.List<String> subtaskNames = MultiSubtaskDialog.show(taskList, 
                 parentForDialog != null ? parentForDialog.getName() : t.getName());
             
-            // Create and insert each subtask
-            for (String name : subtaskNames) {
-                createAndSelectSubtask(t, name);
+            // Create and insert all subtasks at once (batch operation)
+            if (!subtaskNames.isEmpty()) {
+                createAndInsertSubtasks(t, subtaskNames);
             }
         }
     }
 
-    private void createAndSelectSubtask(Task t, String name) {
-        Task parent = taskManager.getTaskById(t.getId());
-        if (parent == null) parent = t;
-        Task newTask = new Task(name, parent.getType(), parent.getWeekday(), parent.getChecklistId());
-        newTask.setParentId(parent.getId());
+    private void createAndInsertSubtasks(Task parent, java.util.List<String> subtaskNames) {
+        Task p = taskManager.getTaskById(parent.getId());
+        if (p == null) p = parent;
+        
+        // Create all subtask objects
+        java.util.List<Task> newSubtasks = new java.util.ArrayList<>();
+        for (String name : subtaskNames) {
+            Task newTask = new Task(name, p.getType(), p.getWeekday(), p.getChecklistId());
+            newTask.setParentId(p.getId());
+            newSubtasks.add(newTask);
+        }
         
         // Find the parent's position in the list
         int parentIndex = -1;
         for (int i = 0; i < listModel.getSize(); i++) {
             Task cand = listModel.get(i);
-            if (cand != null && cand.getId().equals(parent.getId())) {
+            if (cand != null && cand.getId().equals(p.getId())) {
                 parentIndex = i;
                 break;
             }
         }
         
-        // Add to TaskManager (persists to repository)
-        taskManager.addTask(newTask);
-        
-        // Optimize: directly insert into model instead of full reload
         if (parentIndex >= 0) {
             // Find position: after parent and after any existing subtasks
             int insertIndex = parentIndex + 1;
             while (insertIndex < listModel.getSize()) {
                 Task candidate = listModel.get(insertIndex);
-                if (candidate.getParentId() == null || !candidate.getParentId().equals(parent.getId())) {
+                if (candidate.getParentId() == null || !candidate.getParentId().equals(p.getId())) {
                     break;
                 }
                 insertIndex++;
             }
             
-            // Precompute display data for the new task
-            java.util.List<Task> singleTask = new java.util.ArrayList<>();
-            singleTask.add(newTask);
-            DisplayPrecomputer.precomputeForList(singleTask, taskManager, true);
+            // Precompute display data once for all new subtasks (batch operation)
+            DisplayPrecomputer.precomputeForList(newSubtasks, taskManager, true);
             
-            // Insert at the correct position
-            listModel.add(insertIndex, newTask);
-            taskList.setSelectedIndex(insertIndex);
-            taskList.ensureIndexIsVisible(insertIndex);
+            // Add all subtasks
+            for (Task subtask : newSubtasks) {
+                // Add to TaskManager (persists to repository)
+                taskManager.addTask(subtask);
+                
+                // Insert at the correct position
+                listModel.add(insertIndex, subtask);
+                insertIndex++;
+            }
+            
+            // Select the last added subtask
+            taskList.setSelectedIndex(insertIndex - 1);
+            taskList.ensureIndexIsVisible(insertIndex - 1);
         } else {
-            // Fallback: full reload if parent not found
+            // Fallback: add all to TaskManager and trigger full reload
+            for (Task subtask : newSubtasks) {
+                taskManager.addTask(subtask);
+            }
             if (updateCallback != null) updateCallback.run();
         }
+    }
+
+    private void createAndSelectSubtask(Task t, String name) {
+        // Legacy method - now calls batch version with single item
+        java.util.List<String> names = new java.util.ArrayList<>();
+        names.add(name);
+        createAndInsertSubtasks(t, names);
     }
 
     @Override

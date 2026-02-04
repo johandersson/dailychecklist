@@ -324,15 +324,13 @@ public class CustomChecklistPanel extends JPanel {
                                     insertIndex++;
                                 }
                                 
+                                // Precompute display data once for all new subtasks (batch operation)
+                                DisplayPrecomputer.precomputeForList(newSubtasks, taskManager, true);
+                                
                                 // Add all subtasks
                                 for (Task subtask : newSubtasks) {
                                     // Add to TaskManager (persists to repository)
                                     taskManager.addTask(subtask);
-                                    
-                                    // Precompute display data for the new subtask
-                                    java.util.List<Task> singleTask = new java.util.ArrayList<>();
-                                    singleTask.add(subtask);
-                                    DisplayPrecomputer.precomputeForList(singleTask, taskManager, true);
                                     
                                     // Insert at the correct position
                                     customListModel.add(insertIndex, subtask);

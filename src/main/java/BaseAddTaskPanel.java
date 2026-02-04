@@ -21,12 +21,16 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.KeyStroke;
 
 @SuppressWarnings("serial")
 public abstract class BaseAddTaskPanel extends JPanel {
@@ -80,6 +84,16 @@ public abstract class BaseAddTaskPanel extends JPanel {
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.weighty = 0.0; // button row should not take extra vertical space
         add(addButton, gbc);
+        
+        // Add Ctrl+S key binding to task field to trigger add button
+        taskField.getInputMap(JComponent.WHEN_FOCUSED).put(
+            KeyStroke.getKeyStroke("control S"), "addTasks");
+        taskField.getActionMap().put("addTasks", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                addButton.doClick();
+            }
+        });
     }
 
     protected abstract void initializeSpecific();
