@@ -129,7 +129,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     @Override
     public Component getListCellRendererComponent(JList<? extends Task> list, Task task, int index, boolean isSelected, boolean cellHasFocus) {
         populateFromTask(task);
-        buildToolTip(task);
+        // Tooltip building removed - now done lazily on hover in TaskJList.getToolTipText()
         applySelectionStyles(list, isSelected);
         setFont(FontManager.getTaskListFont()); // Use consistent font for all task lists
         setOpaque(true); // Ensure background is painted
@@ -207,32 +207,42 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.isWeekdayTask = task.getWeekday() != null && WEEKDAY_ABBREVIATIONS.containsKey(weekdayKey);
     }
 
-    private void buildToolTip(Task task) {
-        // For top-level tasks show only the add-subtask affordance in the tooltip.
+    /**
+     * Builds tooltip text for a task (now called lazily on hover).
+     * Returns null if no tooltip should be shown.
+     */
+    public static String buildTaskTooltip(Task task, TaskManager taskManager) {
+        if (task == null) return null;
+        
+        // For top-level tasks show only the add-subtask affordance
         if (task.getParentId() == null) {
-            setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Add subtask</p></html>");
-            return;
+            return "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Add subtask</p></html>";
         }
 
         StringBuilder tip = new StringBuilder();
-        if (this.taskReminder != null) {
-            tip.append(String.format("Reminder: %04d-%02d-%02d %02d:%02d", this.taskReminder.getYear(), this.taskReminder.getMonth(), this.taskReminder.getDay(), this.taskReminder.getHour(), this.taskReminder.getMinute()));
-        }
-        if (this.isWeekdayTask) {
-            String wd = task.getWeekday();
-            if (wd != null && !wd.isEmpty()) {
-                // Capitalize first letter
-                String nice = wd.substring(0, 1).toUpperCase() + wd.substring(1).toLowerCase();
-                if (tip.length() > 0) tip.append(" — ");
-                tip.append("Weekday: ").append(nice);
+        
+        // Add reminder info if present
+        if (taskManager != null) {
+            Reminder reminder = taskManager.getReminderForTask(task.getId());
+            if (reminder != null) {
+                tip.append(String.format("Reminder: %04d-%02d-%02d %02d:%02d", 
+                    reminder.getYear(), reminder.getMonth(), reminder.getDay(), 
+                    reminder.getHour(), reminder.getMinute()));
             }
         }
-        if (tip.length() > 0) {
-            String html = "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + tip.toString() + "</p></html>";
-            setToolTipText(html);
-        } else {
-            setToolTipText(null);
+        
+        // Add weekday info if present
+        if (task.getWeekday() != null && !task.getWeekday().isEmpty()) {
+            String wd = task.getWeekday();
+            String nice = wd.substring(0, 1).toUpperCase() + wd.substring(1).toLowerCase();
+            if (tip.length() > 0) tip.append(" — ");
+            tip.append("Weekday: ").append(nice);
         }
+        
+        if (tip.length() > 0) {
+            return "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + tip.toString() + "</p></html>";
+        }
+        return null;
     }
 
     private void applySelectionStyles(JList<? extends Task> list, boolean isSelected) {

@@ -76,8 +76,13 @@ public class TaskListFactory {
             int cellW = cb.width;
 
             Task t = getModel().getElementAt(idx);
-            String tip = ReminderTooltipProvider.getTooltip(t, relX, cellW, taskManager);
-            return tip != null ? tip : super.getToolTipText(e);
+            
+            // Check for icon-specific tooltips first (reminder/weekday icons)
+            String iconTip = ReminderTooltipProvider.getTooltip(t, relX, cellW, taskManager);
+            if (iconTip != null) return iconTip;
+            
+            // Build general task tooltip lazily (only when hovering, not during rendering)
+            return CheckboxListCellRenderer.buildTaskTooltip(t, taskManager);
         }
     }
 }
