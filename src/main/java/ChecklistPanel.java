@@ -403,15 +403,16 @@ public class ChecklistPanel extends JPanel {
                                     
                                     // Select the last added subtask
                                     targetList.setSelectedIndex(insertIndex - 1);
-                            targetList.ensureIndexIsVisible(insertIndex);
-                            targetList.repaint();
-                        } else {
-                            // Fallback to full reload if parent not found
-                            updateTasks();
-                        }
-                    } finally {
-                        // Re-enable TaskChangeListener
-                        suppressTaskChangeListener = false;
+                    targetList.ensureIndexIsVisible(insertIndex);
+                    targetList.repaint();
+                } else {
+                    // Fallback to full reload if parent not found
+                    updateTasks();
+                }
+            } finally {
+                // Re-enable TaskChangeListener
+                suppressTaskChangeListener = false;
+            }
                     }
                 }
             });
