@@ -191,13 +191,73 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
                 }
             }
             if (checklistDisplay != null && parentName != null) {
-                breadcrumbText = checklistDisplay + " > " + parentName;
+                breadcrumbText = truncateBreadcrumb(checklistDisplay, parentName);
             } else if (parentName != null) {
-                breadcrumbText = parentName;
+                breadcrumbText = truncateName(parentName, 40);
             }
         } else {
-            breadcrumbText = parentName;
+            breadcrumbText = parentName != null ? truncateName(parentName, 40) : null;
         }
+    }
+    
+    /**
+     * Truncates a breadcrumb intelligently: checklist > parent.
+     * Limits total length while preserving context by showing beginning/end of long names.
+     * Max total breadcrumb length: ~60 chars to fit nicely in search results.
+     */
+    private String truncateBreadcrumb(String checklistName, String parentName) {
+        final int MAX_TOTAL = 60;
+        final int MIN_CHECKLIST = 15;
+        final int MIN_PARENT = 20;
+        
+        String separator = " > ";
+        int sepLen = separator.length();
+        int totalNeeded = checklistName.length() + sepLen + parentName.length();
+        
+        // If it fits, return as-is
+        if (totalNeeded <= MAX_TOTAL) {
+            return checklistName + separator + parentName;
+        }
+        
+        // Need to truncate - prioritize parent name (more specific)
+        int available = MAX_TOTAL - sepLen;
+        int parentAlloc = Math.min(parentName.length(), Math.max(MIN_PARENT, available / 2));
+        int checklistAlloc = available - parentAlloc;
+        
+        // Ensure minimums
+        if (checklistAlloc < MIN_CHECKLIST && parentAlloc > MIN_PARENT) {
+            int steal = MIN_CHECKLIST - checklistAlloc;
+            checklistAlloc = MIN_CHECKLIST;
+            parentAlloc = Math.max(MIN_PARENT, parentAlloc - steal);
+        }
+        
+        String truncChecklist = truncateName(checklistName, checklistAlloc);
+        String truncParent = truncateName(parentName, parentAlloc);
+        
+        return truncChecklist + separator + truncParent;
+    }
+    
+    /**
+     * Truncates a single name intelligently.
+     * For names longer than maxLen, shows beginning...end to preserve context.
+     */
+    private String truncateName(String name, int maxLen) {
+        if (name == null || name.length() <= maxLen) {
+            return name;
+        }
+        
+        // For very short limits, just use ellipsis
+        if (maxLen < 10) {
+            return name.substring(0, Math.max(1, maxLen - 1)) + "…";
+        }
+        
+        // Show beginning...end (e.g., "Very Long Ch...Name" for "Very Long Checklist Name")
+        int ellipsisLen = 3; // "..."
+        int charsToShow = maxLen - ellipsisLen;
+        int prefixLen = (charsToShow * 2) / 3; // Give 2/3 to beginning
+        int suffixLen = charsToShow - prefixLen;
+        
+        return name.substring(0, prefixLen) + "..." + name.substring(name.length() - suffixLen);
     }
 
     private void resolveWeekday(Task task) {

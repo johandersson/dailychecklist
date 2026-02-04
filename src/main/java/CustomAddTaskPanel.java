@@ -37,20 +37,41 @@ public class CustomAddTaskPanel extends BaseAddTaskPanel {
     @Override
     protected ActionListener createAddActionListener() {
         return e -> {
-            String[] tasks = taskField.getText().split("\\n");
+            String[] lines = taskField.getText().split("\\n");
             int addedCount = 0;
-            for (String taskName : tasks) {
-                if (!taskName.trim().isEmpty()) {
-                    Task newTask = new Task(taskName.trim(), TaskType.CUSTOM, null, checklistName);
-                    taskManager.addTask(newTask);
-                    addedCount++;
+            Task lastParentTask = null;
+            
+            for (String line : lines) {
+                if (line.trim().isEmpty()) {
+                    continue; // Skip empty lines
+                }
+                
+                // Check if line starts with tab (subtask)
+                if (line.startsWith("\t")) {
+                    String subtaskName = line.substring(1).trim(); // Remove tab and trim
+                    if (!subtaskName.isEmpty() && lastParentTask != null) {
+                        // Create subtask with parent reference
+                        Task subtask = new Task(subtaskName, TaskType.CUSTOM, null, checklistName, lastParentTask.getId());
+                        taskManager.addTask(subtask);
+                        addedCount++;
+                    }
+                } else {
+                    // Parent task (no tab indent)
+                    String taskName = line.trim();
+                    if (!taskName.isEmpty()) {
+                        Task newTask = new Task(taskName, TaskType.CUSTOM, null, checklistName);
+                        taskManager.addTask(newTask);
+                        lastParentTask = newTask; // Track for potential subtasks
+                        addedCount++;
+                    }
                 }
             }
+            
             if (addedCount == 0) {
                 JOptionPane.showMessageDialog(this, "No valid tasks to add.", "Validation Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            String message = String.format("Added %d custom tasks to %s successfully.", addedCount, checklistName);
+            String message = String.format("Added %d tasks to %s successfully.", addedCount, checklistName);
             JOptionPane.showMessageDialog(this, message, "Tasks Added", JOptionPane.INFORMATION_MESSAGE);
             taskField.setText("");
             updateTasks.run();

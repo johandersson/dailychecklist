@@ -10,8 +10,8 @@ if not exist build\classes mkdir build\classes
 echo.
 
 echo Compiling Java sources...
-echo Compiling all Java files with proper classpath...
-javac -cp "src\main\java" -d build\classes src\main\java\*.java
+echo Compiling all Java files with proper classpath (targeting Java 17 for test coverage compatibility)...
+javac --release 17 -cp "src\main\java" -d build\classes src\main\java\*.java
 if %errorlevel% neq 0 (
     echo ERROR: Java compilation failed
     echo.

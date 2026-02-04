@@ -1,16 +1,5 @@
 <html>
 <body style="font-family: Arial, sans-serif; color: #222; line-height:1.4;">
-		<h2>Subtasks</h2>
-		<div style="background:#fff7e6;border-left:4px solid #f0c36d;padding:10px;margin-bottom:10px;">
-			<b>Note:</b> Only one level of subtasks is supported — nested subtasks (sub-subtasks) are not allowed. Drag-and-drop or moves that would create deeper nesting are blocked to keep the structure one-level deep.
-		</div>
-		<ul>
-			<li>You can add subtasks to any daily or custom task. Subtasks appear directly below their parent and are indented for clarity.</li>
-			<li>To create a subtask, use the "Add Task" dialog and select a parent task (if supported in the UI), or right-click a task and choose "Add Subtask" (if available).</li>
-			<li>When all subtasks are marked as done, the parent task is automatically marked as done.</li>
-			<li>When you mark a parent task as done, all its subtasks are also marked as done. Unmarking a parent will unmark all subtasks.</li>
-			<li>Subtasks are supported in both daily and custom checklists.</li>
-		</ul>
 	<h1>Daily Checklist Help</h1>
 
 	<p>Daily Checklist is a focused app for managing daily routines (not general todo history). It records whether a task was completed each day but resets status daily. This app is designed for quick, repeatable daily checklists rather than long‑lived task tracking.</p>
@@ -91,6 +80,20 @@
 	<h2>Focus Timer</h2>
 	<p>Right-click a task → <i>Start Focus Timer</i>. Enter minutes (e.g., 25) and start. During the timer a countdown window appears; controls: Space = Pause/Resume, Enter = Start (when paused).</p>
 
+	<h2>Subtasks</h2>
+	<div style="background:#fff7e6;border-left:4px solid #f0c36d;padding:10px;margin-bottom:10px;">
+		<b>Note:</b> Only one level of subtasks is supported — nested subtasks (sub-subtasks) are not allowed. Drag-and-drop or moves that would create deeper nesting are blocked to keep the structure one-level deep.
+	</div>
+	<h3>Working with subtasks</h3>
+	<ul>
+		<li>You can add subtasks to any daily or custom task. Subtasks appear directly below their parent and are indented for clarity.</li>
+		<li>To create a single subtask, right-click a task and choose "Add Subtask".</li>
+		<li>To create multiple subtasks at once, right-click a task and choose "Add Multiple Subtasks", then enter one subtask per line.</li>
+		<li>When all subtasks are marked as done, the parent task is automatically marked as done.</li>
+		<li>When you mark a parent task as done, all its subtasks are also marked as done. Unmarking a parent will unmark all subtasks.</li>
+		<li>Subtasks are supported in both daily and custom checklists.</li>
+	</ul>
+
 	<h2>Settings & Troubleshooting</h2>
 	<ul>
 		<li>Access settings via the menu bar to customize defaults (timer length, etc.).</li>
@@ -102,8 +105,10 @@
 	<h2>Data Backup and Recovery</h2>
 	<ul>
 		<li>Backups are stored in <code>dailychecklist-backups</code> in your user directory.</li>
-		<li>The app makes automatic backups on startup and periodically.</li>
-		<li>To recover, use File → Restore from Backup (the app backs up your live data first).</li>
+		<li>The app makes automatic backups every 30 minutes (up to 30 backup files are retained).</li>
+		<li>Manual backups can be created via File → Create Backup.</li>
+		<li>To recover data, use File → Restore from Backup (the app backs up your live data first).</li>
+		<li>Old backups are automatically cleaned up when the maximum number of backups (30) is reached.</li>
 	</ul>
 
 	<h2>Keyboard Shortcuts</h2>

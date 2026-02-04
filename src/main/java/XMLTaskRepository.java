@@ -800,10 +800,6 @@ public class XMLTaskRepository implements TaskRepository {
             } catch (Exception ex) {
                 _log.log(java.util.logging.Level.WARNING, "Failed to write restore debug log", ex);
             }
-            // Create a backup before replacing all tasks
-            if (backupManager != null) {
-                backupManager.createBackup("before-set-all-tasks");
-            }
             // Normalize checklist identifiers: older backups may have stored the checklist NAME
             // in the task.checklistId field. Convert those to stable checklist IDs so the UI
             // can match tasks to checklists.
@@ -970,8 +966,6 @@ public class XMLTaskRepository implements TaskRepository {
 
     @Override
     public void shutdown() {
-        // Create final backup before shutting down
-        backupManager.createBackup("shutdown");
         shutdownBackupSystem();
         
         // Clear cache to free memory

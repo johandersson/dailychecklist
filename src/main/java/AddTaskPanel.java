@@ -22,21 +22,25 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.Locale;
 import java.util.function.Consumer;
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.KeyStroke;
 
 @SuppressWarnings("serial")
 public class AddTaskPanel extends JPanel {
@@ -184,50 +188,84 @@ public class AddTaskPanel extends JPanel {
         // Button row should not take extra vertical space
         gbc.weighty = 0.0;
         add(addButton, gbc);
+        
+        // Add Ctrl+S key binding to task field to trigger add button
+        taskField.getInputMap(JComponent.WHEN_FOCUSED).put(
+            KeyStroke.getKeyStroke("control S"), "addTasks");
+        taskField.getActionMap().put("addTasks", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                addButton.doClick();
+            }
+        });
     }
 
     private ActionListener createAddMultipleTasksActionListener(JTextArea taskField, JRadioButton morningRadioButton, JRadioButton eveningRadioButton) {
         return e -> {
-            String[] taskNames = taskField.getText().split("\\n");
+            String[] lines = taskField.getText().split("\\n");
             java.util.List<Task> addedTasks = new java.util.ArrayList<>();
+            Task lastParentTask = null;
             
-            for (String taskName : taskNames) {
-                if (!taskName.trim().isEmpty()) {
-                    boolean hasSelection = checklistName != null ||
-                        (addMorningRadioButton != null && addMorningRadioButton.isSelected()) ||
-                        (addEveningRadioButton != null && addEveningRadioButton.isSelected());
-                    if (!hasSelection) {
-                        JOptionPane.showMessageDialog(this, "Please select Morning or Evening.", "Validation Error", JOptionPane.ERROR_MESSAGE);
-                        return;
+            for (String line : lines) {
+                if (line.trim().isEmpty()) {
+                    continue; // Skip empty lines
+                }
+                
+                // Validate selection before processing any tasks
+                boolean hasSelection = checklistName != null ||
+                    (addMorningRadioButton != null && addMorningRadioButton.isSelected()) ||
+                    (addEveningRadioButton != null && addEveningRadioButton.isSelected());
+                if (!hasSelection) {
+                    JOptionPane.showMessageDialog(this, "Please select Morning or Evening.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                if (weekdayComboBox != null && weekdayComboBox.isEnabled() && weekdayComboBox.getSelectedItem() == null) {
+                    JOptionPane.showMessageDialog(this, "Please select a valid weekday.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                
+                // Determine task type
+                TaskType type;
+                if (checklistName != null) {
+                    type = TaskType.CUSTOM;
+                } else if (addMorningRadioButton.isSelected()) {
+                    type = TaskType.MORNING;
+                } else if (addEveningRadioButton.isSelected()) {
+                    type = TaskType.EVENING;
+                } else {
+                    JOptionPane.showMessageDialog(this, "Invalid selection.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                String selectedWeekday = (weekdayComboBox != null && weekdayComboBox.isEnabled() && type != TaskType.CUSTOM) ? (String) weekdayComboBox.getSelectedItem() : null;
+                
+                // Resolve checklist ID if needed
+                String checklistIdForTask = null;
+                if (checklistName != null) {
+                    Checklist found = taskManager.getCustomChecklists().stream()
+                            .filter(c -> checklistName.equals(c.getName()))
+                            .findFirst()
+                            .orElse(null);
+                    if (found != null) checklistIdForTask = found.getId();
+                }
+                
+                // Check if line starts with tab (subtask)
+                if (line.startsWith("\t")) {
+                    String subtaskName = line.substring(1).trim(); // Remove tab and trim
+                    if (!subtaskName.isEmpty() && lastParentTask != null) {
+                        // Create subtask with parent reference
+                        Task subtask = new Task(subtaskName, type, selectedWeekday, checklistIdForTask, lastParentTask.getId());
+                        taskManager.addTask(subtask);
+                        addedTasks.add(subtask);
                     }
-                    if (weekdayComboBox != null && weekdayComboBox.isEnabled() && weekdayComboBox.getSelectedItem() == null) {
-                        JOptionPane.showMessageDialog(this, "Please select a valid weekday.", "Validation Error", JOptionPane.ERROR_MESSAGE);
-                        return;
+                } else {
+                    // Parent task (no tab indent)
+                    String taskName = line.trim();
+                    if (!taskName.isEmpty()) {
+                        Task newTask = new Task(taskName, type, selectedWeekday, checklistIdForTask);
+                        taskManager.addTask(newTask);
+                        addedTasks.add(newTask);
+                        lastParentTask = newTask; // Track for potential subtasks
                     }
-                    TaskType type;
-                    if (checklistName != null) {
-                        type = TaskType.CUSTOM;
-                    } else if (addMorningRadioButton.isSelected()) {
-                        type = TaskType.MORNING;
-                    } else if (addEveningRadioButton.isSelected()) {
-                        type = TaskType.EVENING;
-                    } else {
-                        JOptionPane.showMessageDialog(this, "Invalid selection.", "Error", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-                    String selectedWeekday = (weekdayComboBox != null && weekdayComboBox.isEnabled() && type != TaskType.CUSTOM) ? (String) weekdayComboBox.getSelectedItem() : null;
-                    // If creating a task for a custom checklist, resolve the checklist id from its name
-                    String checklistIdForTask = null;
-                    if (checklistName != null) {
-                        Checklist found = taskManager.getCustomChecklists().stream()
-                                .filter(c -> checklistName.equals(c.getName()))
-                                .findFirst()
-                                .orElse(null);
-                        if (found != null) checklistIdForTask = found.getId();
-                    }
-                    Task newTask = new Task(taskName.trim(), type, selectedWeekday, checklistIdForTask);
-                    taskManager.addTask(newTask);
-                    addedTasks.add(newTask);
                 }
             }
             
