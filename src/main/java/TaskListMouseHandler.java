@@ -166,7 +166,10 @@ public class TaskListMouseHandler extends MouseAdapter {
             } finally {
                 taskManager.endBatchOperation();
             }
-            if (updateCallback != null) updateCallback.run();
+            // Trigger UI refresh in fallback case
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                if (updateCallback != null) updateCallback.run();
+            });
         }
     }
 

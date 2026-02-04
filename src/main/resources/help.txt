@@ -77,6 +77,18 @@
 		<li><b>Very overdue</b>: UI indicates critical overdue reminders.</li>
 	</ul>
 
+	<h2>Today View (Timeline)</h2>
+	<p>The "Today" tab provides a visual timeline of all reminders scheduled for the current day, similar to a calendar day view.</p>
+	<h3>Using the timeline</h3>
+	<ul>
+		<li>The timeline shows the full 24-hour day (00:00 – 23:59) with hour markers and time labels.</li>
+		<li>Each reminder appears as a colored block at its scheduled time.</li>
+		<li>Click any reminder block to jump directly to the associated task or checklist in the main interface.</li>
+		<li>Hover over a reminder block to see full details in a tooltip (time, task name, parent task if applicable).</li>
+		<li>Multiple reminders at the same time appear side by side for easy viewing.</li>
+		<li>The view automatically refreshes when reminders are added, removed, or modified.</li>
+	</ul>
+
 	<h2>Focus Timer</h2>
 	<p>Right-click a task → <i>Start Focus Timer</i>. Enter minutes (e.g., 25) and start. During the timer a countdown window appears; controls: Space = Pause/Resume, Enter = Start (when paused).</p>
 
@@ -89,6 +101,7 @@
 		<li>You can add subtasks to any daily or custom task. Subtasks appear directly below their parent and are indented for clarity.</li>
 		<li>To create a single subtask, right-click a task and choose "Add Subtask".</li>
 		<li>To create multiple subtasks at once, right-click a task and choose "Add Multiple Subtasks", then enter one subtask per line.</li>
+		<li><b>Tab-indented subtasks:</b> When adding multiple subtasks, you can indent lines with a tab character to create subtasks. Non-indented lines create regular tasks.</li>
 		<li>When all subtasks are marked as done, the parent task is automatically marked as done.</li>
 		<li>When you mark a parent task as done, all its subtasks are also marked as done. Unmarking a parent will unmark all subtasks.</li>
 		<li>Subtasks are supported in both daily and custom checklists.</li>
@@ -119,6 +132,7 @@
 		<li>Multi-select: <b>Ctrl+click</b></li>
 		<li>Range-select: <b>Shift+click</b></li>
 		<li>Delete selected tasks: <b>Delete</b></li>
+		<li>Save dialog contents: <b>Ctrl+S</b> (in text areas like Add Tasks or Add Multiple Subtasks dialogs)</li>
 		<li>Timer pause/resume: <b>Space</b></li>
 	</ul>
 

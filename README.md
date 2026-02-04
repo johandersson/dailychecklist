@@ -9,6 +9,7 @@ Stay organized and boost your productivity with the **Daily Checklist** applicat
 - **Daily Task Management**: Add, edit, rename, and remove tasks for your morning and evening routines with flexible scheduling (daily, weekday, or specific days).
 - **Subtasks**: Add subtasks to any daily or custom task. Subtasks appear directly below their parent and are indented. Marking all subtasks as done marks the parent as done, and marking the parent as done marks all subtasks as done. Only one level of subtasks is supported. Reminders that target a subtask will show the subtask's name in the reminder dialog and — when applicable — a small breadcrumb showing the checklist and parent task for context.
 - **Custom Checklists**: Create named checklists for specific projects, habits, or one-off task lists with support for adding multiple tasks at once.
+- **Today View (Timeline)**: Visual 24-hour timeline showing all reminders for the current day. Click any reminder block to jump directly to the task or checklist. Hover for details.
 - **Search Functionality**: Quickly find tasks across all checklists with real-time search (Ctrl+F) and jump directly to selected tasks.
 - **Reminders**: Set date/time reminders for any checklist with notifications and visual clock icons.
 - **Focus Timer**: Start a customizable timer for any task to maintain focus and track progress with visual indicators.
@@ -162,6 +163,20 @@ To build the JAR manually:
 - Right-click a checklist and select "View/Edit Reminders".
 - Edit or delete existing reminders.
 - When reminder time arrives, choose to open the checklist or mark as done.
+
+### Using the Today View (Timeline)
+
+The "Today" tab provides a visual timeline of all reminders scheduled for the current day.
+
+#### Viewing Reminders
+- Click the "Today" tab to see a 24-hour timeline (00:00 – 23:59).
+- Each reminder appears as a colored block at its scheduled time.
+- Multiple reminders at the same time appear side by side.
+
+#### Interacting with Reminders
+- **Click** any reminder block to jump directly to the associated task or checklist.
+- **Hover** over a reminder block to see full details (time, task name, parent task if applicable).
+- The view automatically refreshes when reminders are added, removed, or modified.
 
 ### Using the Focus Timer
 
