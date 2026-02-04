@@ -328,34 +328,38 @@ public class CustomChecklistPanel extends JPanel {
                             }
                             
                             if (parentIndex < 0) {
-                                // Parent not found in model - fallback to full refresh
+                                // Parent not found in model - add subtasks and trigger full refresh
                                 for (Task subtask : newSubtasks) {
                                     taskManager.addTask(subtask);
                                 }
-                                return;
+                                // Don't return - let finally block execute, then trigger refresh
+                                // Mark that we need a full update
+                                javax.swing.SwingUtilities.invokeLater(() -> {
+                                    updateTasks();
+                                });
+                            } else {
+                                // Precompute display data once for all new subtasks (batch operation)
+                                DisplayPrecomputer.precomputeForList(newSubtasks, taskManager, true);
+                                
+                                // Now add all subtasks to TaskManager first (batch persistence)
+                                for (Task subtask : newSubtasks) {
+                                    taskManager.addTask(subtask);
+                                }
+                                
+                                // Then insert all into the model at the calculated position
+                                for (Task subtask : newSubtasks) {
+                                    customListModel.add(insertIndex, subtask);
+                                    insertIndex++;
+                                }
+                                
+                                // Select the last added subtask and ensure visibility
+                                final int finalIndex = insertIndex - 1;
+                                javax.swing.SwingUtilities.invokeLater(() -> {
+                                    customTaskList.setSelectedIndex(finalIndex);
+                                    customTaskList.ensureIndexIsVisible(finalIndex);
+                                    customTaskList.repaint();
+                                });
                             }
-                            
-                            // Precompute display data once for all new subtasks (batch operation)
-                            DisplayPrecomputer.precomputeForList(newSubtasks, taskManager, true);
-                            
-                            // Now add all subtasks to TaskManager first (batch persistence)
-                            for (Task subtask : newSubtasks) {
-                                taskManager.addTask(subtask);
-                            }
-                            
-                            // Then insert all into the model at the calculated position
-                            for (Task subtask : newSubtasks) {
-                                customListModel.add(insertIndex, subtask);
-                                insertIndex++;
-                            }
-                            
-                            // Select the last added subtask and ensure visibility
-                            final int finalIndex = insertIndex - 1;
-                            javax.swing.SwingUtilities.invokeLater(() -> {
-                                customTaskList.setSelectedIndex(finalIndex);
-                                customTaskList.ensureIndexIsVisible(finalIndex);
-                                customTaskList.repaint();
-                            });
                         } finally {
                             // Re-enable TaskChangeListener after direct insertion
                             suppressTaskChangeListener = false;

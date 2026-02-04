@@ -20,6 +20,7 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,9 +33,9 @@ import javax.swing.*;
  */
 public class TodayPanel extends JPanel {
     private final TaskManager taskManager;
-    private final int startHour = 6; // Start timeline at 6 AM
-    private final int endHour = 22;  // End timeline at 10 PM
-    private final int hoursToShow = endHour - startHour;
+    private final int startHour = 0; // Start timeline at midnight
+    private final int endHour = 23;  // End timeline at 11 PM (last hour line)
+    private final int hoursToShow = endHour - startHour + 1; // +1 to include the last hour
     private final int hourHeight = 60; // Height of each hour block
     private final int timelineWidth = 80; // Width of the time column
     private final int reminderBlockHeight = 40; // Height of reminder blocks
@@ -44,6 +45,11 @@ public class TodayPanel extends JPanel {
     private List<Reminder> todaysReminders;
     private Map<String, Task> taskCache;
     private Map<Rectangle, Reminder> reminderBlockBounds; // Track click regions
+    
+    // Cached timeline background image for performance
+    private BufferedImage timelineBackgroundCache;
+    private int cachedWidth = -1;
+    private int cachedHeight = -1;
 
     public TodayPanel(TaskManager taskManager) {
         this.taskManager = taskManager;
@@ -54,11 +60,20 @@ public class TodayPanel extends JPanel {
 
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Listen for task changes (which include reminder changes)
+        taskManager.addTaskChangeListener(() -> {
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                refreshData();
+            });
+        });
 
         // Add component listener to handle resizing
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
+                // Invalidate cache on resize
+                invalidateTimelineCache();
                 refreshData();
                 repaint();
             }
@@ -110,6 +125,15 @@ public class TodayPanel extends JPanel {
         }
 
         repaint();
+    }
+    
+    /**
+     * Invalidate the cached timeline background.
+     */
+    private void invalidateTimelineCache() {
+        timelineBackgroundCache = null;
+        cachedWidth = -1;
+        cachedHeight = -1;
     }
     
     /**
@@ -174,6 +198,31 @@ public class TodayPanel extends JPanel {
         // Clear previous bounds before redrawing
         reminderBlockBounds.clear();
 
+        // Draw cached timeline background or create it if needed
+        if (timelineBackgroundCache == null || cachedWidth != width || cachedHeight != height) {
+            createTimelineBackgroundCache(width, height);
+        }
+        
+        // Draw the cached background
+        g2d.drawImage(timelineBackgroundCache, 0, 0, null);
+
+        // Draw reminder blocks on top (these change frequently)
+        drawReminderBlocks(g2d, width);
+
+        g2d.dispose();
+    }
+    
+    /**
+     * Create a cached image of the timeline background (hour lines and labels).
+     * This is expensive to draw but doesn't change, so we cache it.
+     */
+    private void createTimelineBackgroundCache(int width, int height) {
+        cachedWidth = width;
+        cachedHeight = height;
+        timelineBackgroundCache = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = timelineBackgroundCache.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        
         // Draw timeline background
         g2d.setColor(Color.WHITE);
         g2d.fillRect(0, 0, width, height);
@@ -194,10 +243,7 @@ public class TodayPanel extends JPanel {
             int labelY = y + fm.getAscent() + 5;
             g2d.drawString(timeLabel, 10, labelY);
         }
-
-        // Draw reminder blocks
-        drawReminderBlocks(g2d, width);
-
+        
         g2d.dispose();
     }
 

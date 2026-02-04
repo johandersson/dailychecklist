@@ -413,15 +413,21 @@ public class ChecklistPanel extends JPanel {
                                         targetList.ensureIndexIsVisible(finalIndex);
                                         targetList.repaint();
                                     });
-                } else {
-                    // Fallback to full reload if parent not found
-                    updateTasks();
-                }
-            } finally {
-                // Re-enable TaskChangeListener
-                suppressTaskChangeListener = false;
-                taskManager.endBatchOperation();
-            }
+                                } else {
+                                    // Fallback to full reload if parent not found
+                                    // Add subtasks first, then trigger full refresh
+                                    for (Task subtask : newSubtasks) {
+                                        taskManager.addTask(subtask);
+                                    }
+                                    javax.swing.SwingUtilities.invokeLater(() -> {
+                                        updateTasks();
+                                    });
+                                }
+                            } finally {
+                                // Re-enable TaskChangeListener
+                                suppressTaskChangeListener = false;
+                                taskManager.endBatchOperation();
+                            }
                     }
                 }
             });
