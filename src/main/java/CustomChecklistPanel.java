@@ -347,7 +347,6 @@ public class CustomChecklistPanel extends JPanel {
                                 // Re-enable TaskChangeListener after direct insertion
                                 suppressTaskChangeListener = false;
                             }
-                        }
                     }
                 }
             });
