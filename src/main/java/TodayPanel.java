@@ -87,18 +87,27 @@ public class TodayPanel extends JPanel {
             }
         });
         
-        // Add cursor change on hover
+        // Add cursor change and tooltip on hover
         addMouseMotionListener(new MouseAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
                 boolean overReminder = false;
-                for (Rectangle bounds : reminderBlockBounds.keySet()) {
-                    if (bounds.contains(e.getPoint())) {
+                Reminder hoveredReminder = null;
+                for (Map.Entry<Rectangle, Reminder> entry : reminderBlockBounds.entrySet()) {
+                    if (entry.getKey().contains(e.getPoint())) {
                         overReminder = true;
+                        hoveredReminder = entry.getValue();
                         break;
                     }
                 }
                 setCursor(overReminder ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
+                
+                // Update tooltip
+                if (hoveredReminder != null) {
+                    setToolTipText(getReminderTooltip(hoveredReminder));
+                } else {
+                    setToolTipText(null);
+                }
             }
         });
 
@@ -228,7 +237,7 @@ public class TodayPanel extends JPanel {
         g2d.fillRect(0, 0, width, height);
 
         // Draw hour lines and time labels
-        g2d.setColor(Color.LIGHT_GRAY);
+        g2d.setColor(new Color(120, 120, 120)); // Medium gray for better visibility
         g2d.setFont(g2d.getFont().deriveFont(12f));
 
         for (int hour = startHour; hour <= endHour; hour++) {
@@ -346,6 +355,36 @@ public class TodayPanel extends JPanel {
             }
         }
         return null;
+    }
+    
+    /**
+     * Get tooltip text for a reminder.
+     */
+    private String getReminderTooltip(Reminder reminder) {
+        StringBuilder tooltip = new StringBuilder("<html>");
+        
+        // Add time
+        tooltip.append(String.format("<b>%02d:%02d</b><br>", reminder.getHour(), reminder.getMinute()));
+        
+        // Add title
+        String title = getReminderTitle(reminder);
+        if (title != null) {
+            tooltip.append(title);
+        }
+        
+        // Add breadcrumb if present
+        String subtitle = getReminderSubtitle(reminder);
+        if (subtitle != null && !subtitle.isEmpty()) {
+            tooltip.append("<br>").append(subtitle);
+        }
+        
+        // Add checklist info if not a task reminder
+        if (reminder.getTaskId() == null && reminder.getChecklistName() != null) {
+            tooltip.append("<br><i>Checklist reminder</i>");
+        }
+        
+        tooltip.append("</html>");
+        return tooltip.toString();
     }
 
     @Override
