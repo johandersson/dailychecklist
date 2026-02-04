@@ -118,6 +118,7 @@ public class TaskListMouseHandler extends MouseAdapter {
         
         if (parentIndex >= 0) {
             // Find position: after parent and after any existing subtasks
+            // Calculate this BEFORE adding any tasks to avoid model inconsistency
             int insertIndex = parentIndex + 1;
             while (insertIndex < listModel.getSize()) {
                 Task candidate = listModel.get(insertIndex);
@@ -130,19 +131,24 @@ public class TaskListMouseHandler extends MouseAdapter {
             // Precompute display data once for all new subtasks (batch operation)
             DisplayPrecomputer.precomputeForList(newSubtasks, taskManager, true);
             
-            // Add all subtasks
+            // Add all subtasks to TaskManager first (batch persistence)
             for (Task subtask : newSubtasks) {
-                // Add to TaskManager (persists to repository)
                 taskManager.addTask(subtask);
-                
-                // Insert at the correct position
+            }
+            
+            // Then insert all into the model at the calculated position
+            for (Task subtask : newSubtasks) {
                 listModel.add(insertIndex, subtask);
                 insertIndex++;
             }
             
-            // Select the last added subtask
-            taskList.setSelectedIndex(insertIndex - 1);
-            taskList.ensureIndexIsVisible(insertIndex - 1);
+            // Select the last added subtask - use invokeLater to ensure UI updates complete
+            final int finalIndex = insertIndex - 1;
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                taskList.setSelectedIndex(finalIndex);
+                taskList.ensureIndexIsVisible(finalIndex);
+                taskList.repaint();
+            });
         } else {
             // Fallback: add all to TaskManager and trigger full reload
             for (Task subtask : newSubtasks) {
