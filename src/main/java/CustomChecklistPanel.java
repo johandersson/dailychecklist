@@ -300,51 +300,65 @@ public class CustomChecklistPanel extends JPanel {
                     }
                     
                     if (!newSubtasks.isEmpty()) {
-                            try {
-                                // Suppress TaskChangeListener to avoid full reload
-                                suppressTaskChangeListener = true;
-                                
-                                // Find parent index once
-                                int parentIndex = -1;
-                                for (int i = 0; i < customListModel.getSize(); i++) {
-                                    Task cand = customListModel.get(i);
-                                    if (cand != null && cand.getId().equals(p.getId())) {
-                                        parentIndex = i;
-                                        break;
+                        try {
+                            // Suppress TaskChangeListener to avoid full reload
+                            suppressTaskChangeListener = true;
+                            
+                            // Find parent index and calculate insertion point BEFORE adding anything
+                            int parentIndex = -1;
+                            int insertIndex = -1;
+                            
+                            // Scan model once to find parent and count existing subtasks
+                            for (int i = 0; i < customListModel.getSize(); i++) {
+                                Task cand = customListModel.get(i);
+                                if (cand != null && cand.getId().equals(p.getId())) {
+                                    parentIndex = i;
+                                    // Now count existing subtasks after this parent
+                                    insertIndex = i + 1;
+                                    while (insertIndex < customListModel.getSize()) {
+                                        Task candidate = customListModel.get(insertIndex);
+                                        if (candidate.getParentId() == null || !candidate.getParentId().equals(p.getId())) {
+                                            break;
+                                        }
+                                        insertIndex++;
                                     }
+                                    break;
                                 }
-                                
-                                // Find insertion point: after parent and existing subtasks
-                                int insertIndex = parentIndex + 1;
-                                while (insertIndex < customListModel.getSize()) {
-                                    Task candidate = customListModel.get(insertIndex);
-                                    if (candidate.getParentId() == null || !candidate.getParentId().equals(p.getId())) {
-                                        break;
-                                    }
-                                    insertIndex++;
-                                }
-                                
-                                // Precompute display data once for all new subtasks (batch operation)
-                                DisplayPrecomputer.precomputeForList(newSubtasks, taskManager, true);
-                                
-                                // Add all subtasks
-                                for (Task subtask : newSubtasks) {
-                                    // Add to TaskManager (persists to repository)
-                                    taskManager.addTask(subtask);
-                                    
-                                    // Insert at the correct position
-                                    customListModel.add(insertIndex, subtask);
-                                    insertIndex++;
-                                }
-                                
-                                // Select the last added subtask
-                                customTaskList.setSelectedIndex(insertIndex - 1);
-                                customTaskList.ensureIndexIsVisible(insertIndex - 1);
-                                list.repaint();
-                            } finally {
-                                // Re-enable TaskChangeListener after direct insertion
-                                suppressTaskChangeListener = false;
                             }
+                            
+                            if (parentIndex < 0) {
+                                // Parent not found in model - fallback to full refresh
+                                for (Task subtask : newSubtasks) {
+                                    taskManager.addTask(subtask);
+                                }
+                                return;
+                            }
+                            
+                            // Precompute display data once for all new subtasks (batch operation)
+                            DisplayPrecomputer.precomputeForList(newSubtasks, taskManager, true);
+                            
+                            // Now add all subtasks to TaskManager first (batch persistence)
+                            for (Task subtask : newSubtasks) {
+                                taskManager.addTask(subtask);
+                            }
+                            
+                            // Then insert all into the model at the calculated position
+                            for (Task subtask : newSubtasks) {
+                                customListModel.add(insertIndex, subtask);
+                                insertIndex++;
+                            }
+                            
+                            // Select the last added subtask and ensure visibility
+                            final int finalIndex = insertIndex - 1;
+                            javax.swing.SwingUtilities.invokeLater(() -> {
+                                customTaskList.setSelectedIndex(finalIndex);
+                                customTaskList.ensureIndexIsVisible(finalIndex);
+                                customTaskList.repaint();
+                            });
+                        } finally {
+                            // Re-enable TaskChangeListener after direct insertion
+                            suppressTaskChangeListener = false;
+                        }
                     }
                 }
             });

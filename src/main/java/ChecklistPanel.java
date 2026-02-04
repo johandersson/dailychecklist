@@ -377,6 +377,7 @@ public class ChecklistPanel extends JPanel {
                                 
                                 if (parentIndex >= 0) {
                                     // Find insertion point: after parent and existing subtasks
+                                    // Calculate this BEFORE adding any tasks to avoid model inconsistency
                                     int insertIndex = parentIndex + 1;
                                     while (insertIndex < targetModel.getSize()) {
                                         Task candidate = targetModel.get(insertIndex);
@@ -389,20 +390,24 @@ public class ChecklistPanel extends JPanel {
                                     // Precompute display data once for all new subtasks (batch operation)
                                     DisplayPrecomputer.precomputeForList(newSubtasks, taskManager, false);
                                     
-                                    // Add all subtasks
+                                    // Add all subtasks to TaskManager first (batch persistence)
                                     for (Task subtask : newSubtasks) {
-                                        // Add to TaskManager (persists to repository)
                                         taskManager.addTask(subtask);
-                                        
-                                        // Insert at the correct position
+                                    }
+                                    
+                                    // Then insert all into the model at the calculated position
+                                    for (Task subtask : newSubtasks) {
                                         targetModel.add(insertIndex, subtask);
                                         insertIndex++;
                                     }
                                     
-                                    // Select the last added subtask
-                                    targetList.setSelectedIndex(insertIndex - 1);
-                    targetList.ensureIndexIsVisible(insertIndex);
-                    targetList.repaint();
+                                    // Select the last added subtask - use invokeLater to ensure UI updates complete
+                                    final int finalIndex = insertIndex - 1;
+                                    javax.swing.SwingUtilities.invokeLater(() -> {
+                                        targetList.setSelectedIndex(finalIndex);
+                                        targetList.ensureIndexIsVisible(finalIndex);
+                                        targetList.repaint();
+                                    });
                 } else {
                     // Fallback to full reload if parent not found
                     updateTasks();
