@@ -49,6 +49,34 @@ No additional dependencies are required for runtime.
 
 ## Building from Source
 
+### Quick Build
+Run `build.bat` (Windows) or `build.sh` (Unix/Linux/macOS) to compile and package the application. This creates `build/dailychecklist.jar`.
+
+### Running Tests
+The project includes a comprehensive test suite covering core functionality:
+
+```bash
+# Run tests (downloads JUnit/JaCoCo automatically if not present)
+run_tests.bat
+```
+
+**First Run**: The test runner will automatically download required libraries:
+- JUnit 4.13.2 (testing framework)
+- Hamcrest 1.3 (assertion library)
+- JaCoCo 0.8.11 (code coverage - may not support Java 24+)
+
+These libraries are saved to the `lib/` directory (git-ignored) and only downloaded once.
+
+**Test Suite**: Includes tests for:
+- Task entity (creation, subtasks, completion states)
+- TaskManager (add, update, remove operations)
+- XMLTaskRepository (persistence and O(1) optimization verification)
+- Checklist entity (basic operations)
+
+**Note**: Code coverage reports require JaCoCo which may not support the latest Java versions. Tests will still run successfully but coverage reporting may fail on Java 24+.
+
+## Project Structure
+
 To build the JAR manually:
 
 1. Ensure Java JDK is installed and `javac`/`jar` are in your PATH.
@@ -177,10 +205,18 @@ To build the JAR manually:
 
 - **Project Structure**:
   - `src/main/java/`: Source code.
+## Project Structure
+
+- **Source Code**:
+  - `src/main/java/`: Main application source code.
   - `src/main/resources/`: Resources (e.g., MANIFEST.MF).
-  - `src/test/java/`: Unit tests (requires JUnit for running).
-  - `build.bat`: Build script.
-- **Testing**: Run tests manually with JUnit (not included in build).
+- **Testing**:
+  - `test/java/`: Unit tests for core functionality.
+  - `run_tests.bat`: Test runner with automatic dependency download.
+  - `lib/`: Downloaded test libraries (git-ignored, auto-created).
+- **Build**:
+  - `build.bat` / `build.sh`: Build scripts.
+  - `build/`: Compiled classes and JAR file.
 - **Contributing**: Fork the repo, make changes, and submit a pull request.
 
 ## License
