@@ -344,51 +344,65 @@ public class ChecklistPanel extends JPanel {
                 Task p = taskManager.getTaskById(modelParent.getId());
                 if (p == null) p = modelParent;
                 Task pForDialog = (p != null) ? p : modelParent;
-                String prompt = "Subtask to " + (pForDialog != null ? pForDialog.getName() : "");
-                String subtaskName = javax.swing.JOptionPane.showInputDialog(this, prompt);
-                if (subtaskName != null && !subtaskName.trim().isEmpty()) {
-                    Task subtask = new Task(subtaskName.trim(), p.getType(), p.getWeekday(), p.getChecklistId(), p.getId());
+                
+                // Show multi-line dialog for adding multiple subtasks
+                java.util.List<String> subtaskNames = MultiSubtaskDialog.show(this, pForDialog.getName());
+                
+                if (!subtaskNames.isEmpty()) {
+                    // Create subtask objects
+                    java.util.List<Task> newSubtasks = new java.util.ArrayList<>();
+                    for (String subtaskName : subtaskNames) {
+                        Task subtask = new Task(subtaskName, p.getType(), p.getWeekday(), p.getChecklistId(), p.getId());
+                        newSubtasks.add(subtask);
+                    }
                     
-                    try {
-                        // Suppress TaskChangeListener to avoid full reload
-                        suppressTaskChangeListener = true;
-                        
-                        // Add to TaskManager (persists to repository)
-                        taskManager.addTask(subtask);
-                        
-                        // Optimize: directly insert into the appropriate model
-                        DefaultListModel<Task> targetModel = (p.getType() == TaskType.MORNING) ? morningListModel : eveningListModel;
-                        JList<Task> targetList = (p.getType() == TaskType.MORNING) ? morningTaskList : eveningTaskList;
-                        
-                        // Find parent position
-                        int parentIndex = -1;
-                        for (int i = 0; i < targetModel.getSize(); i++) {
-                            Task cand = targetModel.get(i);
-                            if (cand != null && cand.getId().equals(p.getId())) {
-                                parentIndex = i;
-                                break;
-                            }
-                        }
-                        
-                        if (parentIndex >= 0) {
-                            // Find insertion point: after parent and existing subtasks
-                            int insertIndex = parentIndex + 1;
-                            while (insertIndex < targetModel.getSize()) {
-                                Task candidate = targetModel.get(insertIndex);
-                                if (candidate.getParentId() == null || !candidate.getParentId().equals(p.getId())) {
-                                    break;
+                    if (!newSubtasks.isEmpty()) {
+                            try {
+                                // Suppress TaskChangeListener to avoid full reload
+                                suppressTaskChangeListener = true;
+                                
+                                // Determine target model and list
+                                DefaultListModel<Task> targetModel = (p.getType() == TaskType.MORNING) ? morningListModel : eveningListModel;
+                                JList<Task> targetList = (p.getType() == TaskType.MORNING) ? morningTaskList : eveningTaskList;
+                                
+                                // Find parent position once
+                                int parentIndex = -1;
+                                for (int i = 0; i < targetModel.getSize(); i++) {
+                                    Task cand = targetModel.get(i);
+                                    if (cand != null && cand.getId().equals(p.getId())) {
+                                        parentIndex = i;
+                                        break;
+                                    }
                                 }
-                                insertIndex++;
-                            }
-                            
-                            // Precompute display data for the new subtask
-                            java.util.List<Task> singleTask = new java.util.ArrayList<>();
-                            singleTask.add(subtask);
-                            DisplayPrecomputer.precomputeForList(singleTask, taskManager, false);
-                            
-                            // Insert at the correct position
-                            targetModel.add(insertIndex, subtask);
-                            targetList.setSelectedIndex(insertIndex);
+                                
+                                if (parentIndex >= 0) {
+                                    // Find insertion point: after parent and existing subtasks
+                                    int insertIndex = parentIndex + 1;
+                                    while (insertIndex < targetModel.getSize()) {
+                                        Task candidate = targetModel.get(insertIndex);
+                                        if (candidate.getParentId() == null || !candidate.getParentId().equals(p.getId())) {
+                                            break;
+                                        }
+                                        insertIndex++;
+                                    }
+                                    
+                                    // Add all subtasks
+                                    for (Task subtask : newSubtasks) {
+                                        // Add to TaskManager (persists to repository)
+                                        taskManager.addTask(subtask);
+                                        
+                                        // Precompute display data for the new subtask
+                                        java.util.List<Task> singleTask = new java.util.ArrayList<>();
+                                        singleTask.add(subtask);
+                                        DisplayPrecomputer.precomputeForList(singleTask, taskManager, false);
+                                        
+                                        // Insert at the correct position
+                                        targetModel.add(insertIndex, subtask);
+                                        insertIndex++;
+                                    }
+                                    
+                                    // Select the last added subtask
+                                    targetList.setSelectedIndex(insertIndex - 1);
                             targetList.ensureIndexIsVisible(insertIndex);
                             targetList.repaint();
                         } else {
