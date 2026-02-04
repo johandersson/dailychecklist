@@ -19,7 +19,11 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.temporal.WeekFields;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -358,7 +362,8 @@ public class ChecklistPanel extends JPanel {
                     
                     if (!newSubtasks.isEmpty()) {
                             try {
-                                // Suppress TaskChangeListener to avoid full reload
+                                // Begin batch operation to prevent race conditions with other panels
+                                taskManager.beginBatchOperation();
                                 suppressTaskChangeListener = true;
                                 
                                 // Determine target model and list
@@ -415,6 +420,7 @@ public class ChecklistPanel extends JPanel {
             } finally {
                 // Re-enable TaskChangeListener
                 suppressTaskChangeListener = false;
+                taskManager.endBatchOperation();
             }
                     }
                 }
@@ -563,17 +569,39 @@ public class ChecklistPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
+        // For Morning panel, add date and week number above the title
+        JPanel headerContainer = new JPanel();
+        headerContainer.setLayout(new BoxLayout(headerContainer, BoxLayout.Y_AXIS));
+        headerContainer.setOpaque(false);
+        
+        if ("Morning".equals(title)) {
+            LocalDate today = LocalDate.now();
+            WeekFields weekFields = WeekFields.of(Locale.getDefault());
+            int weekNumber = today.get(weekFields.weekOfWeekBasedYear());
+            
+            // Format: "2 januari 2031 (week X)"
+            SimpleDateFormat dateFormat = new SimpleDateFormat("d MMMM yyyy", new Locale("sv", "SE"));
+            String dateStr = dateFormat.format(java.sql.Date.valueOf(today));
+            String dateWeekText = dateStr + " (week " + weekNumber + ")";
+            
+            javax.swing.JLabel dateLabel = new javax.swing.JLabel(dateWeekText);
+            dateLabel.setFont(FontManager.getTaskListFont());
+            dateLabel.setBorder(BorderFactory.createEmptyBorder(0, 2, 2, 2));
+            headerContainer.add(dateLabel);
+        }
+
         // Header: styled title consistent with app
         javax.swing.JLabel header = new javax.swing.JLabel(title);
         header.setFont(FontManager.getHeader2Font());
         header.setBorder(BorderFactory.createEmptyBorder(2, 2, 6, 2));
+        headerContainer.add(header);
 
         // Reminder/status panel (kept below the heading)
         JPanel reminderPanel = createReminderStatusPanelForType(title);
 
         JPanel north = new JPanel(new BorderLayout());
         north.setOpaque(false);
-        north.add(header, BorderLayout.NORTH);
+        north.add(headerContainer, BorderLayout.NORTH);
         north.add(reminderPanel, BorderLayout.SOUTH);
 
         panel.add(north, BorderLayout.NORTH);

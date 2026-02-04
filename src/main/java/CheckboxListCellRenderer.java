@@ -447,8 +447,19 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
             fmSmallCached = g2.getFontMetrics(smallFont);
         }
         FontMetrics fmCrumb = fmSmallCached;
+        
+        // Calculate actual reserved space based on which icons are present
+        int reservedSpace = 12; // base padding
+        if (isWeekdayTask) reservedSpace += UiLayout.WEEKDAY_ICON_AREA;
+        if (taskReminder != null) reservedSpace += UiLayout.REMINDER_ICON_AREA;
+        // Add space for add-subtask icon if it's shown (top-level tasks)
+        Task backing = (taskManager != null && taskId != null) ? taskManager.getTaskById(taskId) : null;
+        if (showAddSubtaskIcon && backing != null && backing.getParentId() == null && !this.isSubtask) {
+            reservedSpace += UiLayout.ADD_SUBTASK_OFFSET;
+        }
+        
         int crumbWidth = fmCrumb.stringWidth(breadcrumbText) + 6;
-        int crumbX = getWidth() - UiLayout.RIGHT_ICON_SPACE - 6 - crumbWidth;
+        int crumbX = getWidth() - reservedSpace - 6 - crumbWidth;
         if (crumbX > textStartX + 10) {
             breadcrumbComponent.setFontToUse(smallFont);
             breadcrumbComponent.setText(breadcrumbText);

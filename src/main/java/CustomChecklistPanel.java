@@ -301,7 +301,8 @@ public class CustomChecklistPanel extends JPanel {
                     
                     if (!newSubtasks.isEmpty()) {
                         try {
-                            // Suppress TaskChangeListener to avoid full reload
+                            // Begin batch operation to prevent race conditions with other panels
+                            taskManager.beginBatchOperation();
                             suppressTaskChangeListener = true;
                             
                             // Find parent index and calculate insertion point BEFORE adding anything
@@ -358,6 +359,7 @@ public class CustomChecklistPanel extends JPanel {
                         } finally {
                             // Re-enable TaskChangeListener after direct insertion
                             suppressTaskChangeListener = false;
+                            taskManager.endBatchOperation();
                         }
                     }
                 }
