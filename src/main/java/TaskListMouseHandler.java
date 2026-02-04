@@ -82,13 +82,14 @@ public class TaskListMouseHandler extends MouseAdapter {
 
         if (relX >= addIconX && relX <= addIconX + aw) {
             Task parentForDialog = (taskManager != null) ? taskManager.getTaskById(t.getId()) : t;
-            String prompt = "Subtask to " + (parentForDialog != null ? parentForDialog.getName() : t.getName());
-            String name = javax.swing.JOptionPane.showInputDialog(taskList, prompt, "Add Subtask", javax.swing.JOptionPane.PLAIN_MESSAGE);
-            if (name != null) {
-                name = name.trim();
-                if (!name.isEmpty()) {
-                    createAndSelectSubtask(t, name);
-                }
+            
+            // Show multi-line dialog for adding multiple subtasks
+            java.util.List<String> subtaskNames = MultiSubtaskDialog.show(taskList, 
+                parentForDialog != null ? parentForDialog.getName() : t.getName());
+            
+            // Create and insert each subtask
+            for (String name : subtaskNames) {
+                createAndSelectSubtask(t, name);
             }
         }
     }

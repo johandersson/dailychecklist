@@ -287,51 +287,67 @@ public class CustomChecklistPanel extends JPanel {
                 Task p = taskManager.getTaskById(modelParent.getId());
                 if (p == null) p = modelParent;
                 Task pForDialog = (p != null) ? p : modelParent;
-                String prompt = "Subtask to " + (pForDialog != null ? pForDialog.getName() : "");
-                String subtaskName = JOptionPane.showInputDialog(this, prompt);
-                if (subtaskName != null && !subtaskName.trim().isEmpty()) {
-                    Task subtask = new Task(subtaskName.trim(), p.getType(), p.getWeekday(), p.getChecklistId(), p.getId());
+                
+                // Show multi-line dialog for adding multiple subtasks
+                java.util.List<String> subtaskNames = MultiSubtaskDialog.show(this, pForDialog.getName());
+                
+                if (!subtaskNames.isEmpty()) {
+                    // Create subtask objects
+                    java.util.List<Task> newSubtasks = new java.util.ArrayList<>();
+                    for (String subtaskName : subtaskNames) {
+                        Task subtask = new Task(subtaskName, p.getType(), p.getWeekday(), p.getChecklistId(), p.getId());
+                        newSubtasks.add(subtask);
+                    }
                     
-                    try {
-                        // Suppress TaskChangeListener to avoid full reload
-                        suppressTaskChangeListener = true;
-                        
-                        // Add to TaskManager (persists to repository)
-                        taskManager.addTask(subtask);
-                        
-                        // Optimize: directly insert into model instead of full reload
-                        int parentIndex = list.locationToIndex(new java.awt.Point(0, 0));
-                        for (int i = 0; i < customListModel.getSize(); i++) {
-                            Task cand = customListModel.get(i);
-                            if (cand != null && cand.getId().equals(p.getId())) {
-                                parentIndex = i;
-                                break;
+                    if (!newSubtasks.isEmpty()) {
+                            try {
+                                // Suppress TaskChangeListener to avoid full reload
+                                suppressTaskChangeListener = true;
+                                
+                                // Find parent index once
+                                int parentIndex = -1;
+                                for (int i = 0; i < customListModel.getSize(); i++) {
+                                    Task cand = customListModel.get(i);
+                                    if (cand != null && cand.getId().equals(p.getId())) {
+                                        parentIndex = i;
+                                        break;
+                                    }
+                                }
+                                
+                                // Find insertion point: after parent and existing subtasks
+                                int insertIndex = parentIndex + 1;
+                                while (insertIndex < customListModel.getSize()) {
+                                    Task candidate = customListModel.get(insertIndex);
+                                    if (candidate.getParentId() == null || !candidate.getParentId().equals(p.getId())) {
+                                        break;
+                                    }
+                                    insertIndex++;
+                                }
+                                
+                                // Add all subtasks
+                                for (Task subtask : newSubtasks) {
+                                    // Add to TaskManager (persists to repository)
+                                    taskManager.addTask(subtask);
+                                    
+                                    // Precompute display data for the new subtask
+                                    java.util.List<Task> singleTask = new java.util.ArrayList<>();
+                                    singleTask.add(subtask);
+                                    DisplayPrecomputer.precomputeForList(singleTask, taskManager, true);
+                                    
+                                    // Insert at the correct position
+                                    customListModel.add(insertIndex, subtask);
+                                    insertIndex++;
+                                }
+                                
+                                // Select the last added subtask
+                                customTaskList.setSelectedIndex(insertIndex - 1);
+                                customTaskList.ensureIndexIsVisible(insertIndex - 1);
+                                list.repaint();
+                            } finally {
+                                // Re-enable TaskChangeListener after direct insertion
+                                suppressTaskChangeListener = false;
                             }
                         }
-                        
-                        // Find insertion point: after parent and existing subtasks
-                        int insertIndex = parentIndex + 1;
-                        while (insertIndex < customListModel.getSize()) {
-                            Task candidate = customListModel.get(insertIndex);
-                            if (candidate.getParentId() == null || !candidate.getParentId().equals(p.getId())) {
-                                break;
-                            }
-                            insertIndex++;
-                        }
-                        
-                        // Precompute display data for the new subtask
-                        java.util.List<Task> singleTask = new java.util.ArrayList<>();
-                        singleTask.add(subtask);
-                        DisplayPrecomputer.precomputeForList(singleTask, taskManager, true);
-                        
-                        // Insert at the correct position
-                        customListModel.add(insertIndex, subtask);
-                        customTaskList.setSelectedIndex(insertIndex);
-                        customTaskList.ensureIndexIsVisible(insertIndex);
-                        list.repaint();
-                    } finally {
-                        // Re-enable TaskChangeListener after direct insertion
-                        suppressTaskChangeListener = false;
                     }
                 }
             });
