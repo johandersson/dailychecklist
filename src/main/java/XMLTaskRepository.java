@@ -127,6 +127,9 @@ public class XMLTaskRepository implements TaskRepository {
      */
     public void setParentComponent(Component parentComponent) {
         this.parentComponent = parentComponent;
+        if (reminderManager != null) {
+            reminderManager.setParentComponent(parentComponent);
+        }
     }
 
     @FunctionalInterface
@@ -305,6 +308,7 @@ public class XMLTaskRepository implements TaskRepository {
         taskXmlHandler = new TaskStaxHandler(FILE_NAME);
         fallbackXmlHandler = new TaskXmlHandler(FILE_NAME);
         reminderManager = new ReminderManager(REMINDER_FILE_NAME, FILE_NAME);
+        reminderManager.setParentComponent(parentComponent);
         checklistNameManager = new ChecklistNameManager(CHECKLIST_NAMES_FILE_NAME);
 
         // Initialize backup system (but don't start threads yet)

@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
+import java.awt.Component;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
+import javax.swing.SwingUtilities;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
@@ -42,10 +44,18 @@ public class ReminderManager {
     private final String taskFileName;
     private List<Reminder> cachedReminders;
     private boolean remindersDirty = true;
+    private Component parentComponent;
 
     public ReminderManager(String reminderFileName, String taskFileName) {
         this.reminderFileName = reminderFileName;
         this.taskFileName = taskFileName;
+    }
+
+    /**
+     * Sets the parent component for error dialogs.
+     */
+    public void setParentComponent(Component parentComponent) {
+        this.parentComponent = parentComponent;
     }
 
     /**
@@ -99,16 +109,24 @@ public class ReminderManager {
                 String value = props.getProperty(key);
                 String[] parts = value.split(",");
                 if (parts.length >= 6) {
-                    String checklistName = parts[0];
-                    int year = Integer.parseInt(parts[1]);
-                    int month = Integer.parseInt(parts[2]);
-                    int day = Integer.parseInt(parts[3]);
-                    int hour = Integer.parseInt(parts[4]);
-                    int minute = Integer.parseInt(parts[5]);
-                    String taskId = (parts.length >= 7) ? parts[6] : null;
-                    Reminder reminder = new Reminder(checklistName, year, month, day, hour, minute, taskId);
-                    reminders.add(reminder);
-                    reminderCount++;
+                    try {
+                        String checklistName = parts[0].trim();
+                        int year = Integer.parseInt(parts[1].trim());
+                        int month = Integer.parseInt(parts[2].trim());
+                        int day = Integer.parseInt(parts[3].trim());
+                        int hour = Integer.parseInt(parts[4].trim());
+                        int minute = Integer.parseInt(parts[5].trim());
+                        String taskId = (parts.length >= 7) ? parts[6].trim() : null;
+                        Reminder reminder = new Reminder(checklistName, year, month, day, hour, minute, taskId);
+                        reminders.add(reminder);
+                        reminderCount++;
+                    } catch (NumberFormatException e) {
+                        // Show error for this specific reminder but continue loading others
+                        final String errorMsg = "Invalid reminder data in properties file (key: " + key + ", value: " + value + ")";
+                        if (parentComponent != null) {
+                            SwingUtilities.invokeLater(() -> ErrorDialog.showError(parentComponent, errorMsg, e));
+                        }
+                    }
                 }
             }
 
@@ -145,26 +163,41 @@ public class ReminderManager {
                 Node node = nodeList.item(i);
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                     Element element = (Element) node;
-                    String checklistName = element.getAttribute("checklistName");
-                    int year = Integer.parseInt(element.getAttribute("year"));
-                    int month = Integer.parseInt(element.getAttribute("month"));
-                    int day = Integer.parseInt(element.getAttribute("day"));
-                    int hour = Integer.parseInt(element.getAttribute("hour"));
-                    int minute = Integer.parseInt(element.getAttribute("minute"));
-                    String taskId = null;
-                    if (element.hasAttribute("taskId")) {
-                        taskId = element.getAttribute("taskId");
+                    try {
+                        String checklistName = element.getAttribute("checklistName").trim();
+                        int year = Integer.parseInt(element.getAttribute("year").trim());
+                        int month = Integer.parseInt(element.getAttribute("month").trim());
+                        int day = Integer.parseInt(element.getAttribute("day").trim());
+                        int hour = Integer.parseInt(element.getAttribute("hour").trim());
+                        int minute = Integer.parseInt(element.getAttribute("minute").trim());
+                        String taskId = null;
+                        if (element.hasAttribute("taskId")) {
+                            taskId = element.getAttribute("taskId").trim();
+                        }
+                        Reminder reminder = new Reminder(checklistName, year, month, day, hour, minute, taskId);
+                        reminders.add(reminder);
+                    } catch (NumberFormatException e) {
+                        // Show error for this specific reminder but continue loading others
+                        final String errorMsg = "Invalid reminder data in XML file (reminder #" + i + ")";
+                        if (parentComponent != null) {
+                            SwingUtilities.invokeLater(() -> ErrorDialog.showError(parentComponent, errorMsg, e));
+                        }
                     }
-                    Reminder reminder = new Reminder(checklistName, year, month, day, hour, minute, taskId);
-                    reminders.add(reminder);
                 }
             }
 
             if (exceededLimit) {
                 MemorySafetyManager.checkReminderLimit(MemorySafetyManager.MAX_REMINDERS + 1);
             }
+        } catch (NumberFormatException e) {
+            // NumberFormatException is handled above for individual reminders
+            throw e;
         } catch (Exception e) {
-            // Ignore errors for backwards compatibility
+            // Show error dialog for other XML parsing errors
+            final String errorMsg = "Failed to load reminders from XML file";
+            if (parentComponent != null) {
+                SwingUtilities.invokeLater(() -> ErrorDialog.showError(parentComponent, errorMsg, e));
+            }
         }
 
         return reminders;
