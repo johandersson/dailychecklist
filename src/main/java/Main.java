@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
@@ -84,7 +83,8 @@ public class Main {
             }));
 
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Failed to start application: " + e.getMessage(), "Startup Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+            ErrorDialog.showError(null, "Failed to start application", e);
             System.exit(1);
         }
     }
