@@ -93,8 +93,8 @@ public class DailyChecklist {
             this.settingsManager.load();
             
             // Set parent component for repository error dialogs
-            if (repository instanceof XMLTaskRepository xmlRepo) {
-                xmlRepo.setParentComponent(frame);
+            if (repository instanceof XMLTaskRepository) {
+                ((XMLTaskRepository) repository).setParentComponent(frame);
             }
             
             initializeUI();
