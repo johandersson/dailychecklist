@@ -19,6 +19,8 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -49,6 +51,8 @@ public class ErrorDialog extends JDialog {
         titleLabel.setFont(FontManager.getHeader1Font());
         titlePanel.add(titleLabel);
         add(titlePanel, BorderLayout.NORTH);
+        
+        final String errorTitle = "Error";
 
         JPanel content = new JPanel(new BorderLayout());
         content.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
@@ -89,10 +93,25 @@ public class ErrorDialog extends JDialog {
             details.setText(showing ? "Show details" : "Hide details");
             pack();
         });
+        JButton copy = new JButton("Copy");
+        copy.setFont(FontManager.getButtonFont());
+        copy.setToolTipText("Copy error details to clipboard");
+        copy.addActionListener(e -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append(errorTitle).append("\n");
+            sb.append(message).append("\n\n");
+            if (t != null) {
+                sb.append("Stack Trace:\n");
+                sb.append(trace.getText());
+            }
+            StringSelection selection = new StringSelection(sb.toString());
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
+        });
         JButton close = new JButton("Close");
         close.setFont(FontManager.getButtonFont());
         close.addActionListener(e -> dispose());
         btns.add(details);
+        btns.add(copy);
         btns.add(close);
 
         add(content, BorderLayout.CENTER);
