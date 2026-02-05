@@ -18,6 +18,8 @@
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -78,10 +80,27 @@ public class HtmlErrorDialog extends JDialog {
             details.setText(showing ? "Show details" : "Hide details");
             d.pack();
         });
+        JButton copy = new JButton("Copy");
+        copy.setFont(FontManager.getButtonFont());
+        copy.setToolTipText("Copy error details to clipboard");
+        copy.addActionListener(e -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Error\n");
+            // Strip HTML tags for clipboard
+            String plainMessage = htmlMessage.replaceAll("<[^>]*>", "").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
+            sb.append(plainMessage).append("\n\n");
+            if (t != null) {
+                sb.append("Stack Trace:\n");
+                sb.append(trace.getText());
+            }
+            StringSelection selection = new StringSelection(sb.toString());
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
+        });
         JButton close = new JButton("Close");
         close.setFont(FontManager.getButtonFont());
         close.addActionListener(e -> d.dispose());
         btns.add(details);
+        btns.add(copy);
         btns.add(close);
 
         d.add(content, BorderLayout.CENTER);
