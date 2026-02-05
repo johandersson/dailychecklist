@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import javax.swing.JFrame;
+import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
@@ -465,7 +466,9 @@ public class DailyChecklist {
         dailySplit.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
         tabbedPane.add("Checklist", dailySplit);
         tabbedPane.add("Custom checklists", customChecklistsOverviewPanel);
-        tabbedPane.add("Today", new javax.swing.JScrollPane(todayPanel));
+        JScrollPane todayScrollPane = new javax.swing.JScrollPane(todayPanel);
+        todayPanel.setScrollPaneContainer(todayScrollPane);
+        tabbedPane.add("Today", todayScrollPane);
         frame.add(tabbedPane);
         // (No forced white backgrounds here) keep platform defaults for window backgrounds.
     }

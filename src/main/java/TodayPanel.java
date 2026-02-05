@@ -22,6 +22,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,6 +51,9 @@ public class TodayPanel extends JPanel {
     private BufferedImage timelineBackgroundCache;
     private int cachedWidth = -1;
     private int cachedHeight = -1;
+    
+    // Reference to the scroll pane container for scrolling to current time
+    private JScrollPane scrollPaneContainer;
 
     public TodayPanel(TaskManager taskManager) {
         this.taskManager = taskManager;
@@ -60,6 +64,15 @@ public class TodayPanel extends JPanel {
 
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Create and add Now button at the bottom
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        buttonPanel.setBackground(Color.WHITE);
+        JButton nowButton = new JButton("Now");
+        nowButton.setToolTipText("Scroll to current time");
+        nowButton.addActionListener(e -> scrollToCurrentTime());
+        buttonPanel.add(nowButton);
+        add(buttonPanel, BorderLayout.SOUTH);
         
         // Listen for task changes (which include reminder changes)
         taskManager.addTaskChangeListener(() -> {
@@ -217,6 +230,9 @@ public class TodayPanel extends JPanel {
 
         // Draw reminder blocks on top (these change frequently)
         drawReminderBlocks(g2d, width);
+        
+        // Draw current time marker (red line)
+        drawCurrentTimeMarker(g2d, width);
 
         g2d.dispose();
     }
@@ -385,6 +401,74 @@ public class TodayPanel extends JPanel {
         
         tooltip.append("</html>");
         return tooltip.toString();
+    }
+
+    /**
+     * Draw a red line at the current time of day.
+     */
+    private void drawCurrentTimeMarker(Graphics2D g2d, int width) {
+        LocalTime now = LocalTime.now();
+        int currentHour = now.getHour();
+        int currentMinute = now.getMinute();
+        
+        // Calculate Y position for current time
+        int y = (currentHour - startHour) * hourHeight + (currentMinute * hourHeight / 60);
+        
+        // Draw red line
+        g2d.setColor(Color.RED);
+        g2d.setStroke(new BasicStroke(2));
+        g2d.drawLine(timelineWidth, y, width, y);
+        
+        // Draw time label with background
+        String timeLabel = String.format("%02d:%02d", currentHour, currentMinute);
+        g2d.setFont(g2d.getFont().deriveFont(Font.BOLD, 11f));
+        FontMetrics fm = g2d.getFontMetrics();
+        int labelWidth = fm.stringWidth(timeLabel);
+        int labelHeight = fm.getHeight();
+        
+        // Draw label background
+        g2d.setColor(Color.RED);
+        g2d.fillRect(timelineWidth + 5, y - labelHeight / 2, labelWidth + 6, labelHeight);
+        
+        // Draw label text
+        g2d.setColor(Color.WHITE);
+        g2d.drawString(timeLabel, timelineWidth + 8, y + fm.getAscent() / 2);
+    }
+    
+    /**
+     * Set the scroll pane container reference.
+     * This should be called after adding the panel to a scroll pane.
+     */
+    public void setScrollPaneContainer(JScrollPane scrollPane) {
+        this.scrollPaneContainer = scrollPane;
+    }
+    
+    /**
+     * Scroll to the current time of day.
+     */
+    private void scrollToCurrentTime() {
+        LocalTime now = LocalTime.now();
+        int currentHour = now.getHour();
+        int currentMinute = now.getMinute();
+        
+        // Calculate Y position for current time
+        int y = (currentHour - startHour) * hourHeight + (currentMinute * hourHeight / 60);
+        
+        // Scroll to the position (center it in viewport if possible)
+        if (scrollPaneContainer != null) {
+            JViewport viewport = scrollPaneContainer.getViewport();
+            int viewportHeight = viewport.getHeight();
+            
+            // Center the current time in the viewport
+            int scrollY = Math.max(0, y - viewportHeight / 2);
+            
+            Rectangle rect = new Rectangle(0, scrollY, 1, viewportHeight);
+            scrollRectToVisible(rect);
+        } else {
+            // Fallback if no scroll pane set
+            Rectangle rect = new Rectangle(0, y - 100, 1, 200);
+            scrollRectToVisible(rect);
+        }
     }
 
     @Override
