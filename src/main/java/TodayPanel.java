@@ -65,14 +65,14 @@ public class TodayPanel extends JPanel {
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
-        // Create and add Now button at the bottom
+        // Create and add Now button at the top
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
         buttonPanel.setBackground(Color.WHITE);
         JButton nowButton = new JButton("Now");
         nowButton.setToolTipText("Scroll to current time");
         nowButton.addActionListener(e -> scrollToCurrentTime());
         buttonPanel.add(nowButton);
-        add(buttonPanel, BorderLayout.SOUTH);
+        add(buttonPanel, BorderLayout.NORTH);
         
         // Listen for task changes (which include reminder changes)
         taskManager.addTaskChangeListener(() -> {
