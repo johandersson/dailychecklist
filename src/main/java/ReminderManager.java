@@ -89,10 +89,12 @@ public class ReminderManager {
 
     /**
      * Loads reminders from the properties file.
+     * Uses pipe delimiter (|) for new format, falls back to comma for backwards compatibility.
      */
     private List<Reminder> loadRemindersFromProperties() {
         List<Reminder> reminders = new ArrayList<>();
         Properties props = new Properties();
+        boolean hasOldFormat = false;
 
         try (InputStreamReader reader = new InputStreamReader(new FileInputStream(reminderFileName), StandardCharsets.UTF_8)) {
             props.load(reader);
@@ -107,7 +109,15 @@ public class ReminderManager {
                 }
 
                 String value = props.getProperty(key);
-                String[] parts = value.split(",");
+                
+                // Try pipe delimiter first (new format), fall back to comma (old format)
+                String[] parts = value.split("\\|");
+                if (parts.length < 6) {
+                    // Fall back to comma delimiter for backwards compatibility
+                    parts = value.split(",");
+                    hasOldFormat = true;
+                }
+                
                 if (parts.length >= 6) {
                     try {
                         String checklistName = parts[0].trim();
@@ -122,7 +132,8 @@ public class ReminderManager {
                         reminderCount++;
                     } catch (NumberFormatException e) {
                         // Show error for this specific reminder but continue loading others
-                        final String errorMsg = "Invalid reminder data in properties file (key: " + key + ", value: " + value + ")";
+                        final String errorMsg = "Invalid reminder data in properties file (key: " + key + ", value: " + value + ")\\n\\n" +
+                                "This reminder will be skipped. If the reminder name contains commas, it will be fixed when you next add or remove a reminder.";
                         if (parentComponent != null) {
                             SwingUtilities.invokeLater(() -> ErrorDialog.showError(parentComponent, errorMsg, e));
                         }
@@ -132,6 +143,11 @@ public class ReminderManager {
 
             if (exceededLimit) {
                 MemorySafetyManager.checkReminderLimit(MemorySafetyManager.MAX_REMINDERS + 1);
+            }
+            
+            // If we loaded any old format data successfully, re-save in new format
+            if (hasOldFormat && !reminders.isEmpty()) {
+                saveRemindersToProperties(reminders);
             }
         } catch (IOException e) {
             // File doesn't exist or can't be read
@@ -212,10 +228,10 @@ public class ReminderManager {
             Reminder r = reminders.get(i);
             String key = "reminder." + i;
                         StringBuilder sb = new StringBuilder();
-                        sb.append(r.getChecklistName()).append(',').append(r.getYear()).append(',').append(r.getMonth()).append(',')
-                            .append(r.getDay()).append(',').append(r.getHour()).append(',').append(r.getMinute());
+                        sb.append(r.getChecklistName()).append('|').append(r.getYear()).append('|').append(r.getMonth()).append('|')
+                            .append(r.getDay()).append('|').append(r.getHour()).append('|').append(r.getMinute());
                         if (r.getTaskId() != null) {
-                                sb.append(',').append(r.getTaskId());
+                                sb.append('|').append(r.getTaskId());
                         }
                         String value = sb.toString();
             props.setProperty(key, value);
