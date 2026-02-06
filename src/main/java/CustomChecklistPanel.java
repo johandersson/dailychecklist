@@ -357,6 +357,7 @@ public class CustomChecklistPanel extends JPanel {
                                 javax.swing.SwingUtilities.invokeLater(() -> {
                                     customTaskList.setSelectedIndex(finalIndex);
                                     customTaskList.ensureIndexIsVisible(finalIndex);
+                                    customTaskList.revalidate();
                                     customTaskList.repaint();
                                 });
                             }
