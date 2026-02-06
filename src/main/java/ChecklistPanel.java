@@ -411,6 +411,7 @@ public class ChecklistPanel extends JPanel {
                                     javax.swing.SwingUtilities.invokeLater(() -> {
                                         targetList.setSelectedIndex(finalIndex);
                                         targetList.ensureIndexIsVisible(finalIndex);
+                                        targetList.revalidate();
                                         targetList.repaint();
                                     });
                                 } else {

@@ -16,7 +16,10 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import java.awt.BasicStroke;
+import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
@@ -28,7 +31,10 @@ import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
@@ -466,9 +472,31 @@ public class DailyChecklist {
         dailySplit.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0));
         tabbedPane.add("Checklist", dailySplit);
         tabbedPane.add("Custom checklists", customChecklistsOverviewPanel);
+        
+        // Create container for Today tab with fixed button above scrollable timeline
+        JPanel todayContainer = new JPanel(new BorderLayout());
+        
+        // Create fixed header panel with solid positioning
+        JPanel buttonPanel = new JPanel(new BorderLayout());
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+        buttonPanel.setPreferredSize(new Dimension(0, 45)); // Fixed height for solid positioning
+        
+        // Center the "Now" button in a centered panel
+        JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        JButton nowButton = new JButton("Now");
+        nowButton.setToolTipText("Scroll to current time");
+        nowButton.setPreferredSize(new Dimension(80, 28));
+        nowButton.addActionListener(e -> todayPanel.scrollToCurrentTime());
+        centerPanel.add(nowButton);
+        
+        buttonPanel.add(centerPanel, BorderLayout.CENTER);
+        todayContainer.add(buttonPanel, BorderLayout.NORTH);
+        
         JScrollPane todayScrollPane = new javax.swing.JScrollPane(todayPanel);
         todayPanel.setScrollPaneContainer(todayScrollPane);
-        tabbedPane.add("Today", todayScrollPane);
+        todayContainer.add(todayScrollPane, BorderLayout.CENTER);
+        
+        tabbedPane.add("Today", todayContainer);
         frame.add(tabbedPane);
         // (No forced white backgrounds here) keep platform defaults for window backgrounds.
     }
