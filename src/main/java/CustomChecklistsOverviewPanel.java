@@ -45,7 +45,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
     private DefaultListModel<Checklist> listModel;
     private final transient TaskManager taskManager;
     private final transient Runnable updateTasks;
-    private JTextField newChecklistField;
+    private JTextArea newChecklistField;
     private JButton createButton;
     private JSplitPane splitPane;
     private JPanel rightPanel;
@@ -154,20 +154,50 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             }
         });
 
-        newChecklistField = new JTextField(20);
-        newChecklistField.addKeyListener(new KeyAdapter() {
+        newChecklistField = new JTextArea(3, 20);
+        newChecklistField.setLineWrap(true);
+        newChecklistField.setWrapStyleWord(true);
+        newChecklistField.setFont(FontManager.getTaskListFont());
+        newChecklistField.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+            javax.swing.BorderFactory.createLineBorder(java.awt.Color.GRAY, 1),
+            javax.swing.BorderFactory.createEmptyBorder(4, 4, 4, 4)
+        ));
+        
+        // Add undo/redo support
+        final javax.swing.undo.UndoManager undoManager = new javax.swing.undo.UndoManager();
+        newChecklistField.getDocument().addUndoableEditListener(undoManager);
+        
+        // Bind Ctrl+Z for undo and Ctrl+Y for redo
+        newChecklistField.getInputMap().put(javax.swing.KeyStroke.getKeyStroke("control Z"), "undo");
+        newChecklistField.getActionMap().put("undo", new javax.swing.AbstractAction() {
             @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    createNewChecklist();
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (undoManager.canUndo()) {
+                    undoManager.undo();
                 }
             }
         });
-        createButton = new JButton("Create Checklist");
-        createButton.addActionListener(e -> createNewChecklist());
+        
+        newChecklistField.getInputMap().put(javax.swing.KeyStroke.getKeyStroke("control Y"), "redo");
+        newChecklistField.getActionMap().put("redo", new javax.swing.AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (undoManager.canRedo()) {
+                    undoManager.redo();
+                }
+            }
+        });
+        
+        JScrollPane newChecklistScroll = new JScrollPane(newChecklistField);
+        newChecklistScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        newChecklistScroll.setBorder(javax.swing.BorderFactory.createEmptyBorder());
+        
+        createButton = new JButton("Create Checklist(s)");
+        createButton.addActionListener(e -> createNewChecklists());
+        createButton.setToolTipText("Create one or more checklists (one per line)");
 
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.add(newChecklistField, BorderLayout.CENTER);
+        topPanel.add(newChecklistScroll, BorderLayout.CENTER);
         topPanel.add(createButton, BorderLayout.EAST);
         // Flatter look: reduce extra titled/etched borders and padding
         topPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 4, 4, 4));
@@ -222,41 +252,101 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         worker.execute();
     }
 
-    private void createNewChecklist() {
-        String rawName = newChecklistField.getText();
-        String name = TaskManager.validateInputWithError(rawName, "Checklist name");
-        if (name == null) {
+    private void createNewChecklists() {
+        String input = newChecklistField.getText();
+        if (input == null || input.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please enter at least one checklist name.");
             return;
         }
+        
+        String[] lines = input.split("\\n");
+        
+        // Limit to prevent excessive batch additions
+        final int MAX_BATCH_CHECKLISTS = 100;
+        if (lines.length > MAX_BATCH_CHECKLISTS) {
+            JOptionPane.showMessageDialog(this, 
+                "Too many lines (" + lines.length + "). Maximum allowed is " + MAX_BATCH_CHECKLISTS + " checklists at once.",
+                "Limit Exceeded", 
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
         Set<Checklist> existing = taskManager.getCustomChecklists();
-        boolean nameExists = existing.stream().anyMatch(c -> name.equals(c.getName()));
-        if (nameExists) {
-            JOptionPane.showMessageDialog(this, "Checklist name already exists.");
-            return;
-        }
-        // Remove any orphaned tasks with this name
-        List<Task> allTasks = taskManager.getAllTasks();
-        for (Task task : allTasks) {
-            if (task.getChecklistId() != null) {
-                Checklist taskChecklist = taskManager.getCustomChecklists().stream()
-                    .filter(c -> task.getChecklistId().equals(c.getId()))
-                    .findFirst().orElse(null);
-                if (taskChecklist != null && name.equals(taskChecklist.getName())) {
-                    taskManager.removeTask(task);
+        java.util.List<Checklist> newChecklists = new java.util.ArrayList<>();
+        java.util.List<String> skipped = new java.util.ArrayList<>();
+        
+        for (String line : lines) {
+            String rawName = line.trim();
+            if (rawName.isEmpty()) {
+                continue; // Skip empty lines
+            }
+            
+            String name = TaskManager.validateInputWithError(rawName, "Checklist name");
+            if (name == null) {
+                skipped.add(rawName + " (invalid name)");
+                continue;
+            }
+            
+            // Check if name already exists
+            boolean nameExists = existing.stream().anyMatch(c -> name.equals(c.getName())) ||
+                                 newChecklists.stream().anyMatch(c -> name.equals(c.getName()));
+            if (nameExists) {
+                skipped.add(name + " (already exists)");
+                continue;
+            }
+            
+            // Remove any orphaned tasks with this name
+            List<Task> allTasks = taskManager.getAllTasks();
+            for (Task task : allTasks) {
+                if (task.getChecklistId() != null) {
+                    Checklist taskChecklist = taskManager.getCustomChecklists().stream()
+                        .filter(c -> task.getChecklistId().equals(c.getId()))
+                        .findFirst().orElse(null);
+                    if (taskChecklist != null && name.equals(taskChecklist.getName())) {
+                        taskManager.removeTask(task);
+                    }
                 }
             }
+            
+            Checklist newChecklist = new Checklist(name);
+            allChecklists.add(newChecklist);
+            taskManager.addChecklist(newChecklist);
+            newChecklists.add(newChecklist);
+            existing.add(newChecklist); // Add to existing set for duplicate checking
         }
+        
         newChecklistField.setText("");
-        Checklist newChecklist = new Checklist(name);
-        allChecklists.add(newChecklist);  // Track the new checklist
-        taskManager.addChecklist(newChecklist);  // Persist the checklist
-        updateChecklistList();  // Update the list model first
-        selectChecklist(newChecklist);  // Then select it
-        updateTasks.run();  // Update other panels
-        checklistList.setSelectedValue(newChecklist, true);
-        // Ensure UI refreshes
-        checklistList.revalidate();
-        checklistList.repaint();
+        
+        if (!newChecklists.isEmpty()) {
+            updateChecklistList();
+            // Select the last created checklist
+            Checklist lastCreated = newChecklists.get(newChecklists.size() - 1);
+            selectChecklist(lastCreated);
+            updateTasks.run();
+            checklistList.setSelectedValue(lastCreated, true);
+            checklistList.revalidate();
+            checklistList.repaint();
+            
+            String message = "Created " + newChecklists.size() + " checklist(s)";
+            if (!skipped.isEmpty()) {
+                message += "\n\nSkipped " + skipped.size() + " item(s):\n" + 
+                          String.join("\n", skipped.subList(0, Math.min(10, skipped.size())));
+                if (skipped.size() > 10) {
+                    message += "\n... and " + (skipped.size() - 10) + " more";
+                }
+            }
+            JOptionPane.showMessageDialog(this, message, "Checklists Created", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            String message = "No checklists were created";
+            if (!skipped.isEmpty()) {
+                message += "\n\nSkipped " + skipped.size() + " item(s):\n" + 
+                          String.join("\n", skipped.subList(0, Math.min(10, skipped.size())));
+                if (skipped.size() > 10) {
+                    message += "\n... and " + (skipped.size() - 10) + " more";
+                }
+            }
+            JOptionPane.showMessageDialog(this, message, "No Checklists Created", JOptionPane.WARNING_MESSAGE);
+        }
     }
 
     /**

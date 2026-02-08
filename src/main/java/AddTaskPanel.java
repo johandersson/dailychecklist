@@ -83,6 +83,32 @@ public class AddTaskPanel extends JPanel {
         JTextArea taskField = new JTextArea(25, 40);
         taskField.setLineWrap(true);
         taskField.setWrapStyleWord(true);
+        
+        // Add undo/redo support
+        final javax.swing.undo.UndoManager undoManager = new javax.swing.undo.UndoManager();
+        taskField.getDocument().addUndoableEditListener(undoManager);
+        
+        // Bind Ctrl+Z for undo and Ctrl+Y for redo
+        taskField.getInputMap().put(KeyStroke.getKeyStroke("control Z"), "undo");
+        taskField.getActionMap().put("undo", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (undoManager.canUndo()) {
+                    undoManager.undo();
+                }
+            }
+        });
+        
+        taskField.getInputMap().put(KeyStroke.getKeyStroke("control Y"), "redo");
+        taskField.getActionMap().put("redo", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (undoManager.canRedo()) {
+                    undoManager.redo();
+                }
+            }
+        });
+        
         JScrollPane taskScrollPane = new JScrollPane(taskField);
         taskScrollPane.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         taskScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
@@ -203,6 +229,17 @@ public class AddTaskPanel extends JPanel {
     private ActionListener createAddMultipleTasksActionListener(JTextArea taskField, JRadioButton morningRadioButton, JRadioButton eveningRadioButton) {
         return e -> {
             String[] lines = taskField.getText().split("\\n");
+            
+            // Limit to prevent excessive batch additions
+            final int MAX_BATCH_TASKS = 1000;
+            if (lines.length > MAX_BATCH_TASKS) {
+                JOptionPane.showMessageDialog(this, 
+                    "Too many lines (" + lines.length + "). Maximum allowed is " + MAX_BATCH_TASKS + " tasks at once.",
+                    "Limit Exceeded", 
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
             java.util.List<Task> addedTasks = new java.util.ArrayList<>();
             Task lastParentTask = null;
             
@@ -248,14 +285,34 @@ public class AddTaskPanel extends JPanel {
                     if (found != null) checklistIdForTask = found.getId();
                 }
                 
-                // Check if line starts with tab (subtask)
+                // Check if line starts with tab (subtask or heading)
                 if (line.startsWith("\t")) {
-                    String subtaskName = line.substring(1).trim(); // Remove tab and trim
-                    if (!subtaskName.isEmpty() && lastParentTask != null) {
-                        // Create subtask with parent reference
-                        Task subtask = new Task(subtaskName, type, selectedWeekday, checklistIdForTask, lastParentTask.getId());
-                        taskManager.addTask(subtask);
-                        addedTasks.add(subtask);
+                    String content = line.substring(1).trim(); // Remove tab and trim
+                    if (!content.isEmpty() && lastParentTask != null) {
+                        // Check if it's a heading (starts with #)
+                        if (content.startsWith("#")) {
+                            String headingText = content.substring(1).trim();
+                            if (!headingText.isEmpty()) {
+                                // Check if parent already has a heading
+                                boolean alreadyHasHeading = false;
+                                for (Task existingSubtask : taskManager.getSubtasks(lastParentTask)) {
+                                    if (existingSubtask.getType() == TaskType.HEADING) {
+                                        alreadyHasHeading = true;
+                                        break;
+                                    }
+                                }
+                                if (!alreadyHasHeading) {
+                                    Task heading = new Task(headingText, TaskType.HEADING, null, checklistIdForTask, lastParentTask.getId());
+                                    taskManager.addTask(heading);
+                                    addedTasks.add(heading);
+                                }
+                            }
+                        } else {
+                            // Regular subtask
+                            Task subtask = new Task(content, type, selectedWeekday, checklistIdForTask, lastParentTask.getId());
+                            taskManager.addTask(subtask);
+                            addedTasks.add(subtask);
+                        }
                     }
                 } else {
                     // Parent task (no tab indent)

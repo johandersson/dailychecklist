@@ -40,9 +40,35 @@ public final class MultiSubtaskDialog {
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
         textArea.setFont(FontManager.getTaskListFont());
+        
+        // Add undo/redo support
+        final javax.swing.undo.UndoManager undoManager = new javax.swing.undo.UndoManager();
+        textArea.getDocument().addUndoableEditListener(undoManager);
+        
+        // Bind Ctrl+Z for undo and Ctrl+Y for redo
+        textArea.getInputMap().put(javax.swing.KeyStroke.getKeyStroke("control Z"), "undo");
+        textArea.getActionMap().put("undo", new javax.swing.AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (undoManager.canUndo()) {
+                    undoManager.undo();
+                }
+            }
+        });
+        
+        textArea.getInputMap().put(javax.swing.KeyStroke.getKeyStroke("control Y"), "redo");
+        textArea.getActionMap().put("redo", new javax.swing.AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (undoManager.canRedo()) {
+                    undoManager.redo();
+                }
+            }
+        });
+        
         JScrollPane scrollPane = new JScrollPane(textArea);
         
-        String prompt = "Add subtasks to: " + parentTaskName + "\n(Enter one subtask per line)";
+        String prompt = "Add subtasks to: " + parentTaskName + "\n(Enter one subtask per line. Prefix with # for heading)";
         int result = JOptionPane.showConfirmDialog(
             parent, 
             scrollPane, 
@@ -57,6 +83,19 @@ public final class MultiSubtaskDialog {
             String input = textArea.getText();
             if (input != null && !input.trim().isEmpty()) {
                 String[] lines = input.split("\\r?\\n");
+                
+                // Limit to prevent excessive batch additions
+                final int MAX_BATCH_SUBTASKS = 1000;
+                if (lines.length > MAX_BATCH_SUBTASKS) {
+                    JOptionPane.showMessageDialog(
+                        parent,
+                        "Too many lines (" + lines.length + "). Maximum allowed is " + MAX_BATCH_SUBTASKS + " subtasks at once.",
+                        "Limit Exceeded",
+                        JOptionPane.WARNING_MESSAGE
+                    );
+                    return new ArrayList<>();
+                }
+                
                 for (String line : lines) {
                     String trimmed = line.trim();
                     if (!trimmed.isEmpty()) {

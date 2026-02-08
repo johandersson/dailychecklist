@@ -86,7 +86,23 @@ public class TodayPanel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                handleReminderClick(e.getPoint());
+                if (!e.isPopupTrigger()) {
+                    handleReminderClick(e.getPoint());
+                }
+            }
+            
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    handleReminderRightClick(e.getPoint(), e.getX(), e.getY());
+                }
+            }
+            
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    handleReminderRightClick(e.getPoint(), e.getX(), e.getY());
+                }
             }
         });
         
@@ -136,6 +152,8 @@ public class TodayPanel extends JPanel {
             }
         }
 
+        // Revalidate to update preferred size based on new reminder count
+        revalidate();
         repaint();
     }
     
@@ -158,6 +176,77 @@ public class TodayPanel extends JPanel {
                 jumpToReminder(reminder);
                 break;
             }
+        }
+    }
+    
+    /**
+     * Handle right-clicks on reminder blocks to show edit menu.
+     */
+    private void handleReminderRightClick(Point clickPoint, int x, int y) {
+        for (Map.Entry<Rectangle, Reminder> entry : reminderBlockBounds.entrySet()) {
+            if (entry.getKey().contains(clickPoint)) {
+                Reminder reminder = entry.getValue();
+                showReminderContextMenu(reminder, x, y);
+                break;
+            }
+        }
+    }
+    
+    /**
+     * Show context menu for a reminder block.
+     */
+    private void showReminderContextMenu(Reminder reminder, int x, int y) {
+        JPopupMenu popup = new JPopupMenu();
+        
+        JMenuItem editItem = new JMenuItem("Edit Reminder");
+        editItem.addActionListener(e -> editReminder(reminder));
+        popup.add(editItem);
+        
+        JMenuItem deleteItem = new JMenuItem("Delete Reminder");
+        deleteItem.addActionListener(e -> deleteReminder(reminder));
+        popup.add(deleteItem);
+        
+        popup.show(this, x, y);
+    }
+    
+    /**
+     * Open the reminder edit dialog for the selected reminder.
+     */
+    private void editReminder(Reminder reminder) {
+        String checklistName = reminder.getChecklistName();
+        if (checklistName == null) {
+            JOptionPane.showMessageDialog(this, "Cannot edit this reminder.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        ReminderEditDialog dialog = new ReminderEditDialog(
+            taskManager, 
+            checklistName, 
+            reminder, 
+            () -> {
+                refreshData();
+                repaint();
+            },
+            reminder.getTaskId()
+        );
+        dialog.setVisible(true);
+    }
+    
+    /**
+     * Delete the selected reminder.
+     */
+    private void deleteReminder(Reminder reminder) {
+        int confirm = JOptionPane.showConfirmDialog(
+            this,
+            "Delete this reminder?",
+            "Confirm Delete",
+            JOptionPane.YES_NO_OPTION
+        );
+        
+        if (confirm == JOptionPane.YES_OPTION) {
+            taskManager.removeReminder(reminder);
+            refreshData();
+            repaint();
         }
     }
     
@@ -463,6 +552,43 @@ public class TodayPanel extends JPanel {
 
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension(600, hoursToShow * hourHeight + 50);
+        // Calculate width based on maximum overlapping reminders at any time
+        int maxOverlapping = getMaxOverlappingReminders();
+        
+        // Base width includes timeline + padding
+        int baseWidth = timelineWidth + 20;
+        
+        // Add width for reminder blocks
+        int reminderAreaWidth = 0;
+        if (maxOverlapping > 0) {
+            reminderAreaWidth = (maxOverlapping * reminderBlockWidth) + ((maxOverlapping - 1) * 10);
+        }
+        
+        int totalWidth = Math.max(600, baseWidth + reminderAreaWidth);
+        
+        return new Dimension(totalWidth, hoursToShow * hourHeight + 50);
+    }
+    
+    /**
+     * Calculate the maximum number of overlapping reminders at any single time.
+     */
+    private int getMaxOverlappingReminders() {
+        if (todaysReminders == null || todaysReminders.isEmpty()) {
+            return 0;
+        }
+        
+        Map<String, Integer> reminderCountByTime = new HashMap<>();
+        
+        for (Reminder reminder : todaysReminders) {
+            String timeKey = reminder.getHour() + ":" + reminder.getMinute();
+            reminderCountByTime.put(timeKey, reminderCountByTime.getOrDefault(timeKey, 0) + 1);
+        }
+        
+        int maxCount = 0;
+        for (int count : reminderCountByTime.values()) {
+            maxCount = Math.max(maxCount, count);
+        }
+        
+        return maxCount;
     }
 }

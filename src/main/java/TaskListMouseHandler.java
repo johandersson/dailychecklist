@@ -98,12 +98,33 @@ public class TaskListMouseHandler extends MouseAdapter {
         Task p = taskManager.getTaskById(parent.getId());
         if (p == null) p = parent;
         
-        // Create all subtask objects
+        // Check if parent already has a heading
+        boolean alreadyHasHeading = false;
+        for (Task existingSubtask : taskManager.getSubtasks(p)) {
+            if (existingSubtask.getType() == TaskType.HEADING) {
+                alreadyHasHeading = true;
+                break;
+            }
+        }
+        
+        // Create all subtask/heading objects
         java.util.List<Task> newSubtasks = new java.util.ArrayList<>();
         for (String name : subtaskNames) {
-            Task newTask = new Task(name, p.getType(), p.getWeekday(), p.getChecklistId());
-            newTask.setParentId(p.getId());
-            newSubtasks.add(newTask);
+            // Check if it's a heading (starts with #)
+            if (name.startsWith("#")) {
+                String headingText = name.substring(1).trim();
+                if (!headingText.isEmpty() && !alreadyHasHeading) {
+                    Task heading = new Task(headingText, TaskType.HEADING, null, p.getChecklistId());
+                    heading.setParentId(p.getId());
+                    newSubtasks.add(heading);
+                    alreadyHasHeading = true; // Only allow one heading
+                }
+            } else {
+                // Regular subtask
+                Task newTask = new Task(name, p.getType(), p.getWeekday(), p.getChecklistId());
+                newTask.setParentId(p.getId());
+                newSubtasks.add(newTask);
+            }
         }
         
         // Find the parent's position in the list
