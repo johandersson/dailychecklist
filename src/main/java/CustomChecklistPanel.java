@@ -214,50 +214,53 @@ public class CustomChecklistPanel extends JPanel {
         // Preserve selections before updating
         java.util.List<Task> selectedTasks = customTaskList.getSelectedValuesList();
 
-        for (Task t : extraSubs) taskManager.removeTask(t);
-        for (Task task : tasksToDelete) taskManager.removeTask(task);
+        // Suppress task change listener to avoid race conditions
+        suppressTaskChangeListener = true;
+        try {
+            for (Task t : extraSubs) taskManager.removeTask(t);
+            for (Task task : tasksToDelete) taskManager.removeTask(task);
 
-        // Update synchronously
-        List<Task> customs = taskManager.getTasks(TaskType.CUSTOM, checklist);
-        List<Task> headings = taskManager.getTasks(TaskType.HEADING, checklist);
-        java.util.Map<String, Task> headingByParent = new java.util.HashMap<>();
-        if (headings != null) {
-            for (Task h : headings) {
-                if (h.getParentId() != null) headingByParent.put(h.getParentId(), h);
+            // Update synchronously
+            List<Task> customs = taskManager.getTasks(TaskType.CUSTOM, checklist);
+            List<Task> headings = taskManager.getTasks(TaskType.HEADING, checklist);
+            java.util.Map<String, Task> headingByParent = new java.util.HashMap<>();
+            if (headings != null) {
+                for (Task h : headings) {
+                    if (h.getParentId() != null) headingByParent.put(h.getParentId(), h);
+                }
             }
-        }
 
-        // For custom checklists we want parents followed by their direct subtasks.
-        java.util.List<Task> parents = new java.util.ArrayList<>();
-        for (Task t : customs) {
-            if (t.getParentId() == null) {
-                parents.add(t);
+            // For custom checklists we want parents followed by their direct subtasks.
+            java.util.List<Task> parents = new java.util.ArrayList<>();
+            for (Task t : customs) {
+                if (t.getParentId() == null) {
+                    parents.add(t);
+                }
             }
-        }
-        java.util.List<Task> desired = new java.util.ArrayList<>();
-        for (Task p : parents) {
-            Task heading = headingByParent.get(p.getId());
-            if (heading != null) desired.add(heading);
-            desired.add(p);
-            java.util.List<Task> subs = taskManager.getSubtasksSorted(p.getId());
-            if (subs != null && !subs.isEmpty()) {
-                for (Task s : subs) {
-                    if (p.getChecklistId() == null) {
-                        if (s.getChecklistId() == null) desired.add(s);
-                    } else if (p.getChecklistId().equals(s.getChecklistId())) {
-                        desired.add(s);
+            java.util.List<Task> desired = new java.util.ArrayList<>();
+            for (Task p : parents) {
+                Task heading = headingByParent.get(p.getId());
+                if (heading != null) desired.add(heading);
+                desired.add(p);
+                java.util.List<Task> subs = taskManager.getSubtasksSorted(p.getId());
+                if (subs != null && !subs.isEmpty()) {
+                    for (Task s : subs) {
+                        if (p.getChecklistId() == null) {
+                            if (s.getChecklistId() == null) desired.add(s);
+                        } else if (p.getChecklistId().equals(s.getChecklistId())) {
+                            desired.add(s);
+                        }
                     }
                 }
             }
-        }
 
-        // Precompute display strings (include checklist info for custom lists)
-        DisplayPrecomputer.precomputeForList(desired, taskManager, true);
-        TaskUpdater.syncModel(customListModel, desired);
+            // Precompute display strings (include checklist info for custom lists)
+            DisplayPrecomputer.precomputeForList(desired, taskManager, true);
+            TaskUpdater.syncModel(customListModel, desired);
 
-        // Restore selections after updating
-        for (Task selectedTask : selectedTasks) {
-            for (int i = 0; i < customListModel.getSize(); i++) {
+            // Restore selections after updating
+            for (Task selectedTask : selectedTasks) {
+                for (int i = 0; i < customListModel.getSize(); i++) {
                 if (customListModel.getElementAt(i).equals(selectedTask)) {
                     customTaskList.addSelectionInterval(i, i);
                     break;
@@ -267,18 +270,9 @@ public class CustomChecklistPanel extends JPanel {
 
         customTaskList.revalidate();
         customTaskList.repaint();
-    }
-
-    // Confirmation handled by shared DeleteConfirmationDialog helper
-
-    // Place at the end of the class, before the final closing brace
-    private JMenuItem createAddSubtaskMenuItem(JList<Task> list, int index) {
-        JMenuItem addSubtaskItem = new JMenuItem("Add Subtask");
-        // Use authoritative task instance from TaskManager to avoid stale model objects
-        Task modelParent = list.getModel().getElementAt(index);
-        Task parent = taskManager.getTaskById(modelParent.getId());
-        if (parent == null) parent = modelParent;
-        if (parent.getParentId() != null) {
+        } finally {
+            suppressTaskChangeListener = false;
+        }
             // Disable adding a subtask to a subtask (only one level supported)
             addSubtaskItem.setEnabled(false);
             addSubtaskItem.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Cannot add a subtask to a subtask</p></html>");
@@ -500,18 +494,77 @@ public class CustomChecklistPanel extends JPanel {
             int res = JOptionPane.showOptionDialog(this, sb.toString(), "Confirm Deletion",
                     JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, options, options[1]);
             if (res == 0) {
-                // delete subtasks first, then parent
-                for (Task s : subs) taskManager.removeTask(s);
-                taskManager.removeTask(task);
-                updateTasks();
+                // Suppress task change listener to avoid race conditions
+                suppressTaskChangeListener = true;
+                try {
+                    // delete subtasks first, then parent
+                    for (Task s : subs) taskManager.removeTask(s);
+                    taskManager.removeTask(task);
+                    // Update model synchronously to ensure GUI updates immediately
+                    updateModelSynchronously();
+                } finally {
+                    suppressTaskChangeListener = false;
+                }
             }
         } else {
             int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to remove the task '" + task.getName() + "'?", "Confirm Removal", JOptionPane.YES_NO_OPTION);
             if (result == JOptionPane.YES_OPTION) {
-                taskManager.removeTask(task);
-                updateTasks();
+                // Suppress task change listener to avoid race conditions
+                suppressTaskChangeListener = true;
+                try {
+                    taskManager.removeTask(task);
+                    // Update model synchronously to ensure GUI updates immediately
+                    updateModelSynchronously();
+                } finally {
+                    suppressTaskChangeListener = false;
+                }
             }
         }
+    }
+    
+    /**
+     * Synchronously update the list model after task changes to avoid GUI display issues.
+     */
+    private void updateModelSynchronously() {
+        List<Task> customs = taskManager.getTasks(TaskType.CUSTOM, checklist);
+        List<Task> headings = taskManager.getTasks(TaskType.HEADING, checklist);
+        java.util.Map<String, Task> headingByParent = new java.util.HashMap<>();
+        if (headings != null) {
+            for (Task h : headings) {
+                if (h.getParentId() != null) headingByParent.put(h.getParentId(), h);
+            }
+        }
+
+        // For custom checklists we want parents followed by their direct subtasks.
+        java.util.List<Task> parents = new java.util.ArrayList<>();
+        for (Task t : customs) {
+            if (t.getParentId() == null) {
+                parents.add(t);
+            }
+        }
+        java.util.List<Task> desired = new java.util.ArrayList<>();
+        for (Task p : parents) {
+            Task heading = headingByParent.get(p.getId());
+            if (heading != null) desired.add(heading);
+            desired.add(p);
+            java.util.List<Task> subs = taskManager.getSubtasksSorted(p.getId());
+            if (subs != null && !subs.isEmpty()) {
+                for (Task s : subs) {
+                    if (p.getChecklistId() == null) {
+                        if (s.getChecklistId() == null) desired.add(s);
+                    } else if (p.getChecklistId().equals(s.getChecklistId())) {
+                        desired.add(s);
+                    }
+                }
+            }
+        }
+
+        // Precompute display strings (include checklist info for custom lists)
+        DisplayPrecomputer.precomputeForList(desired, taskManager, true);
+        TaskUpdater.syncModel(customListModel, desired);
+
+        customTaskList.revalidate();
+        customTaskList.repaint();
     }
 
     private JPanel createPanel(JList<Task> taskList) {
