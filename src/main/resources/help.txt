@@ -42,10 +42,13 @@
 
 	<h2>Custom Checklists</h2>
 	<h3>Create a checklist</h3>
-	<p>In the right panel, enter a name and click "Create Checklist". The name cannot be empty.</p>
+	<p>In the right panel, enter one or more checklist names (one per line) and click "Create Checklist(s)". Empty lines are skipped. You can create up to 100 checklists at once.</p>
 
 	<h3>Add tasks to a checklist</h3>
-	<p>Select a checklist, enter tasks (one per line) in the Add Tasks area, and click "Add Tasks". Empty lines are skipped. Tasks appear in the selected checklist.</p>
+	<p>Select a checklist, enter tasks (one per line) in the Add Tasks area, and click "Add Tasks". Empty lines are skipped. You can add up to 1000 tasks at once. Tasks appear in the selected checklist.</p>
+	<div style="background:#e8f4fd;border-left:4px solid #0078d7;padding:10px;margin-bottom:10px;">
+		<b>Undo/Redo Support:</b> All batch text areas support <b>Ctrl+Z</b> (undo) and <b>Ctrl+Y</b> (redo) to easily recover from typing mistakes.
+	</div>
 
 	<h3>Manage checklists</h3>
 	<ul>
@@ -83,7 +86,8 @@
 	<ul>
 		<li>The timeline shows the full 24-hour day (00:00 – 23:59) with hour markers and time labels.</li>
 		<li>Each reminder appears as a colored block at its scheduled time.</li>
-		<li>Click any reminder block to jump directly to the associated task or checklist in the main interface.</li>
+		<li><b>Left-click</b> any reminder block to jump directly to the associated task or checklist in the main interface.</li>
+		<li><b>Right-click</b> a reminder block to edit or delete the reminder directly from the timeline.</li>
 		<li>Hover over a reminder block to see full details in a tooltip (time, task name, parent task if applicable).</li>
 		<li>Multiple reminders at the same time appear side by side for easy viewing.</li>
 		<li>The view automatically refreshes when reminders are added, removed, or modified.</li>
@@ -100,8 +104,9 @@
 	<ul>
 		<li>You can add subtasks to any daily or custom task. Subtasks appear directly below their parent and are indented for clarity.</li>
 		<li>To create a single subtask, right-click a task and choose "Add Subtask".</li>
-		<li>To create multiple subtasks at once, right-click a task and choose "Add Multiple Subtasks", then enter one subtask per line.</li>
-		<li><b>Tab-indented subtasks:</b> When adding multiple subtasks, you can indent lines with a tab character to create subtasks. Non-indented lines create regular tasks.</li>
+		<li>To create multiple subtasks at once, right-click a task and choose "Add Multiple Subtasks", then enter one subtask per line (up to 1000 subtasks).</li>
+		<li><b>Tab-indented subtasks:</b> When batch adding tasks, indent lines with a tab character to create subtasks. Non-indented lines create regular tasks.</li>
+		<li><b>Headings:</b> Prefix a line with <b>#</b> to create a heading (e.g., "#Shopping List"). For subtask headings, use tab + # (e.g., "\t#Groceries"). Only one heading per parent is allowed.</li>
 		<li>When all subtasks are marked as done, the parent task is automatically marked as done.</li>
 		<li>When you mark a parent task as done, all its subtasks are also marked as done. Unmarking a parent will unmark all subtasks.</li>
 		<li>Subtasks are supported in both daily and custom checklists.</li>
@@ -132,6 +137,8 @@
 		<li>Multi-select: <b>Ctrl+click</b></li>
 		<li>Range-select: <b>Shift+click</b></li>
 		<li>Delete selected tasks: <b>Delete</b></li>
+		<li>Undo in batch text areas: <b>Ctrl+Z</b></li>
+		<li>Redo in batch text areas: <b>Ctrl+Y</b></li>
 		<li>Save dialog contents: <b>Ctrl+S</b> (in text areas like Add Tasks or Add Multiple Subtasks dialogs)</li>
 		<li>Timer pause/resume: <b>Space</b></li>
 	</ul>
