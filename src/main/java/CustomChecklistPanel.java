@@ -273,6 +273,14 @@ public class CustomChecklistPanel extends JPanel {
         } finally {
             suppressTaskChangeListener = false;
         }
+    }
+
+    private JMenuItem createAddSubtaskMenuItem(JList<Task> list, int index) {
+        JMenuItem addSubtaskItem = new JMenuItem("Add Multiple Subtasks");
+        Task modelParent = list.getModel().getElementAt(index);
+        
+        // Check if this is a subtask (cannot add subtask to a subtask)
+        if (modelParent.getParentId() != null) {
             // Disable adding a subtask to a subtask (only one level supported)
             addSubtaskItem.setEnabled(false);
             addSubtaskItem.setToolTipText("<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Cannot add a subtask to a subtask</p></html>");

@@ -36,7 +36,9 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.undo.UndoManager;
 
 @SuppressWarnings("serial")
 public class CustomChecklistsOverviewPanel extends JPanel {

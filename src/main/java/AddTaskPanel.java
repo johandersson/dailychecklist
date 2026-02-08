@@ -295,7 +295,7 @@ public class AddTaskPanel extends JPanel {
                             if (!headingText.isEmpty()) {
                                 // Check if parent already has a heading
                                 boolean alreadyHasHeading = false;
-                                for (Task existingSubtask : taskManager.getSubtasks(lastParentTask)) {
+                                for (Task existingSubtask : taskManager.getSubtasks(lastParentTask.getId())) {
                                     if (existingSubtask.getType() == TaskType.HEADING) {
                                         alreadyHasHeading = true;
                                         break;
