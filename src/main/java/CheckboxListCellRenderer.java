@@ -515,6 +515,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     }
 
     private void drawInfoIconIfNeeded(Graphics2D g2) {
+        // Only show info icon for tasks with notes
         if (!hasNote) return;
         javax.swing.Icon icon = IconCache.getInfoIcon();
         int iconW = icon.getIconWidth();
