@@ -21,7 +21,7 @@ import javax.swing.JOptionPane;
 
 public class MemorySafetyManager {
     // Reasonable limits to prevent memory overflow and performance issues
-    public static final int MAX_TASKS = 100000;
+    public static final int MAX_TASKS = 10000;
     public static final int MAX_REMINDERS = 10000;
 
     /**
