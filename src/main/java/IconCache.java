@@ -35,6 +35,7 @@ public final class IconCache {
     private static final javax.swing.Icon CHECKLIST_DOC;
     private static final javax.swing.Icon ADD_SUBTASK_ICON;
     private static final javax.swing.Icon CHECKMARK_ICON;
+    private static final javax.swing.Icon INFO_ICON;
 
     // Key format: hour-minute-state-showTime
     private static final ConcurrentMap<String, Icon> reminderClockCache = new ConcurrentHashMap<>();
@@ -66,6 +67,10 @@ public final class IconCache {
         return CHECKMARK_ICON;
     }
 
+    public static Icon getInfoIcon() {
+        return INFO_ICON;
+    }
+
     public static Icon getReminderClockIcon(int hour, int minute, ReminderClockIcon.State state, boolean showTimeText) {
         String key = hour + "-" + minute + "-" + (state == null ? "" : state.name()) + "-" + showTimeText;
         return reminderClockCache.computeIfAbsent(key, k -> {
@@ -87,6 +92,8 @@ public final class IconCache {
         ZZZ = renderToImageIcon(rawZzz);
 
         CHECKLIST_DOC = renderToImageIcon(CHECKLIST_DOC_RAW);
+
+        INFO_ICON = renderToImageIcon(new InfoIcon(18));
 
         ADD_SUBTASK_ICON = renderToImageIcon(new AddSubtaskIcon(16));
 

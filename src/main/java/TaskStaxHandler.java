@@ -69,6 +69,7 @@ public class TaskStaxHandler {
                             case "parentId": current.setParentId(txt); break;
                             case "weekday": current.setWeekday(txt); break;
                             case "done": current.setDone(Boolean.parseBoolean(txt)); break;
+                            case "note": current.setNote(txt); break;
                             case "doneDate":
                                 if (txt != null && !txt.isEmpty()) {
                                     try {
@@ -158,6 +159,7 @@ public class TaskStaxHandler {
                 if (t.getWeekday() != null) { sb.append("    <weekday>"); escapeXmlToBuilder(t.getWeekday(), sb); sb.append("</weekday>\n"); }
                 sb.append("    <done>"); sb.append(t.isDone()); sb.append("</done>\n");
                 sb.append("    <doneDate>"); if (t.getDoneDate() != null) escapeXmlToBuilder(t.getDoneDate(), sb); sb.append("</doneDate>\n");
+                if (t.getNote() != null && !t.getNote().isEmpty()) { sb.append("    <note>"); escapeXmlToBuilder(t.getNote(), sb); sb.append("</note>\n"); }
 
                 sb.append("  </task>\n");
                 writeUtf8(os, sb.toString());

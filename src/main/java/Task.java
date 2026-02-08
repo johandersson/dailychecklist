@@ -28,6 +28,7 @@ public class Task {
     private String weekday;
     private boolean done;
     private String checklistId; // Changed from checklistName to checklistId
+    private String note; // Optional note for task/subtask (max 1000 words)
 
     // Subtask support
     private String parentId; // null if not a subtask
@@ -197,6 +198,19 @@ public class Task {
         }
         // Invalidate cached parsed date
         this.cachedParsedDoneDate = null;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
+        this.displayDirty = true;
+    }
+
+    public boolean hasNote() {
+        return note != null && !note.trim().isEmpty();
     }
     
     // Cache management methods

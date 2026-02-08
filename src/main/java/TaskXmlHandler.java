@@ -244,8 +244,20 @@ public class TaskXmlHandler {
         NodeList doneDateNodes = element.getElementsByTagName("doneDate");
         String doneDate = doneDateNodes.getLength() > 0 ? doneDateNodes.item(0).getTextContent() : null;
 
+        // Parse note if present
+        String note = null;
+        NodeList noteNodes = element.getElementsByTagName("note");
+        if (noteNodes.getLength() > 0) {
+            note = noteNodes.item(0).getTextContent();
+            if (note != null && note.trim().isEmpty()) {
+                note = null;
+            }
+        }
+
         // Use new constructor with parentId for backwards compatibility
-        return new Task(id, name, type, weekday, done, doneDate, checklistId, parentId);
+        Task task = new Task(id, name, type, weekday, done, doneDate, checklistId, parentId);
+        task.setNote(note);
+        return task;
     }
 
     /**
@@ -287,6 +299,12 @@ public class TaskXmlHandler {
             Element parentIdElement = document.createElement("parentId");
             parentIdElement.setTextContent(task.getParentId().trim());
             taskElement.appendChild(parentIdElement);
+        }
+
+        if (task.getNote() != null && !task.getNote().trim().isEmpty()) {
+            Element noteElement = document.createElement("note");
+            noteElement.setTextContent(task.getNote());
+            taskElement.appendChild(noteElement);
         }
 
         return taskElement;
@@ -384,6 +402,21 @@ public class TaskXmlHandler {
             checklistIdElement.setTextContent(task.getChecklistId());
         } else if (checklistIdNodes.getLength() > 0) {
             taskElement.removeChild(checklistIdNodes.item(0));
+        }
+
+        // Handle note (optional)
+        NodeList noteNodes = taskElement.getElementsByTagName("note");
+        if (task.getNote() != null && !task.getNote().trim().isEmpty()) {
+            Element noteElement;
+            if (noteNodes.getLength() > 0) {
+                noteElement = (Element) noteNodes.item(0);
+            } else {
+                noteElement = document.createElement("note");
+                taskElement.appendChild(noteElement);
+            }
+            noteElement.setTextContent(task.getNote());
+        } else if (noteNodes.getLength() > 0) {
+            taskElement.removeChild(noteNodes.item(0));
         }
     }
 

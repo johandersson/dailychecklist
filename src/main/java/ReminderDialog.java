@@ -37,20 +37,27 @@ public class ReminderDialog extends JDialog {
     private transient final Runnable onRemindLater;
     private transient final Runnable onRemindTomorrow;
     private transient final Runnable onMarkAsDone;
+    private TaskManager taskManager; // For retrieving task notes
 
     @SuppressWarnings("this-escape")
     public ReminderDialog(JFrame parent, Reminder reminder, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow, Runnable onMarkAsDone) {
-        this(parent, reminder, null, null, onOpen, onDone, onRemindLater, onRemindTomorrow, onMarkAsDone);
+        this(parent, reminder, null, null, onOpen, onDone, onRemindLater, onRemindTomorrow, onMarkAsDone, null);
     }
 
     @SuppressWarnings("this-escape")
     public ReminderDialog(JFrame parent, Reminder reminder, String displayTitle, String breadcrumbText, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow, Runnable onMarkAsDone) {
+        this(parent, reminder, displayTitle, breadcrumbText, onOpen, onDone, onRemindLater, onRemindTomorrow, onMarkAsDone, null);
+    }
+
+    @SuppressWarnings("this-escape")
+    public ReminderDialog(JFrame parent, Reminder reminder, String displayTitle, String breadcrumbText, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow, Runnable onMarkAsDone, TaskManager taskManager) {
         super(parent, "Reminder", true);
         this.onOpen = onOpen;
         this.onDone = onDone;
         this.onRemindLater = onRemindLater;
         this.onRemindTomorrow = onRemindTomorrow;
         this.onMarkAsDone = onMarkAsDone;
+        this.taskManager = taskManager;
 
         initDialogSettings(parent);
 
@@ -64,11 +71,19 @@ public class ReminderDialog extends JDialog {
 
         JPanel topPanel = buildTopPanel(checklistName, breadcrumbText, timeString, dateString);
         JLabel messageLabel = buildMessageLabel();
+        JPanel notePanel = buildNotePanel(reminder);
         JPanel buttonPanel = buildButtonPanel(reminder);
 
         setLayout(new BorderLayout());
         add(topPanel, BorderLayout.NORTH);
-        add(messageLabel, BorderLayout.CENTER);
+        
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.add(messageLabel, BorderLayout.NORTH);
+        if (notePanel != null) {
+            centerPanel.add(notePanel, BorderLayout.CENTER);
+        }
+        add(centerPanel, BorderLayout.CENTER);
+        
         add(buttonPanel, BorderLayout.SOUTH);
 
         pack();
@@ -105,6 +120,51 @@ public class ReminderDialog extends JDialog {
         return "<html><div style='text-align:center;padding:6px;'><h2 style='color: #2E86AB;margin:0 0 4px 0;font-size:16px;'>⏰ Reminder</h2>" +
                 "<div style='font-size:14px;font-weight:bold;color:#333;margin-bottom:4px;'>" + checklistName + "</div>" +
                 "<div style='color:#666;font-size:11px;'>Scheduled for: " + timeString + " on " + dateString + "</div></div></html>";
+    }
+
+    private JPanel buildNotePanel(Reminder reminder) {
+        // If reminder is for a specific task, get the task's note
+        if (taskManager == null || reminder.getTaskId() == null) {
+            return null;
+        }
+        
+        Task task = taskManager.getTaskById(reminder.getTaskId());
+        if (task == null || !task.hasNote()) {
+            return null;
+        }
+        
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(0, 12, 6, 12));
+        
+        // Create collapsible note area (similar to ErrorDialog)
+        javax.swing.JTextArea noteArea = new javax.swing.JTextArea(task.getNote());
+        noteArea.setEditable(false);
+        noteArea.setFont(FontManager.getTaskListFont());
+        noteArea.setLineWrap(true);
+        noteArea.setWrapStyleWord(true);
+        noteArea.setVisible(false);
+        
+        javax.swing.JScrollPane scroll = new javax.swing.JScrollPane(noteArea);
+        scroll.setPreferredSize(new java.awt.Dimension(400, 120));
+        scroll.setVisible(false);
+        panel.add(scroll, BorderLayout.CENTER);
+        
+        // Button to toggle note visibility
+        JButton toggleButton = new JButton("Show note");
+        toggleButton.setFont(FontManager.getButtonFont());
+        toggleButton.addActionListener(e -> {
+            boolean showing = scroll.isVisible();
+            scroll.setVisible(!showing);
+            noteArea.setVisible(!showing);
+            toggleButton.setText(showing ? "Show note" : "Hide note");
+            pack();
+        });
+        
+        JPanel buttonWrap = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonWrap.add(toggleButton);
+        panel.add(buttonWrap, BorderLayout.NORTH);
+        
+        return panel;
     }
 
     private JLabel buildMessageLabel() {
