@@ -48,15 +48,27 @@ public class TaskMoveHandler {
             // Do persistence in background to avoid blocking EDT
             java.util.concurrent.CompletableFuture.runAsync(() -> {
                 try {
-                    // Persist atomically so UI changes are not lost by the coalescer
-                    taskManager.updateTasks(toPersist);
+                    // Begin batch operation to suppress listener notifications and prevent duplication
+                    taskManager.beginBatchOperation();
+                    
+                    try {
+                        // Persist atomically so UI changes are not lost by the coalescer
+                        taskManager.updateTasks(toPersist);
 
-                    // For daily checklists, reorder the tasks to place moved tasks at the correct position
-                    if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
-                        reorderTasksForDailyList(checklistName, tasks, finalDropIndex, taskManager);
+                        // For daily checklists, reorder the tasks to place moved tasks at the correct position
+                        if ("MORNING".equals(checklistName) || "EVENING".equals(checklistName)) {
+                            reorderTasksForDailyList(checklistName, tasks, finalDropIndex, taskManager);
+                        }
+                    } finally {
+                        // End batch operation and trigger single notification
+                        taskManager.endBatchOperation();
                     }
                 } catch (Exception e) {
                     DebugLog.d("Error during drag-and-drop persistence: %s", e.getMessage());
+                    // Ensure we always end the batch operation even on error
+                    try {
+                        taskManager.endBatchOperation();
+                    } catch (Exception ignored) {}
                 }
             }).thenRun(() -> {
                 // Update all panels after persistence completes
