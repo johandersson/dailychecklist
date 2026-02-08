@@ -56,6 +56,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
     private Font smallFont = null;
     private FontMetrics fmMainCached = null;
     private FontMetrics fmSmallCached = null;
+    private boolean hasNote = false; // True if task has a note
     
     // Checkmark is provided by IconCache
 
@@ -151,6 +152,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         this.taskId = task.getId();
         this.isHeading = task.getType() == TaskType.HEADING;
         this.taskReminder = null;
+        this.hasNote = task.hasNote();
         // Headings are not subtasks visually
         this.isSubtask = !this.isHeading && (task.getParentId() != null) && !this.showSubtaskBreadcrumb;
         this.breadcrumbText = null;
@@ -360,6 +362,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         drawBreadcrumbIfNeeded(g2, textStartX, textY);
         drawDoneTimestampIfNeeded(g2, textStartX);
         drawAddSubtaskIfNeeded(g2);
+        drawInfoIconIfNeeded(g2);
         drawWeekdayCircleIfNeeded(g2);
         drawReminderIfNeeded(g2);
     }
@@ -452,6 +455,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         int reservedSpace = 12; // base padding
         if (isWeekdayTask) reservedSpace += UiLayout.WEEKDAY_ICON_AREA;
         if (taskReminder != null) reservedSpace += UiLayout.REMINDER_ICON_AREA;
+        if (hasNote) reservedSpace += UiLayout.INFO_ICON_AREA;
         // Add space for add-subtask icon if it's shown (top-level tasks)
         Task backing = (taskManager != null && taskId != null) ? taskManager.getTaskById(taskId) : null;
         if (showAddSubtaskIcon && backing != null && backing.getParentId() == null && !this.isSubtask) {
@@ -510,14 +514,26 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         g2.drawString(weekdayAbbreviation != null ? weekdayAbbreviation : "", textX, textCenterY);
     }
 
+    private void drawInfoIconIfNeeded(Graphics2D g2) {
+        if (!hasNote) return;
+        javax.swing.Icon icon = IconCache.getInfoIcon();
+        int iconW = icon.getIconWidth();
+        int iconH = icon.getIconHeight();
+        // Info icon is positioned left of the weekday area
+        int areaX = getWidth() - UiLayout.WEEKDAY_ICON_AREA - UiLayout.INFO_ICON_AREA;
+        int iconX = areaX + (UiLayout.INFO_ICON_AREA - iconW) / 2;
+        int iconY = getHeight() / 2 - iconH / 2;
+        icon.paintIcon(this, g2, iconX, iconY);
+    }
+
     private void drawReminderIfNeeded(Graphics2D g2) {
         if (taskReminder == null) return;
         ReminderClockIcon.State state = computeState(taskReminder);
         javax.swing.Icon icon = IconCache.getReminderClockIcon(taskReminder.getHour(), taskReminder.getMinute(), state, true);
         int iconW = icon.getIconWidth();
         int iconH = icon.getIconHeight();
-        // reminder area is left of the weekday area
-        int areaX = getWidth() - UiLayout.WEEKDAY_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
+        // reminder area is left of the info icon area (which is left of the weekday area)
+        int areaX = getWidth() - UiLayout.WEEKDAY_ICON_AREA - UiLayout.INFO_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
         // center the icon (and its time text) within the reminder reserved area
         int iconX = areaX + Math.max(2, (UiLayout.REMINDER_ICON_AREA - iconW) / 2);
         int iconY = getHeight() / 2 - iconH / 2;
@@ -536,8 +552,8 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         javax.swing.Icon add = IconCache.getAddSubtaskIcon();
         int aw = add.getIconWidth();
         int ah = add.getIconHeight();
-        // Place it to the left of the reminder area
-        int areaX = getWidth() - UiLayout.WEEKDAY_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
+        // Place it to the left of the reminder area (which is left of the info icon area)
+        int areaX = getWidth() - UiLayout.WEEKDAY_ICON_AREA - UiLayout.INFO_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
         int iconX = areaX - UiLayout.ADD_SUBTASK_OFFSET; // spacing
         if (iconX < 0) iconX = Math.max(2, getWidth() - UiLayout.RIGHT_ICON_SPACE - aw - 6);
         int iconY = getHeight() / 2 - ah / 2;

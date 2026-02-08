@@ -21,6 +21,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.DefaultListModel;
 import javax.swing.Icon;
+import javax.swing.JFrame;
 import javax.swing.JList;
 
 public class TaskListMouseHandler extends MouseAdapter {
@@ -59,7 +60,44 @@ public class TaskListMouseHandler extends MouseAdapter {
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        handleAddSubtaskClick(e);
+        if (!handleInfoIconClick(e)) {
+            handleAddSubtaskClick(e);
+        }
+    }
+
+    private boolean handleInfoIconClick(MouseEvent e) {
+        int idx = taskList.locationToIndex(e.getPoint());
+        if (idx < 0) return false;
+        Rectangle cb = taskList.getCellBounds(idx, idx);
+        if (cb == null) return false;
+        int relX = e.getX() - cb.x;
+        int cellW = cb.width;
+
+        // Info icon is positioned between weekday and reminder icons
+        int infoIconStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.INFO_ICON_AREA;
+        int infoIconEnd = cellW - UiLayout.WEEKDAY_ICON_AREA;
+
+        Task t = taskList.getModel().getElementAt(idx);
+        if (t == null) return false;
+
+        // Check if click is within info icon area
+        if (relX >= infoIconStart && relX < infoIconEnd) {
+            // Open NoteDialog for this task
+            Task taskForDialog = (taskManager != null) ? taskManager.getTaskById(t.getId()) : t;
+            if (taskForDialog != null) {
+                JFrame parentFrame = (JFrame) javax.swing.SwingUtilities.getWindowAncestor(taskList);
+                String updatedNote = NoteDialog.showDialog(parentFrame, taskForDialog.getName(), taskForDialog.getNote());
+                if (updatedNote != null) {
+                    taskForDialog.setNote(updatedNote);
+                    if (taskManager != null) {
+                        taskManager.updateTask(taskForDialog);
+                    }
+                    taskList.repaint();
+                }
+                return true; // Consumed the click
+            }
+        }
+        return false; // Did not consume the click
     }
 
     private void handleAddSubtaskClick(MouseEvent e) {

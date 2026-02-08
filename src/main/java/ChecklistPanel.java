@@ -326,6 +326,7 @@ public class ChecklistPanel extends JPanel {
 
     private void addTaskActionItems(JPopupMenu menu, JList<Task> list, int index) {
         menu.add(createAddSubtaskMenuItem(list, index));
+        menu.add(createAddNoteMenuItem(list, index));
         menu.add(createRemoveMenuItem(list, index));
         menu.add(createStartFocusTimerMenuItem(list, index));
         menu.add(createSetTaskReminderMenuItem(list, index));
@@ -483,6 +484,24 @@ public class ChecklistPanel extends JPanel {
             }
         });
         return removeTaskReminderItem;
+    }
+
+    private JMenuItem createAddNoteMenuItem(JList<Task> list, int index) {
+        JMenuItem item = new JMenuItem("Add note");
+        item.addActionListener(event -> {
+            Task task = list.getModel().getElementAt(index);
+            String newNote = NoteDialog.showDialog(
+                (javax.swing.JFrame) SwingUtilities.getWindowAncestor(this),
+                task.getName(),
+                task.getNote()
+            );
+            if (newNote != task.getNote()) { // null-safe comparison intentional
+                task.setNote(newNote);
+                taskManager.updateTask(task);
+                list.repaint(list.getCellBounds(index, index));
+            }
+        });
+        return item;
     }
 
     private JMenuItem getMorningAndEveneingItems(JList<Task> list, int index) {

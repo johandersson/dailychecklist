@@ -158,6 +158,7 @@ public class CustomChecklistPanel extends JPanel {
         contextMenu.add(createAddSubtaskMenuItem(list, index));
         contextMenu.add(createCreateHeadingMenuItem(list, index));
         contextMenu.add(createEditMenuItem(list, index));
+        contextMenu.add(createAddNoteMenuItem(list, index));
         contextMenu.add(createRemoveMenuItem(list, index));
         contextMenu.add(createStartFocusTimerItem(list, index));
         contextMenu.add(createSetTaskReminderItem(list, index));
@@ -480,6 +481,24 @@ public class CustomChecklistPanel extends JPanel {
                 }
             } else {
                 JOptionPane.showMessageDialog(this, "No reminder set for this task.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+        return item;
+    }
+
+    private JMenuItem createAddNoteMenuItem(JList<Task> list, int index) {
+        JMenuItem item = new JMenuItem("Add note");
+        item.addActionListener(event -> {
+            Task task = list.getModel().getElementAt(index);
+            String newNote = NoteDialog.showDialog(
+                (javax.swing.JFrame) SwingUtilities.getWindowAncestor(this),
+                task.getName(),
+                task.getNote()
+            );
+            if (newNote != task.getNote()) { // null-safe comparison intentional
+                task.setNote(newNote);
+                taskManager.updateTask(task);
+                list.repaint(list.getCellBounds(index, index));
             }
         });
         return item;

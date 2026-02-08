@@ -222,7 +222,8 @@ public class DailyChecklist {
                 handleReminderDismiss(reminder),
                 handleReminderRemindLater(reminder),
                 handleReminderRemindTomorrow(reminder),
-                handleReminderMarkAsDone(reminder)
+                handleReminderMarkAsDone(reminder),
+                checklistManager
             );
 
             dialog.setVisible(true);
