@@ -108,7 +108,8 @@ public class TaskListMouseHandler extends MouseAdapter {
         int relX = e.getX() - cb.x;
         int cellW = cb.width;
 
-        int reminderStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
+        // Calculate add icon position (left of reminder area, which is left of info icon area)
+        int reminderStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.INFO_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
         int addIconX = reminderStart - UiLayout.ADD_SUBTASK_OFFSET; // matches renderer spacing
 
         Task t = taskList.getModel().getElementAt(idx);

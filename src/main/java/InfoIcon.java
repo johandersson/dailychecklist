@@ -59,7 +59,6 @@ public class InfoIcon implements Icon {
         FontMetrics fm = g2.getFontMetrics();
         String text = "i";
         int textWidth = fm.stringWidth(text);
-        // Better vertical centering calculation
         int textX = x + (size - textWidth) / 2;
         int textY = y + ((size - fm.getHeight()) / 2) + fm.getAscent();
         g2.drawString(text, textX, textY);

@@ -136,21 +136,25 @@ public class ReminderDialog extends JDialog {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(0, 12, 6, 12));
         
-        // Create collapsible note area (similar to ErrorDialog)
+        // Create note display area with nice formatting - visible by default
         javax.swing.JTextArea noteArea = new javax.swing.JTextArea(task.getNote());
         noteArea.setEditable(false);
         noteArea.setFont(FontManager.getTaskListFont());
         noteArea.setLineWrap(true);
         noteArea.setWrapStyleWord(true);
-        noteArea.setVisible(false);
+        noteArea.setBackground(new java.awt.Color(245, 245, 245)); // Light gray background
+        noteArea.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new java.awt.Color(200, 200, 200), 1),
+            BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
         
         javax.swing.JScrollPane scroll = new javax.swing.JScrollPane(noteArea);
         scroll.setPreferredSize(new java.awt.Dimension(400, 120));
-        scroll.setVisible(false);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
         panel.add(scroll, BorderLayout.CENTER);
         
-        // Button to toggle note visibility
-        JButton toggleButton = new JButton("Show note");
+        // Button to toggle note visibility (starts as visible)
+        JButton toggleButton = new JButton("Hide note");
         toggleButton.setFont(FontManager.getButtonFont());
         toggleButton.addActionListener(e -> {
             boolean showing = scroll.isVisible();
@@ -162,7 +166,7 @@ public class ReminderDialog extends JDialog {
         
         JPanel buttonWrap = new JPanel(new FlowLayout(FlowLayout.CENTER));
         buttonWrap.add(toggleButton);
-        panel.add(buttonWrap, BorderLayout.NORTH);
+        panel.add(buttonWrap, BorderLayout.SOUTH);
         
         return panel;
     }

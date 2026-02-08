@@ -49,6 +49,7 @@ public class TaskStaxHandler {
             XMLStreamReader r = INPUT_FACTORY.createXMLStreamReader(is, "UTF-8");
             Task current = null;
             String currentElement = null;
+            StringBuilder textAccumulator = new StringBuilder(); // Fix: accumulate text across multiple CHARACTERS events
             while (r.hasNext()) {
                 int ev = r.next();
                 if (ev == XMLStreamConstants.START_ELEMENT) {
@@ -58,10 +59,21 @@ public class TaskStaxHandler {
                         current = new Task(id, "", TaskType.CUSTOM, null, false, null, null, null);
                     } else {
                         currentElement = name;
+                        textAccumulator.setLength(0); // Reset accumulator for new element
                     }
                 } else if (ev == XMLStreamConstants.CHARACTERS) {
                     if (current != null && currentElement != null) {
-                        String txt = r.getText();
+                        // Critical fix: accumulate text across multiple CHARACTERS events
+                        textAccumulator.append(r.getText());
+                    }
+                } else if (ev == XMLStreamConstants.END_ELEMENT) {
+                    String name = r.getLocalName();
+                    if ("task".equals(name)) {
+                        if (TaskXmlHandler.validateTask(current)) out.add(current);
+                        current = null;
+                    } else if (current != null && currentElement != null) {
+                        // Process accumulated text at end of element
+                        String txt = textAccumulator.toString();
                         switch (currentElement) {
                             case "name": current.setName(txt); break;
                             case "type": try { current.setType(TaskType.valueOf(txt)); } catch (Exception ex) {} break;
@@ -79,14 +91,8 @@ public class TaskStaxHandler {
                                 }
                                 break;
                         }
-                    }
-                } else if (ev == XMLStreamConstants.END_ELEMENT) {
-                    String name = r.getLocalName();
-                    if ("task".equals(name)) {
-                        if (TaskXmlHandler.validateTask(current)) out.add(current);
-                        current = null;
-                    } else {
                         currentElement = null;
+                        textAccumulator.setLength(0); // Reset after processing
                     }
                 }
             }
@@ -102,7 +108,8 @@ public class TaskStaxHandler {
     public void updateTasks(List<Task> tasks) throws Exception {
         // For simplicity: read all, apply updates/inserts, write full doc
         List<Task> current = parseAllTasks();
-        java.util.Map<String, Task> map = new java.util.HashMap<>();
+        // Use LinkedHashMap to preserve insertion order and prevent task scrambling
+        java.util.Map<String, Task> map = new java.util.LinkedHashMap<>();
         for (Task t : current) map.put(t.getId(), t);
         for (Task t : tasks) map.put(t.getId(), t);
         List<Task> merged = new ArrayList<>(map.values());
@@ -110,14 +117,28 @@ public class TaskStaxHandler {
     }
 
     public void addTask(Task task) throws Exception {
+        if (task == null || !TaskXmlHandler.validateTask(task)) {
+            throw new IllegalArgumentException("Invalid task: " + task);
+        }
         List<Task> current = parseAllTasks();
+        // Check for duplicate IDs before adding
+        if (current.stream().anyMatch(t -> t.getId().equals(task.getId()))) {
+            throw new IllegalArgumentException("Task with ID " + task.getId() + " already exists");
+        }
         current.add(task);
         KMLOutput(current);
     }
 
     public void removeTask(Task task) throws Exception {
+        if (task == null || task.getId() == null) {
+            throw new IllegalArgumentException("Invalid task or task ID: " + task);
+        }
         List<Task> current = parseAllTasks();
-        current.removeIf(t -> t.getId().equals(task.getId()));
+        boolean removed = current.removeIf(t -> t.getId().equals(task.getId()));
+        if (!removed) {
+            // Not an error - task might have already been removed by another operation
+            System.out.println("Task " + task.getId() + " not found during removal (may already be deleted)");
+        }
         KMLOutput(current);
     }
 
