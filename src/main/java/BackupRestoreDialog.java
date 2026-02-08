@@ -46,9 +46,8 @@ public class BackupRestoreDialog {
         File chosen = chooseBackupFile(parent);
         if (chosen == null) return;
 
-        // Load backup data with progress dialog
-        RestoreProgressDialog loadDlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(parent), "Loading backup file");
-        loadDlg.runTask(() -> {
+        // Load backup data (with progress dialog only for large files)
+        Runnable loadTask = () -> {
             Map<String,String> checklists = readChecklistsFromZip(chosen);
             List<Task> backupTasks;
             try {
@@ -64,7 +63,16 @@ public class BackupRestoreDialog {
 
             // Continue on EDT with loaded data
             SwingUtilities.invokeLater(() -> showRestorePreview(parent, taskManager, updateTasks, chosen, checklists, backupTasks));
-        });
+        };
+        
+        // Only show progress dialog for large files (> 100KB suggests many tasks)
+        if (chosen.length() > 100 * 1024) {
+            RestoreProgressDialog loadDlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(parent), "Loading backup file");
+            loadDlg.runTask(loadTask);
+        } else {
+            // Small file - load directly without progress dialog
+            new Thread(loadTask, "BackupLoader").start();
+        }
     }
 
     private static void showRestorePreview(Component parent, TaskManager taskManager, Runnable updateTasks, File chosen, Map<String,String> checklists, List<Task> backupTasks) {
@@ -82,8 +90,9 @@ public class BackupRestoreDialog {
         Map<String,String> checklistsCopy = new LinkedHashMap<>(checklists);
 
         RestoreContext restoreCtx = new RestoreContext(parent, taskManager, updateTasks, checklistsCopy, customTasks, morningTasks, eveningTasks, currentTasks);
-        Runnable onMerge = createOnRestoreRunnable(restoreCtx);
-        Runnable onReplace = createOnReplaceRunnable(restoreCtx, backupTasks);
+        boolean showProgress = backupTasks.size() > 150; // Only show progress for large backups
+        Runnable onMerge = createOnRestoreRunnable(restoreCtx, showProgress);
+        Runnable onReplace = createOnReplaceRunnable(restoreCtx, backupTasks, showProgress);
 
         int morningImportCount = (int) morningTasks.stream().filter(t -> !existingIds.contains(t.getId())).count();
         int eveningImportCount = (int) eveningTasks.stream().filter(t -> !existingIds.contains(t.getId())).count();
@@ -163,9 +172,9 @@ public class BackupRestoreDialog {
 
     
 
-    private static Runnable createOnRestoreRunnable(RestoreContext ctx) {
+    private static Runnable createOnRestoreRunnable(RestoreContext ctx, boolean showProgress) {
         return () -> {
-            // Run restore in background with progress dialog so UI remains responsive
+            // Run restore in background
             File liveBackup = backupLiveData();
             Runnable work = () -> {
                 try {
@@ -176,43 +185,55 @@ public class BackupRestoreDialog {
                     for (Task t : ctx.morningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
                     for (Task t : ctx.eveningTasks) if (!mergedIds.contains(t.getId())) merged.add(t);
                     ctx.taskManager.setTasks(merged);
-                    // Show progress during GUI update
+                    // Update GUI (with progress dialog only for large imports)
                     Runnable guiUpdate = () -> ctx.updateTasks.run();
-                    RestoreProgressDialog guiProgress = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Updating display");
-                    guiProgress.runTask(() -> {
-                        guiUpdate.run();
-                    });
+                    if (showProgress) {
+                        RestoreProgressDialog guiProgress = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Updating display");
+                        guiProgress.runTask(guiUpdate);
+                    } else {
+                        SwingUtilities.invokeLater(guiUpdate);
+                    }
                 } catch (RuntimeException e) {
                     SwingUtilities.invokeLater(() -> ErrorDialog.showError(ctx.parent, "Failed to import tasks", e));
                     return;
                 }
             };
-            RestoreProgressDialog dlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Importing backup");
-            dlg.runTask(work);
+            if (showProgress) {
+                RestoreProgressDialog dlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Importing backup");
+                dlg.runTask(work);
+            } else {
+                new Thread(work, "RestoreWorker").start();
+            }
         };
     }
 
-    private static Runnable createOnReplaceRunnable(RestoreContext ctx, List<Task> backupTasks) {
+    private static Runnable createOnReplaceRunnable(RestoreContext ctx, List<Task> backupTasks, boolean showProgress) {
         return () -> {
-            // Run replace in background with progress dialog so UI remains responsive
+            // Run replace in background
             File liveBackup = backupLiveData();
             Runnable work = () -> {
                 try {
                     if (!ctx.checklistsCopy.isEmpty()) mergeChecklistsToLive(ctx.checklistsCopy);
                     ctx.taskManager.setTasks(new ArrayList<>(backupTasks));
-                    // Show progress during GUI update
+                    // Update GUI (with progress dialog only for large restores)
                     Runnable guiUpdate = () -> ctx.updateTasks.run();
-                    RestoreProgressDialog guiProgress = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Updating display");
-                    guiProgress.runTask(() -> {
-                        guiUpdate.run();
-                    });
+                    if (showProgress) {
+                        RestoreProgressDialog guiProgress = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Updating display");
+                        guiProgress.runTask(guiUpdate);
+                    } else {
+                        SwingUtilities.invokeLater(guiUpdate);
+                    }
                 } catch (RuntimeException e) {
                     SwingUtilities.invokeLater(() -> ErrorDialog.showError(ctx.parent, "Failed to restore tasks", e));
                     return;
                 }
             };
-            RestoreProgressDialog dlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Restoring backup");
-            dlg.runTask(work);
+            if (showProgress) {
+                RestoreProgressDialog dlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(ctx.parent), "Restoring backup");
+                dlg.runTask(work);
+            } else {
+                new Thread(work, "ReplaceWorker").start();
+            }
         };
     }
 

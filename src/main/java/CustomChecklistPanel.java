@@ -635,7 +635,7 @@ public class CustomChecklistPanel extends JPanel {
         boolean showProgress = false;
         try {
             List<Task> existingTasks = taskManager.getTasks(TaskType.CUSTOM, checklist);
-            showProgress = existingTasks != null && existingTasks.size() > 30; // Show progress for lists with 30+ items
+            showProgress = existingTasks != null && existingTasks.size() > 100; // Show progress for lists with 100+ items
         } catch (Exception e) {
             // If we can't check, assume small
         }
