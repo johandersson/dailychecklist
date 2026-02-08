@@ -31,7 +31,7 @@ import javax.swing.Icon;
  */
 public class InfoIcon implements Icon {
     private final int size;
-    private static final Color INFO_COLOR = new Color(66, 139, 202); // Nice blue color
+    private static final Color INFO_COLOR = new Color(30, 120, 220); // Brighter, more vibrant blue
 
     public InfoIcon(int size) {
         this.size = size;
@@ -52,16 +52,16 @@ public class InfoIcon implements Icon {
         g2.setStroke(new BasicStroke(1.2f));
         g2.drawOval(x, y, size, size);
 
-        // Draw "i" character in white
+        // Draw "i" character in white (smaller and better centered)
         g2.setColor(Color.WHITE);
-        Font font = new Font(FontManager.FONT_NAME, Font.BOLD, (int)(size * 0.7));
+        Font font = new Font(FontManager.FONT_NAME, Font.BOLD, (int)(size * 0.55));
         g2.setFont(font);
         FontMetrics fm = g2.getFontMetrics();
         String text = "i";
         int textWidth = fm.stringWidth(text);
-        int textHeight = fm.getAscent();
+        // Better vertical centering calculation
         int textX = x + (size - textWidth) / 2;
-        int textY = y + (size + textHeight) / 2 - fm.getDescent();
+        int textY = y + ((size - fm.getHeight()) / 2) + fm.getAscent();
         g2.drawString(text, textX, textY);
 
         g2.dispose();

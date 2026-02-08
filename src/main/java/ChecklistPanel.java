@@ -669,7 +669,7 @@ public class ChecklistPanel extends JPanel {
         boolean showProgress = false;
         try {
             List<Task> existingTasks = taskManager.getAllTasks();
-            showProgress = existingTasks != null && existingTasks.size() > 100; // Show progress for 100+ tasks
+            showProgress = existingTasks != null && existingTasks.size() > 200; // Show progress for 200+ tasks
         } catch (Exception e) {
             // If we can't check, assume small
         }
