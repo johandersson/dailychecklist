@@ -83,19 +83,23 @@ public class TaskListMouseHandler extends MouseAdapter {
         // Check if click is within note icon area
         if (relX >= noteIconStart && relX < noteIconEnd) {
             // Open NoteDialog for this task
-            Task taskForDialog = (taskManager != null) ? taskManager.getTaskById(t.getId()) : t;
-            if (taskForDialog != null) {
-                JFrame parentFrame = (JFrame) javax.swing.SwingUtilities.getWindowAncestor(taskList);
-                String updatedNote = NoteDialog.showDialog(parentFrame, taskForDialog.getName(), taskForDialog.getNote());
-                if (updatedNote != null) {
-                    taskForDialog.setNote(updatedNote);
-                    if (taskManager != null) {
-                        taskManager.updateTask(taskForDialog);
-                    }
-                    taskList.repaint();
+            Task modelTask = t;
+            Task taskForDialog = (taskManager != null) ? taskManager.getTaskById(modelTask.getId()) : modelTask;
+            if (taskForDialog == null) taskForDialog = modelTask;
+            
+            String originalNote = taskForDialog.getNote();
+            JFrame parentFrame = (JFrame) javax.swing.SwingUtilities.getWindowAncestor(taskList);
+            String updatedNote = NoteDialog.showDialog(parentFrame, taskForDialog.getName(), originalNote);
+            
+            // Only update if the note actually changed
+            if (!java.util.Objects.equals(updatedNote, originalNote)) {
+                taskForDialog.setNote(updatedNote);
+                if (taskManager != null) {
+                    taskManager.updateTask(taskForDialog);
                 }
-                return true; // Consumed the click
+                taskList.repaint();
             }
+            return true; // Consumed the click
         }
         return false; // Did not consume the click
     }

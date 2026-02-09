@@ -477,6 +477,8 @@ public class CustomChecklistPanel extends JPanel {
                 int res = JOptionPane.showConfirmDialog(this, "Remove reminder for task '" + task.getName() + "'?", "Confirm", JOptionPane.YES_NO_OPTION);
                 if (res == JOptionPane.YES_OPTION) {
                     taskManager.removeReminder(existing);
+                    // Explicitly notify listeners to ensure day view updates
+                    taskManager.notifyTaskChangeListeners();
                     if (updateAllPanels != null) updateAllPanels.run();
                     updateTasks();
                 }
@@ -490,13 +492,19 @@ public class CustomChecklistPanel extends JPanel {
     private JMenuItem createAddNoteMenuItem(JList<Task> list, int index) {
         JMenuItem item = new JMenuItem("Add note");
         item.addActionListener(event -> {
-            Task task = list.getModel().getElementAt(index);
+            Task modelTask = list.getModel().getElementAt(index);
+            // Get authoritative task from TaskManager to avoid stale copies
+            Task task = taskManager.getTaskById(modelTask.getId());
+            if (task == null) task = modelTask;
+            
+            String originalNote = task.getNote();
             String newNote = NoteDialog.showDialog(
                 (javax.swing.JFrame) SwingUtilities.getWindowAncestor(this),
                 task.getName(),
-                task.getNote()
+                originalNote
             );
-            if (newNote != task.getNote()) { // null-safe comparison intentional
+            // Only update if the note actually changed (proper comparison)
+            if (!java.util.Objects.equals(newNote, originalNote)) {
                 task.setNote(newNote);
                 taskManager.updateTask(task);
                 list.repaint(list.getCellBounds(index, index));

@@ -469,6 +469,14 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         // Reminder menu only valid for single selection
         if (selCount == 1 && selected.get(0) != null) {
             Checklist single = selected.get(0);
+            
+            // Add Copy Outline option
+            menu.addSeparator();
+            JMenuItem copyOutlineItem = new JMenuItem("Copy Outline to Clipboard");
+            copyOutlineItem.addActionListener(e -> copyChecklistOutline(single));
+            menu.add(copyOutlineItem);
+            menu.addSeparator();
+            
             boolean hasReminderForSelected = taskManager.getReminders().stream().anyMatch(r -> r.getChecklistName().equals(single.getName()));
             JMenuItem addReminderItem = new JMenuItem(hasReminderForSelected ? "Edit Reminder" : "Set Reminder");
             addReminderItem.addActionListener(e -> setReminder());
@@ -762,6 +770,76 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                     list.requestFocusInWindow();
                 }
             }
+        }
+    }
+    
+    /**
+     * Copies the entire outline of a checklist (including tasks and subtasks) to the clipboard.
+     */
+    private void copyChecklistOutline(Checklist checklist) {
+        if (checklist == null) return;
+        
+        // Get all tasks for this checklist
+        List<Task> allTasks = taskManager.getTasks(TaskType.CUSTOM, checklist);
+        if (allTasks == null || allTasks.isEmpty()) {
+            JOptionPane.showMessageDialog(this, 
+                "Checklist '" + checklist.getName() + "' has no tasks.",
+                "Empty Checklist",
+                JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        // Organize tasks: parents followed by their subtasks
+        java.util.List<Task> parents = new java.util.ArrayList<>();
+        for (Task t : allTasks) {
+            if (t.getParentId() == null) {
+                parents.add(t);
+            }
+        }
+        
+        StringBuilder outline = new StringBuilder();
+        outline.append("# ").append(checklist.getName()).append("\n\n");
+        
+        int taskNumber = 1;
+        for (Task parent : parents) {
+            // Add parent task
+            outline.append(taskNumber++).append(". ").append(parent.getName());
+            if (parent.getNote() != null && !parent.getNote().trim().isEmpty()) {
+                outline.append(" [Note: ").append(parent.getNote().trim()).append("]");
+            }
+            outline.append("\n");
+            
+            // Add subtasks under this parent
+            java.util.List<Task> subtasks = taskManager.getSubtasksSorted(parent.getId());
+            if (subtasks != null && !subtasks.isEmpty()) {
+                char subLetter = 'a';
+                for (Task subtask : subtasks) {
+                    if (checklist.getId().equals(subtask.getChecklistId())) {
+                        outline.append("   ").append(subLetter++).append(". ").append(subtask.getName());
+                        if (subtask.getNote() != null && !subtask.getNote().trim().isEmpty()) {
+                            outline.append(" [Note: ").append(subtask.getNote().trim()).append("]");
+                        }
+                        outline.append("\n");
+                    }
+                }
+            }
+            outline.append("\n");
+        }
+        
+        // Copy to clipboard
+        try {
+            java.awt.datatransfer.StringSelection selection = new java.awt.datatransfer.StringSelection(outline.toString());
+            java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
+            
+            JOptionPane.showMessageDialog(this,
+                "Copied outline with " + parents.size() + " task(s) to clipboard!",
+                "Outline Copied",
+                JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                "Failed to copy outline to clipboard: " + ex.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
         }
     }
 
