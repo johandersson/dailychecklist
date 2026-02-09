@@ -355,14 +355,15 @@ public class CustomChecklistPanel extends JPanel {
                                     insertIndex++;
                                 }
                                 
-                                // Select the last added subtask and ensure visibility
+                                // Select the last added subtask and ensure visibility - do it immediately, not with invokeLater
                                 final int finalIndex = insertIndex - 1;
-                                javax.swing.SwingUtilities.invokeLater(() -> {
-                                    customTaskList.setSelectedIndex(finalIndex);
-                                    customTaskList.ensureIndexIsVisible(finalIndex);
-                                    customTaskList.revalidate();
-                                    customTaskList.repaint();
-                                });
+                                customTaskList.setSelectedIndex(finalIndex);
+                                customTaskList.ensureIndexIsVisible(finalIndex);
+                                customTaskList.revalidate();
+                                customTaskList.repaint();
+                                // Also repaint the entire panel to ensure UI updates
+                                CustomChecklistPanel.this.revalidate();
+                                CustomChecklistPanel.this.repaint();
                             }
                         } finally {
                             // Re-enable TaskChangeListener after direct insertion

@@ -32,6 +32,10 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.UndoableEditEvent;
 import javax.swing.event.UndoableEditListener;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 import javax.swing.undo.UndoManager;
 
 /**
@@ -96,6 +100,36 @@ public class NoteDialog extends JDialog {
         noteArea.setLineWrap(true);
         noteArea.setWrapStyleWord(true);
         noteArea.setFont(FontManager.getTaskListFont());
+        
+        // Add document filter to enforce character limit
+        ((AbstractDocument) noteArea.getDocument()).setDocumentFilter(new DocumentFilter() {
+            @Override
+            public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
+                if (string == null) return;
+                if ((fb.getDocument().getLength() + string.length()) <= MAX_CHARACTERS) {
+                    super.insertString(fb, offset, string, attr);
+                }
+            }
+            
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
+                if (text == null) {
+                    super.replace(fb, offset, length, text, attrs);
+                    return;
+                }
+                int currentLength = fb.getDocument().getLength();
+                int newLength = currentLength - length + text.length();
+                if (newLength <= MAX_CHARACTERS) {
+                    super.replace(fb, offset, length, text, attrs);
+                } else {
+                    // Trim the text to fit within the limit
+                    int allowedLength = MAX_CHARACTERS - (currentLength - length);
+                    if (allowedLength > 0) {
+                        super.replace(fb, offset, length, text.substring(0, allowedLength), attrs);
+                    }
+                }
+            }
+        });
         
         // Add undo/redo support
         undoManager = new UndoManager();
@@ -176,8 +210,9 @@ public class NoteDialog extends JDialog {
         saveButton.setFont(FontManager.getButtonFont());
         saveButton.addActionListener(e -> saveAndClose());
         
-        JButton clearButton = new JButton("Clear");
+        JButton clearButton = new JButton("Clear Note");
         clearButton.setFont(FontManager.getButtonFont());
+        clearButton.setToolTipText("Clear and save the note as empty");
         clearButton.addActionListener(e -> {
             resultNote = null;
             confirmed = true;
@@ -200,11 +235,10 @@ public class NoteDialog extends JDialog {
 
     private void saveAndClose() {
         String text = noteArea.getText();
-        if (validateCharCount(text)) {
-            resultNote = text.trim().isEmpty() ? null : text;
-            confirmed = true;
-            dispose();
-        }
+        // No need to validate since DocumentFilter enforces the limit
+        resultNote = text.trim().isEmpty() ? null : text;
+        confirmed = true;
+        dispose();
     }
 
     private void updateCharCount() {

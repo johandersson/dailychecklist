@@ -407,14 +407,15 @@ public class ChecklistPanel extends JPanel {
                                         insertIndex++;
                                     }
                                     
-                                    // Select the last added subtask - use invokeLater to ensure UI updates complete
+                                    // Select the last added subtask - do it immediately, not with invokeLater
                                     final int finalIndex = insertIndex - 1;
-                                    javax.swing.SwingUtilities.invokeLater(() -> {
-                                        targetList.setSelectedIndex(finalIndex);
-                                        targetList.ensureIndexIsVisible(finalIndex);
-                                        targetList.revalidate();
-                                        targetList.repaint();
-                                    });
+                                    targetList.setSelectedIndex(finalIndex);
+                                    targetList.ensureIndexIsVisible(finalIndex);
+                                    targetList.revalidate();
+                                    targetList.repaint();
+                                    // Also repaint the entire panel to ensure UI updates
+                                    ChecklistPanel.this.revalidate();
+                                    ChecklistPanel.this.repaint();
                                 } else {
                                     // Fallback to full reload if parent not found
                                     // Add subtasks first, then trigger full refresh
