@@ -116,15 +116,32 @@ public class MenuBarBuilder {
                     Task authoritative = taskManager.getTaskById(o.getId());
                     if (authoritative == null) authoritative = o;
                     authoritative.setChecklistId(unassigned.getId());
+                    authoritative.setType(TaskType.CUSTOM);
                     authoritative.setParentId(null);
                     toPersist.add(authoritative);
                 }
 
+                // Update tasks first, then refresh UI
                 taskManager.updateTasks(toPersist);
-                if (updateTasks != null) updateTasks.run();
+                
+                // Trigger UI refresh
+                if (updateTasks != null) {
+                    updateTasks.run();
+                }
+                
+                // Show the Unassigned checklist so user can see the moved tasks
+                final Checklist finalUnassigned = unassigned;
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    try {
+                        if (dailyChecklist != null) {
+                            dailyChecklist.showCustomChecklist(finalUnassigned.getName());
+                        }
+                    } catch (Exception ex) {
+                        DebugLog.d("Error showing Unassigned checklist: %s", ex.getMessage());
+                    }
+                });
+                
                 JOptionPane.showMessageDialog(parent, "Moved " + toPersist.size() + " orphaned task(s) to 'Unassigned'.", "Clean Orphans", JOptionPane.INFORMATION_MESSAGE);
-                // Ensure newly created checklist is visible
-                try { if (dailyChecklist != null) dailyChecklist.showCustomChecklist(unassigned.getName()); } catch (Exception ignore) {}
             } catch (Exception ex) {
                 ErrorDialog.showError(parent, "Failed to clean orphaned tasks", ex);
             }
