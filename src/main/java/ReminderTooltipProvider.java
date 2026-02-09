@@ -23,9 +23,9 @@ public final class ReminderTooltipProvider {
     public static String getTooltip(Task t, int relX, int cellW, TaskManager taskManager) {
         if (t == null) return null;
 
-        int infoStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.INFO_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
-        int reminderStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.INFO_ICON_AREA;
-        int infoAreaStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.INFO_ICON_AREA;
+        int infoStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.NOTE_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
+        int reminderStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.NOTE_ICON_AREA;
+        int noteAreaStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.NOTE_ICON_AREA;
         int weekdayStart = cellW - UiLayout.WEEKDAY_ICON_AREA;
 
         // Weekday tooltip (far right circle)
@@ -38,16 +38,16 @@ public final class ReminderTooltipProvider {
             return null;
         }
 
-        // Info icon tooltip (left of weekday, right of reminder)
-        if (relX >= infoAreaStart && relX < weekdayStart) {
+        // Note icon tooltip (left of weekday, right of reminder)
+        if (relX >= noteAreaStart && relX < weekdayStart) {
             if (t.hasNote()) {
                 return "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>Task has a note (click to view/edit)</p></html>";
             }
             return null;
         }
 
-        // Reminder tooltip (left of info icon area)
-        if (relX >= infoStart && relX < infoAreaStart) {
+        // Reminder tooltip (left of note icon area)
+        if (relX >= infoStart && relX < noteAreaStart) {
             Reminder found = null;
             if (taskManager != null && t != null && t.getId() != null) {
                 for (Reminder r : taskManager.getReminders()) {

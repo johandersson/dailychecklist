@@ -60,12 +60,12 @@ public class TaskListMouseHandler extends MouseAdapter {
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        if (!handleInfoIconClick(e)) {
+        if (!handleNoteIconClick(e)) {
             handleAddSubtaskClick(e);
         }
     }
 
-    private boolean handleInfoIconClick(MouseEvent e) {
+    private boolean handleNoteIconClick(MouseEvent e) {
         int idx = taskList.locationToIndex(e.getPoint());
         if (idx < 0) return false;
         Rectangle cb = taskList.getCellBounds(idx, idx);
@@ -73,15 +73,15 @@ public class TaskListMouseHandler extends MouseAdapter {
         int relX = e.getX() - cb.x;
         int cellW = cb.width;
 
-        // Info icon is positioned between weekday and reminder icons
-        int infoIconStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.INFO_ICON_AREA;
-        int infoIconEnd = cellW - UiLayout.WEEKDAY_ICON_AREA;
+        // Note icon is positioned between weekday and reminder icons
+        int noteIconStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.NOTE_ICON_AREA;
+        int noteIconEnd = cellW - UiLayout.WEEKDAY_ICON_AREA;
 
         Task t = taskList.getModel().getElementAt(idx);
         if (t == null) return false;
 
-        // Check if click is within info icon area
-        if (relX >= infoIconStart && relX < infoIconEnd) {
+        // Check if click is within note icon area
+        if (relX >= noteIconStart && relX < noteIconEnd) {
             // Open NoteDialog for this task
             Task taskForDialog = (taskManager != null) ? taskManager.getTaskById(t.getId()) : t;
             if (taskForDialog != null) {
@@ -108,8 +108,8 @@ public class TaskListMouseHandler extends MouseAdapter {
         int relX = e.getX() - cb.x;
         int cellW = cb.width;
 
-        // Calculate add icon position (left of reminder area, which is left of info icon area)
-        int reminderStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.INFO_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
+        // Calculate add icon position (left of reminder area, which is left of note icon area)
+        int reminderStart = cellW - UiLayout.WEEKDAY_ICON_AREA - UiLayout.NOTE_ICON_AREA - UiLayout.REMINDER_ICON_AREA;
         int addIconX = reminderStart - UiLayout.ADD_SUBTASK_OFFSET; // matches renderer spacing
 
         Task t = taskList.getModel().getElementAt(idx);

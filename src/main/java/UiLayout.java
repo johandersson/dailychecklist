@@ -22,8 +22,8 @@ public final class UiLayout {
     // Reserved areas on the right for icons: reminder area + weekday area.
     public static final int REMINDER_ICON_AREA = 80; // space reserved for reminder clock + optional time text
     public static final int WEEKDAY_ICON_AREA = 40; // space reserved for weekday circle
-    public static final int INFO_ICON_AREA = 30; // space reserved for info icon (note indicator)
-    public static final int RIGHT_ICON_SPACE = REMINDER_ICON_AREA + WEEKDAY_ICON_AREA + INFO_ICON_AREA + 12; // total reserved space
+    public static final int NOTE_ICON_AREA = 35; // space reserved for note icon (note indicator)
+    public static final int RIGHT_ICON_SPACE = REMINDER_ICON_AREA + WEEKDAY_ICON_AREA + NOTE_ICON_AREA + 12; // total reserved space
     // Spacing used by renderer/handlers for add-subtask icon
     public static final int ADD_SUBTASK_OFFSET = 36;
     // Checkbox constants

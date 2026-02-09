@@ -73,21 +73,31 @@ public final class TaskDropHandler {
         int parentModelIndexOrig = findModelIndex(model, target.getId());
         int modelInsertIndexOrig = computeModelInsertIndex(model, parentModelIndexOrig, insertOffset, target);
 
-        // Count how many of the moved items are located before the original insert index
+        // Count how many of the moved items (and their subtasks) are located before the original insert index
         int removedBefore = 0;
+        java.util.Set<String> movedIds = new java.util.HashSet<>();
         for (Task t : toPersist) {
-            for (int i = 0; i < model.getSize(); i++) {
-                if (model.get(i).getId().equals(t.getId())) {
-                    if (i < modelInsertIndexOrig) removedBefore++;
-                    break;
+            movedIds.add(t.getId());
+            // Also include subtasks
+            if (taskManager != null) {
+                java.util.List<Task> subtasks = taskManager.getSubtasks(t.getId());
+                if (subtasks != null) {
+                    for (Task sub : subtasks) {
+                        movedIds.add(sub.getId());
+                    }
                 }
+            }
+        }
+        for (int i = 0; i < model.getSize(); i++) {
+            if (movedIds.contains(model.get(i).getId())) {
+                if (i < modelInsertIndexOrig) removedBefore++;
             }
         }
 
         DebugLog.d("persistUsingModel: parentModelIndexOrig=%d modelInsertIndexOrig=%d removedBefore=%d toPersist=%s", parentModelIndexOrig, modelInsertIndexOrig, removedBefore, toPersist.toString());
 
-        // Remove moved tasks from the UI model
-        removeMovedFromModel(model, toPersist);
+        // Remove moved tasks AND their subtasks from the UI model
+        removeMovedFromModel(model, toPersist, taskManager);
 
         // Adjust insert index after removals
         int modelInsertIndex = modelInsertIndexOrig - removedBefore;
@@ -138,11 +148,20 @@ public final class TaskDropHandler {
         return true;
     }
 
-    private static void removeMovedFromModel(javax.swing.DefaultListModel<Task> model, List<Task> toPersist) {
-        // Collect all task IDs to remove (including subtasks that will move with parents)
+    private static void removeMovedFromModel(javax.swing.DefaultListModel<Task> model, List<Task> toPersist, TaskManager taskManager) {
+        // Collect all task IDs to remove (including subtasks of moved tasks)
         java.util.Set<String> idsToRemove = new java.util.HashSet<>();
         for (Task t : toPersist) {
             idsToRemove.add(t.getId());
+            // Also include subtasks of this task
+            if (taskManager != null) {
+                java.util.List<Task> subtasks = taskManager.getSubtasks(t.getId());
+                if (subtasks != null) {
+                    for (Task sub : subtasks) {
+                        idsToRemove.add(sub.getId());
+                    }
+                }
+            }
         }
         // Remove ALL occurrences (not just first) by iterating backwards
         for (int i = model.getSize() - 1; i >= 0; i--) {
