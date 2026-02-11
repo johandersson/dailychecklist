@@ -16,9 +16,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 import java.util.ArrayList;
+import javax.swing.SwingUtilities;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class TaskManager {
     private final TaskRepository repository;
@@ -27,7 +29,8 @@ public class TaskManager {
     private volatile java.util.Map<String, java.util.List<Task>> cachedSubtasksByParent = new java.util.concurrent.ConcurrentHashMap<>();
     private volatile boolean subtasksCacheValid = false;
     // Batch operation support to prevent race conditions during multi-task operations
-    private volatile boolean suppressNotifications = false;
+    // Use an atomic counter so nested begin/end calls are safe.
+    private final AtomicInteger batchCounter = new AtomicInteger(0);
 
     public TaskManager(TaskRepository repository) {
         this.repository = repository;
@@ -45,7 +48,7 @@ public class TaskManager {
      * This prevents race conditions when multiple tasks are being added/updated.
      */
     public void beginBatchOperation() {
-        suppressNotifications = true;
+        batchCounter.incrementAndGet();
     }
     
     /**
@@ -53,13 +56,27 @@ public class TaskManager {
      * Must be called after beginBatchOperation() to resume normal notifications.
      */
     public void endBatchOperation() {
-        suppressNotifications = false;
-        notifyListeners();
+        int val = batchCounter.decrementAndGet();
+        if (val <= 0) {
+            // Reset to zero to avoid negative counts on mismatched calls
+            batchCounter.set(0);
+            notifyListeners();
+        }
     }
     
     private void notifyListeners() {
-        if (suppressNotifications) return;
-        for (TaskChangeListener l : listeners) { try { l.onChange(); } catch (Exception ignore) {} }
+        if (batchCounter.get() > 0) return;
+        for (TaskChangeListener l : listeners) {
+            try {
+                if (SwingUtilities.isEventDispatchThread()) {
+                    l.onChange();
+                } else {
+                    SwingUtilities.invokeLater(() -> {
+                        try { l.onChange(); } catch (Exception ignore) {}
+                    });
+                }
+            } catch (Exception ignore) {}
+        }
     }
 
     /**
@@ -109,9 +126,12 @@ public class TaskManager {
             }
         }
         repository.addTask(task);
-        // Incrementally update subtask cache
+        // Invalidate subtasks cache so authoritative state is rebuilt on next access.
+        // Avoid mutating cached lists in-place (they may be unmodifiable), which
+        // can cause subtle race conditions when lists are rebuilt to unmodifiable
+        // views. Rebuilding preserves consistent ordering from the repository.
         if (task.getParentId() != null && task.getType() != TaskType.HEADING) {
-            cachedSubtasksByParent.computeIfAbsent(task.getParentId(), k -> new ArrayList<>()).add(task);
+            invalidateSubtasksCache();
         }
         notifyListeners();
     }
@@ -185,22 +205,25 @@ public class TaskManager {
     }
 
     public void removeTask(Task task) {
-        repository.removeTask(task);
-        // Incrementally update subtask cache
-        // If the task being removed is a subtask, remove it from its parent's subtask list
-        if (task.getParentId() != null && task.getType() != TaskType.HEADING) {
-            List<Task> subtasks = cachedSubtasksByParent.get(task.getParentId());
-            if (subtasks != null) {
-                subtasks.remove(task);
-                if (subtasks.isEmpty()) {
-                    cachedSubtasksByParent.remove(task.getParentId());
+        // If removing a parent task, also remove its direct subtasks to preserve
+        // data integrity and match higher-level behavior expected by callers.
+        if (task.getParentId() == null && task.getType() != TaskType.HEADING) {
+            List<Task> subs = getSubtasks(task.getId());
+            if (subs != null) {
+                for (Task s : subs) {
+                    try {
+                        repository.removeTask(s);
+                    } catch (Exception ignore) {}
                 }
             }
         }
-        // If the task being removed is a parent (has subtasks), remove its entry from the cache
-        // This ensures that if subtasks were already deleted separately, we don't keep stale data
-        cachedSubtasksByParent.remove(task.getId());
-        
+
+        // Remove the task itself
+        repository.removeTask(task);
+
+        // Invalidate the subtasks cache to ensure consistency after removals
+        invalidateSubtasksCache();
+
         notifyListeners();
     }
 
