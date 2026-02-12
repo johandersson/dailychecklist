@@ -674,25 +674,10 @@ public class ChecklistPanel extends JPanel {
         java.util.List<Task> selectedMorningTasks = morningTaskList.getSelectedValuesList();
         java.util.List<Task> selectedEveningTasks = eveningTaskList.getSelectedValuesList();
 
-        // Check if we need a progress dialog (only for large task sets)
-        boolean showProgress = false;
-        try {
-            List<Task> existingTasks = taskManager.getAllTasks();
-            showProgress = existingTasks != null && existingTasks.size() > 200; // Show progress for 200+ tasks
-        } catch (Exception e) {
-            // If we can't check, assume small
-        }
-
         Runnable backgroundTask = () -> loadAndUpdateTasks(selectedMorningTasks, selectedEveningTasks);
 
-        if (showProgress) {
-            // Show progress dialog for loading and updating large task lists
-            RestoreProgressDialog progressDlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(this), "Loading tasks");
-            progressDlg.runTask(backgroundTask);
-        } else {
-            // Load directly without progress dialog for small task sets
-            backgroundTask.run();
-        }
+        // Load directly without progress dialog
+        backgroundTask.run();
     }
 
     private void loadAndUpdateTasks(java.util.List<Task> selectedMorningTasks, java.util.List<Task> selectedEveningTasks) {
