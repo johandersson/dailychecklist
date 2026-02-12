@@ -39,7 +39,6 @@ public class XMLTaskRepository implements TaskRepository {
 
     // Component managers
     private TaskStaxHandler taskXmlHandler;
-    private TaskXmlHandler fallbackXmlHandler;
     private ReminderManager reminderManager;
     private ChecklistNameManager checklistNameManager;
 
@@ -253,37 +252,21 @@ public class XMLTaskRepository implements TaskRepository {
         }
     }
 
-    // Persistence helpers: try StAX first, fall back to DOM-based TaskXmlHandler on error.
+    // Persistence helpers
     private void persistAdd(Task task) throws Exception {
-        try {
-            taskXmlHandler.addTask(task);
-        } catch (Exception e) {
-            fallbackXmlHandler.addTask(task);
-        }
+        taskXmlHandler.addTask(task);
     }
 
     private void persistUpdateTasks(List<Task> tasks) throws Exception {
-        try {
-            taskXmlHandler.updateTasks(tasks);
-        } catch (Exception e) {
-            fallbackXmlHandler.updateTasks(tasks);
-        }
+        taskXmlHandler.updateTasks(tasks);
     }
 
     private void persistRemove(Task task) throws Exception {
-        try {
-            taskXmlHandler.removeTask(task);
-        } catch (Exception e) {
-            fallbackXmlHandler.removeTask(task);
-        }
+        taskXmlHandler.removeTask(task);
     }
 
     private void persistSetAllTasks(List<Task> tasks) throws Exception {
-        try {
-            taskXmlHandler.setAllTasks(tasks);
-        } catch (Exception e) {
-            fallbackXmlHandler.setAllTasks(tasks);
-        }
+        taskXmlHandler.setAllTasks(tasks);
     }
 
     /**
@@ -308,7 +291,6 @@ public class XMLTaskRepository implements TaskRepository {
     public void initialize() {
         // Initialize component managers
         taskXmlHandler = new TaskStaxHandler(FILE_NAME);
-        fallbackXmlHandler = new TaskXmlHandler(FILE_NAME);
         reminderManager = new ReminderManager(REMINDER_FILE_NAME, FILE_NAME);
         reminderManager.setParentComponent(parentComponent);
         checklistNameManager = new ChecklistNameManager(CHECKLIST_NAMES_FILE_NAME);
@@ -329,12 +311,7 @@ public class XMLTaskRepository implements TaskRepository {
             try {
                 // Ensure parent data directory exists and create an empty tasks document safely
                 ApplicationConfiguration.ensureDataDirectoryExists();
-                try {
-                    taskXmlHandler.ensureFileExists();
-                } catch (Exception e) {
-                    // StAX handler failed to ensure file; try DOM fallback
-                    fallbackXmlHandler.ensureFileExists();
-                }
+                taskXmlHandler.ensureFileExists();
             } catch (Exception e) {
                 // Show user-friendly error dialog and re-throw as runtime exception
                 if (parentComponent != null) {
@@ -395,19 +372,7 @@ public class XMLTaskRepository implements TaskRepository {
             }
             ensureDataFileExists();
             try {
-                try {
-                    cachedTasks = taskXmlHandler.parseAllTasks();
-                } catch (Exception e) {
-                    // Try DOM fallback when StAX parsing fails (migrate if possible)
-                    try {
-                        cachedTasks = fallbackXmlHandler.parseAllTasks();
-                        // Schedule a background migration to StAX format
-                        List<Task> migrated = new ArrayList<>(cachedTasks);
-                        submitWithRetriesQuiet("migrate-xml-to-stax", () -> taskXmlHandler.setAllTasks(migrated));
-                    } catch (Exception ex) {
-                        throw ex;
-                    }
-                }
+                cachedTasks = taskXmlHandler.parseAllTasks();
                 // Memory safety check
                 if (MemorySafetyManager.checkTaskLimit(cachedTasks.size())) {
                     cachedTasks = cachedTasks.subList(0, Math.min(MemorySafetyManager.MAX_TASKS, cachedTasks.size()));
