@@ -34,6 +34,7 @@ public class ChecklistNameManager {
     private final String checklistNamesFileName;
     private Map<String, Checklist> cachedChecklists;
     private boolean checklistsDirty = true;
+    private long lastModifiedTime = 0;
 
     public ChecklistNameManager(String checklistNamesFileName) {
         this.checklistNamesFileName = checklistNamesFileName;
@@ -43,6 +44,14 @@ public class ChecklistNameManager {
      * Gets all checklists, using cache if available.
      */
     public Set<Checklist> getChecklists() {
+        // Check if file has been modified externally
+        java.io.File propsFile = new java.io.File(checklistNamesFileName);
+        long currentModified = propsFile.lastModified();
+        if (currentModified > lastModifiedTime) {
+            checklistsDirty = true;
+            lastModifiedTime = currentModified;
+        }
+
         if (cachedChecklists != null && !checklistsDirty) {
             return new HashSet<>(cachedChecklists.values());
         }
@@ -55,7 +64,7 @@ public class ChecklistNameManager {
             for (String id : props.stringPropertyNames()) {
                 String name = props.getProperty(id);
                 if (name != null && !name.trim().isEmpty()) {
-                    checklists.put(id, new Checklist(id, name.trim()));
+                    checklists.put(id, new Checklist(name.trim(), id));
                 }
             }
         } catch (IOException e) {
@@ -64,6 +73,7 @@ public class ChecklistNameManager {
 
         cachedChecklists = new HashMap<>(checklists);
         checklistsDirty = false;
+        lastModifiedTime = currentModified;
         return new HashSet<>(checklists.values());
     }
 

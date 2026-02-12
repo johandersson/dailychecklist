@@ -38,6 +38,8 @@ public class CustomChecklistPanel extends JPanel {
     private Checklist checklist;
     private transient Runnable updateAllPanels;
     private volatile boolean suppressTaskChangeListener = false;
+    // Track last added task id so we can select/scroll to it after a model refresh
+    private volatile String lastAddedTaskId = null;
     
 
     public CustomChecklistPanel(TaskManager taskManager, Checklist checklist) {
@@ -269,6 +271,19 @@ public class CustomChecklistPanel extends JPanel {
             }
         }
 
+            // If we recently added a task, select and ensure visibility for it
+            if (lastAddedTaskId != null) {
+                for (int i = 0; i < customListModel.getSize(); i++) {
+                    Task t = customListModel.getElementAt(i);
+                    if (t != null && lastAddedTaskId.equals(t.getId())) {
+                        customTaskList.setSelectedIndex(i);
+                        customTaskList.ensureIndexIsVisible(i);
+                        break;
+                    }
+                }
+                lastAddedTaskId = null;
+            }
+
         customTaskList.revalidate();
         customTaskList.repaint();
         } finally {
@@ -303,70 +318,19 @@ public class CustomChecklistPanel extends JPanel {
                     }
                     
                     if (!newSubtasks.isEmpty()) {
+                        // Precompute display data once for all new subtasks (batch operation)
+                        DisplayPrecomputer.precomputeForList(newSubtasks, taskManager, true);
+
+                        // Perform a single batch operation for all additions.
+                        taskManager.beginBatchOperation();
+                        suppressTaskChangeListener = true;
                         try {
-                            // Begin batch operation to prevent race conditions with other panels
-                            taskManager.beginBatchOperation();
-                            suppressTaskChangeListener = true;
-                            
-                            // Find parent index and calculate insertion point BEFORE adding anything
-                            int parentIndex = -1;
-                            int insertIndex = -1;
-                            
-                            // Scan model once to find parent and count existing subtasks
-                            for (int i = 0; i < customListModel.getSize(); i++) {
-                                Task cand = customListModel.get(i);
-                                if (cand != null && cand.getId().equals(p.getId())) {
-                                    parentIndex = i;
-                                    // Now count existing subtasks after this parent
-                                    insertIndex = i + 1;
-                                    while (insertIndex < customListModel.getSize()) {
-                                        Task candidate = customListModel.get(insertIndex);
-                                        if (candidate.getParentId() == null || !candidate.getParentId().equals(p.getId())) {
-                                            break;
-                                        }
-                                        insertIndex++;
-                                    }
-                                    break;
-                                }
+                            for (Task subtask : newSubtasks) {
+                                taskManager.addTask(subtask);
                             }
-                            
-                            if (parentIndex < 0) {
-                                // Parent not found in model - add subtasks and trigger full refresh
-                                for (Task subtask : newSubtasks) {
-                                    taskManager.addTask(subtask);
-                                }
-                                // Don't return - let finally block execute, then trigger refresh
-                                // Mark that we need a full update
-                                javax.swing.SwingUtilities.invokeLater(() -> {
-                                    updateTasks();
-                                });
-                            } else {
-                                // Precompute display data once for all new subtasks (batch operation)
-                                DisplayPrecomputer.precomputeForList(newSubtasks, taskManager, true);
-                                
-                                // Now add all subtasks to TaskManager first (batch persistence)
-                                for (Task subtask : newSubtasks) {
-                                    taskManager.addTask(subtask);
-                                }
-                                
-                                // Then insert all into the model at the calculated position
-                                for (Task subtask : newSubtasks) {
-                                    customListModel.add(insertIndex, subtask);
-                                    insertIndex++;
-                                }
-                                
-                                // Select the last added subtask and ensure visibility - do it immediately, not with invokeLater
-                                final int finalIndex = insertIndex - 1;
-                                customTaskList.setSelectedIndex(finalIndex);
-                                customTaskList.ensureIndexIsVisible(finalIndex);
-                                customTaskList.revalidate();
-                                customTaskList.repaint();
-                                // Also repaint the entire panel to ensure UI updates
-                                CustomChecklistPanel.this.revalidate();
-                                CustomChecklistPanel.this.repaint();
-                            }
+                            // Remember last added for selection after the authoritative refresh
+                            lastAddedTaskId = newSubtasks.get(newSubtasks.size() - 1).getId();
                         } finally {
-                            // Re-enable TaskChangeListener after direct insertion
                             suppressTaskChangeListener = false;
                             taskManager.endBatchOperation();
                         }
@@ -731,6 +695,19 @@ public class CustomChecklistPanel extends JPanel {
                                     break;
                                 }
                             }
+                        }
+
+                        // If we recently added a task, select and ensure visibility for it
+                        if (lastAddedTaskId != null) {
+                            for (int i = 0; i < customListModel.getSize(); i++) {
+                                Task t = customListModel.getElementAt(i);
+                                if (t != null && lastAddedTaskId.equals(t.getId())) {
+                                    customTaskList.setSelectedIndex(i);
+                                    customTaskList.ensureIndexIsVisible(i);
+                                    break;
+                                }
+                            }
+                            lastAddedTaskId = null;
                         }
 
                         customTaskList.revalidate();

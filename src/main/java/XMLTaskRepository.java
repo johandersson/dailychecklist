@@ -52,6 +52,7 @@ public class XMLTaskRepository implements TaskRepository {
     private Map<TaskType, List<Task>> tasksByType = null;
     private Map<String, List<Task>> tasksByChecklist = null;
     private boolean tasksCacheDirty = true;
+    private long lastModifiedTime = 0;
     // Cache display computation state to avoid recomputing on reload
     private Map<String, Boolean> taskDisplayDirtyState = new HashMap<>();
     private Map<String, String> taskCachedDisplayFullName = new HashMap<>();
@@ -291,6 +292,7 @@ public class XMLTaskRepository implements TaskRepository {
      */
     public XMLTaskRepository() {
         this(null);
+        initialize();
     }
 
     /**
@@ -367,6 +369,14 @@ public class XMLTaskRepository implements TaskRepository {
      * Applies memory safety checks.
      */
     private List<Task> getCachedTasks() {
+        // Check if file has been modified externally
+        java.io.File dataFile = new java.io.File(FILE_NAME);
+        long currentModified = dataFile.lastModified();
+        if (currentModified > lastModifiedTime) {
+            tasksCacheDirty = true;
+            lastModifiedTime = currentModified;
+        }
+
         // Use read-lock for the fast path, escalate to write-lock when cache needs loading
         rwLock.readLock().lock();
         try {
@@ -404,6 +414,7 @@ public class XMLTaskRepository implements TaskRepository {
                 }
                 rebuildMapsFromCachedTasks();
                 tasksCacheDirty = false;
+                lastModifiedTime = currentModified;
             } catch (Exception e) {
                 if (parentComponent != null) {
                     ApplicationErrorHandler.showDataLoadError(parentComponent, "cached tasks", e);
@@ -558,9 +569,27 @@ public class XMLTaskRepository implements TaskRepository {
         rwLock.writeLock().lock();
         try {
             if (cachedTasks == null) cachedTasks = new ArrayList<>();
-            cachedTasks.add(task);
-            // Use incremental update instead of full rebuild for better performance
-            addTaskToMaps(task);
+            // Avoid adding duplicate task ids into the in-memory cache. If a task
+            // with the same id already exists treat this as an update/replace so
+            // we don't produce duplicate entries that later surface in the UI.
+            boolean replaced = false;
+            for (int i = 0; i < cachedTasks.size(); i++) {
+                Task existing = cachedTasks.get(i);
+                if (existing != null && existing.getId().equals(task.getId())) {
+                    cachedTasks.set(i, task);
+                    replaced = true;
+                    break;
+                }
+            }
+            if (!replaced) {
+                cachedTasks.add(task);
+                // Use incremental update instead of full rebuild for better performance
+                addTaskToMaps(task);
+            } else {
+                // If we replaced an existing entry, rebuild the maps so derived
+                // lookup structures stay consistent.
+                rebuildMapsFromCachedTasks();
+            }
             tasksCacheDirty = false;
         } finally {
             rwLock.writeLock().unlock();
@@ -875,7 +904,7 @@ public class XMLTaskRepository implements TaskRepository {
             if (looksLikeUuid(trimmed)) {
                 Checklist c = checklistNameManager.getChecklistById(trimmed);
                 if (c == null) {
-                    c = new Checklist(trimmed, "Untitled Checklist");
+                    c = new Checklist("Untitled Checklist", trimmed);
                 }
                 found.add(c);
             } else {

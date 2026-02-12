@@ -25,13 +25,14 @@ public class Checklist {
     private final String id;
     private String name;
 
-    public Checklist(String id, String name) {
+    // Constructor takes (name, id) where id may be null to auto-generate.
+    public Checklist(String name, String id) {
         this.id = id != null ? id : UUID.randomUUID().toString();
         this.name = name != null ? name.trim() : "";
     }
 
     public Checklist(String name) {
-        this(null, name);
+        this(name, null);
     }
 
     public String getId() {

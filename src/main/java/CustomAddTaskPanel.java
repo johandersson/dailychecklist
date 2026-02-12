@@ -52,7 +52,13 @@ public class CustomAddTaskPanel extends BaseAddTaskPanel {
                     if (!subtaskName.isEmpty() && lastParentTask != null) {
                         // Create subtask with parent reference
                         Task subtask = new Task(subtaskName, TaskType.CUSTOM, null, checklistName, lastParentTask.getId());
+                        System.out.println("[DEBUG] CustomAddTaskPanel: about to add subtask -> " + subtask);
                         taskManager.addTask(subtask);
+                        // Read back authoritative copy from manager/repository and log
+                        try {
+                            Task stored = taskManager.getTaskById(subtask.getId());
+                            System.out.println("[DEBUG] CustomAddTaskPanel: stored subtask -> " + stored);
+                        } catch (Throwable ignore) {}
                         addedCount++;
                     }
                 } else {
@@ -60,7 +66,12 @@ public class CustomAddTaskPanel extends BaseAddTaskPanel {
                     String taskName = line.trim();
                     if (!taskName.isEmpty()) {
                         Task newTask = new Task(taskName, TaskType.CUSTOM, null, checklistName);
+                        System.out.println("[DEBUG] CustomAddTaskPanel: about to add parent task -> " + newTask);
                         taskManager.addTask(newTask);
+                        try {
+                            Task stored = taskManager.getTaskById(newTask.getId());
+                            System.out.println("[DEBUG] CustomAddTaskPanel: stored parent task -> " + stored);
+                        } catch (Throwable ignore) {}
                         lastParentTask = newTask; // Track for potential subtasks
                         addedCount++;
                     }

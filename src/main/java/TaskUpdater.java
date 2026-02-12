@@ -97,6 +97,21 @@ public class TaskUpdater {
      * add/remove/move operations. Uses equality via Objects.equals.
      */
     public static <T> void syncModel(DefaultListModel<T> model, List<T> desired) {
+        // First, remove any accidental duplicate entries already present in the model
+        // (duplicates are determined by equality, e.g. same Task id). This ensures
+        // the subsequent sync logic operates on at-most-one instance per logical
+        // element and prevents duplicate items lingering after merges.
+        java.util.Set<T> seen = new java.util.HashSet<>();
+        for (int i = 0; i < model.getSize(); ) {
+            T current = model.getElementAt(i);
+            if (seen.contains(current)) {
+                model.removeElementAt(i);
+            } else {
+                seen.add(current);
+                i++;
+            }
+        }
+
         // Create fast lookup set for O(1) containment checks - eliminates O(n²) nested loops
         Set<T> desiredSet = new HashSet<>(desired);
         
