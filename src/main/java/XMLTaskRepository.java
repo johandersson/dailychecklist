@@ -434,16 +434,15 @@ public class XMLTaskRepository implements TaskRepository {
      * Rebuilds the lookup maps from the current cachedTasks list. Caller must hold write lock.
      */
     private void rebuildMapsFromCachedTasks() {
-        taskMap = new HashMap<>();
-        tasksByType = new HashMap<>();
-        tasksByChecklist = new HashMap<>();
+        // Build maps using parallel streams for efficiency
+        taskMap = cachedTasks.parallelStream().collect(java.util.stream.Collectors.toMap(Task::getId, java.util.function.Function.identity()));
+        tasksByType = cachedTasks.parallelStream().collect(java.util.stream.Collectors.groupingBy(Task::getType));
+        tasksByChecklist = cachedTasks.parallelStream()
+            .filter(task -> task.getType() == TaskType.CUSTOM && task.getChecklistId() != null)
+            .collect(java.util.stream.Collectors.groupingBy(Task::getChecklistId));
+
+        // Restore display computation state
         for (Task task : cachedTasks) {
-            taskMap.put(task.getId(), task);
-            tasksByType.computeIfAbsent(task.getType(), k -> new ArrayList<>()).add(task);
-            if (task.getType() == TaskType.CUSTOM && task.getChecklistId() != null) {
-                tasksByChecklist.computeIfAbsent(task.getChecklistId(), k -> new ArrayList<>()).add(task);
-            }
-            // Restore display computation state if we have it cached
             String taskId = task.getId();
             Boolean wasDirty = taskDisplayDirtyState.get(taskId);
             if (wasDirty != null && !wasDirty) {
