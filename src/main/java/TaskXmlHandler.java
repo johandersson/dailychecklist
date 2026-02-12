@@ -391,6 +391,9 @@ public class TaskXmlHandler {
 
         // Handle checklist id
         NodeList checklistIdNodes = taskElement.getElementsByTagName("checklistId");
+        // If the incoming Task explicitly carries a non-null checklistId, update/create it.
+        // If the incoming Task has a null checklistId, do NOT remove the existing element
+        // to avoid accidental loss when callers perform partial updates.
         if (task.getChecklistId() != null) {
             Element checklistIdElement;
             if (checklistIdNodes.getLength() > 0) {
@@ -400,8 +403,6 @@ public class TaskXmlHandler {
                 taskElement.appendChild(checklistIdElement);
             }
             checklistIdElement.setTextContent(task.getChecklistId());
-        } else if (checklistIdNodes.getLength() > 0) {
-            taskElement.removeChild(checklistIdNodes.item(0));
         }
 
         // Handle note (optional)

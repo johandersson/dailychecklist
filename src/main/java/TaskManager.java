@@ -126,6 +126,15 @@ public class TaskManager {
             }
         }
         repository.addTask(task);
+        // Debug logging to trace checklist id/name issues for custom tasks
+        if (task != null && task.getType() == TaskType.CUSTOM) {
+            try {
+                String caller = "unknown";
+                StackTraceElement[] st = Thread.currentThread().getStackTrace();
+                if (st != null && st.length > 3) caller = st[3].toString();
+                System.out.println("[DEBUG] TaskManager.addTask: name='" + task.getName() + "' checklistId='" + task.getChecklistId() + "' parent='" + task.getParentId() + "' thread=" + Thread.currentThread().getName() + " caller=" + caller);
+            } catch (Throwable ignore) {}
+        }
         // Invalidate subtasks cache so authoritative state is rebuilt on next access.
         // Avoid mutating cached lists in-place (they may be unmodifiable), which
         // can cause subtle race conditions when lists are rebuilt to unmodifiable
@@ -137,6 +146,13 @@ public class TaskManager {
     }
 
     public void updateTask(Task task) {
+        // Protect against accidental checklistId removal when callers pass partial Task
+        if (task != null && task.getChecklistId() == null) {
+            Task existing = getTaskById(task.getId());
+            if (existing != null && existing.getChecklistId() != null) {
+                task.setChecklistId(existing.getChecklistId());
+            }
+        }
         repository.updateTask(task);
         invalidateSubtasksCache();
         notifyListeners();
@@ -196,9 +212,28 @@ public class TaskManager {
      */
     public void updateTasks(java.util.List<Task> tasks) {
         if (repository instanceof XMLTaskRepository xmlRepo) {
+            // Preserve checklistId for tasks where incoming checklistId is null
+            if (tasks != null) {
+                for (Task t : tasks) {
+                    if (t != null && t.getChecklistId() == null) {
+                        Task existing = getTaskById(t.getId());
+                        if (existing != null && existing.getChecklistId() != null) {
+                            t.setChecklistId(existing.getChecklistId());
+                        }
+                    }
+                }
+            }
             xmlRepo.updateTasks(tasks);
         } else {
-            for (Task t : tasks) repository.updateTask(t);
+            for (Task t : tasks) {
+                if (t != null && t.getChecklistId() == null) {
+                    Task existing = getTaskById(t.getId());
+                    if (existing != null && existing.getChecklistId() != null) {
+                        t.setChecklistId(existing.getChecklistId());
+                    }
+                }
+                repository.updateTask(t);
+            }
         }
         invalidateSubtasksCache();
         notifyListeners();
