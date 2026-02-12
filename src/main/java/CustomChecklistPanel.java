@@ -604,25 +604,10 @@ public class CustomChecklistPanel extends JPanel {
         // Preserve selections before updating
         java.util.List<Task> selectedTasks = customTaskList.getSelectedValuesList();
 
-        // Check if we need a progress dialog (only for large checklists)
-        boolean showProgress = false;
-        try {
-            List<Task> existingTasks = taskManager.getTasks(TaskType.CUSTOM, checklist);
-            showProgress = existingTasks != null && existingTasks.size() > 100; // Show progress for lists with 100+ items
-        } catch (Exception e) {
-            // If we can't check, assume small
-        }
-
         Runnable backgroundTask = () -> loadAndUpdateTasks(selectedTasks);
 
-        if (showProgress) {
-            // Show progress dialog for loading and updating large checklists
-            RestoreProgressDialog progressDlg = new RestoreProgressDialog(SwingUtilities.getWindowAncestor(this), "Loading checklist");
-            progressDlg.runTask(backgroundTask);
-        } else {
-            // Load directly without progress dialog for small checklists
-            backgroundTask.run();
-        }
+        // Load directly without progress dialog
+        backgroundTask.run();
     }
 
     private void loadAndUpdateTasks(java.util.List<Task> selectedTasks) {
