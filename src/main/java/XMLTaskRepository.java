@@ -400,7 +400,16 @@ public class XMLTaskRepository implements TaskRepository {
      */
     private void rebuildMapsFromCachedTasks() {
         // Build maps using parallel streams for efficiency
-        taskMap = cachedTasks.parallelStream().collect(java.util.stream.Collectors.toMap(Task::getId, java.util.function.Function.identity()));
+        // Defensively handle duplicate task IDs in the source list by keeping
+        // the first seen instance. This prevents IllegalStateException when
+        // parsing corrupted or duplicated backup/restore payloads.
+        taskMap = cachedTasks.parallelStream().collect(
+            java.util.stream.Collectors.toMap(
+                Task::getId,
+                java.util.function.Function.identity(),
+                (existing, replacement) -> existing
+            )
+        );
         tasksByType = cachedTasks.parallelStream().collect(java.util.stream.Collectors.groupingBy(Task::getType));
         tasksByChecklist = cachedTasks.parallelStream()
             .filter(task -> task.getType() == TaskType.CUSTOM && task.getChecklistId() != null)
@@ -819,7 +828,11 @@ public class XMLTaskRepository implements TaskRepository {
                     }
                 }
             }
-            persistSetAllTasks(tasks);
+            // Persist asynchronously on the write executor to avoid blocking
+            // the calling thread and to serialize disk writes with other
+            // coalesced background flushes (prevents file-in-use collisions).
+            submitWithRetries("setAllTasks", () -> persistSetAllTasks(tasks));
+
             // Update in-memory representation immediately
             rwLock.writeLock().lock();
             try {

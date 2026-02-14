@@ -158,7 +158,9 @@ public class TaskStaxHandler {
         Path target = Paths.get(fileName);
         Path parent = target.toAbsolutePath().getParent();
         if (parent == null) parent = Paths.get(".");
-        Path tmp = parent.resolve(target.getFileName().toString() + ".tmp");
+        // Use a unique temp file name to avoid collisions / locks on Windows
+        String uniqueSuffix = java.lang.management.ManagementFactory.getRuntimeMXBean().getName().replaceAll("[^0-9a-zA-Z._-]", "_") + "." + System.nanoTime();
+        Path tmp = parent.resolve(target.getFileName().toString() + ".tmp." + uniqueSuffix);
 
         try (OutputStream fos = new FileOutputStream(tmp.toFile()); OutputStream os = new BufferedOutputStream(fos, 32 * 1024)) {
             // write header
