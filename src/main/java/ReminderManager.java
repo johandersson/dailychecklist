@@ -126,8 +126,41 @@ public class ReminderManager {
                         int day = Integer.parseInt(parts[3].trim());
                         int hour = Integer.parseInt(parts[4].trim());
                         int minute = Integer.parseInt(parts[5].trim());
-                        String taskId = (parts.length >= 7) ? parts[6].trim() : null;
-                        Reminder reminder = new Reminder(checklistName, year, month, day, hour, minute, taskId);
+                        String taskId = null;
+                        int daysBitmask = 0;
+
+                        // Additional optional key=value tokens may follow (e.g. taskId=..., days=1,3,5)
+                        if (parts.length >= 7) {
+                            for (int p = 6; p < parts.length; p++) {
+                                String token = parts[p].trim();
+                                if (token.startsWith("taskId=")) {
+                                    taskId = token.substring("taskId=".length()).trim();
+                                } else if (token.startsWith("days=")) {
+                                    String list = token.substring("days=".length()).trim();
+                                    // parse comma separated 1..7 values (1=Mon)
+                                    String[] ds = list.split(",");
+                                    for (String d : ds) {
+                                        try {
+                                            int val = Integer.parseInt(d.trim());
+                                            if (val >= 1 && val <= 7) {
+                                                daysBitmask |= 1 << (val - 1);
+                                            }
+                                        } catch (NumberFormatException ignore) {}
+                                    }
+                                } else if (!token.isEmpty()) {
+                                    // older format: single taskId without key
+                                    if (taskId == null) taskId = token;
+                                }
+                            }
+                        }
+
+                        Reminder reminder;
+                        if (daysBitmask != 0) {
+                            // recurring reminder
+                            reminder = new Reminder(checklistName, daysBitmask, hour, minute, taskId);
+                        } else {
+                            reminder = new Reminder(checklistName, year, month, day, hour, minute, taskId);
+                        }
                         reminders.add(reminder);
                         reminderCount++;
                     } catch (NumberFormatException e) {
@@ -187,10 +220,23 @@ public class ReminderManager {
                         int hour = Integer.parseInt(element.getAttribute("hour").trim());
                         int minute = Integer.parseInt(element.getAttribute("minute").trim());
                         String taskId = null;
+                        int daysBitmask = 0;
                         if (element.hasAttribute("taskId")) {
                             taskId = element.getAttribute("taskId").trim();
                         }
-                        Reminder reminder = new Reminder(checklistName, year, month, day, hour, minute, taskId);
+                        if (element.hasAttribute("days")) {
+                            String list = element.getAttribute("days").trim();
+                            String[] ds = list.split(",");
+                            for (String d : ds) {
+                                try {
+                                    int val = Integer.parseInt(d.trim());
+                                    if (val >= 1 && val <= 7) daysBitmask |= 1 << (val - 1);
+                                } catch (NumberFormatException ignore) {}
+                            }
+                        }
+                        Reminder reminder = (daysBitmask != 0)
+                                ? new Reminder(checklistName, daysBitmask, hour, minute, taskId)
+                                : new Reminder(checklistName, year, month, day, hour, minute, taskId);
                         reminders.add(reminder);
                     } catch (NumberFormatException e) {
                         // Show error for this specific reminder but continue loading others
@@ -230,8 +276,22 @@ public class ReminderManager {
                         StringBuilder sb = new StringBuilder();
                         sb.append(r.getChecklistName()).append('|').append(r.getYear()).append('|').append(r.getMonth()).append('|')
                             .append(r.getDay()).append('|').append(r.getHour()).append('|').append(r.getMinute());
+                        // New format uses key=value tokens for optional data so parsing is unambiguous
                         if (r.getTaskId() != null) {
-                                sb.append('|').append(r.getTaskId());
+                                sb.append('|').append("taskId=").append(r.getTaskId());
+                        }
+                        if (r.isRecurring()) {
+                                // convert bitmask to 1..7 comma list
+                                StringBuilder days = new StringBuilder();
+                                for (int d = 1; d <= 7; d++) {
+                                    if ((r.getDaysBitmask() & (1 << (d - 1))) != 0) {
+                                        if (days.length() > 0) days.append(',');
+                                        days.append(d);
+                                    }
+                                }
+                                if (days.length() > 0) {
+                                    sb.append('|').append("days=").append(days.toString());
+                                }
                         }
                         String value = sb.toString();
             props.setProperty(key, value);
@@ -260,16 +320,49 @@ public class ReminderManager {
      */
     public void removeReminder(Reminder reminder) {
         List<Reminder> reminders = getReminders();
-        reminders.removeIf(r -> Objects.equals(r.getChecklistName(), reminder.getChecklistName()) &&
-                       r.getYear() == reminder.getYear() &&
-                       r.getMonth() == reminder.getMonth() &&
-                       r.getDay() == reminder.getDay() &&
-                       r.getHour() == reminder.getHour() &&
-                       r.getMinute() == reminder.getMinute() &&
-                       Objects.equals(r.getTaskId(), reminder.getTaskId()));
+        reminders.removeIf(r -> {
+                       if (!Objects.equals(r.getChecklistName(), reminder.getChecklistName())) return false;
+                       if (r.isRecurring() && reminder.isRecurring()) {
+                           return r.getDaysBitmask() == reminder.getDaysBitmask()
+                                   && r.getHour() == reminder.getHour()
+                                   && r.getMinute() == reminder.getMinute()
+                                   && Objects.equals(r.getTaskId(), reminder.getTaskId());
+                       } else {
+                           return r.getYear() == reminder.getYear() &&
+                                   r.getMonth() == reminder.getMonth() &&
+                                   r.getDay() == reminder.getDay() &&
+                                   r.getHour() == reminder.getHour() &&
+                                   r.getMinute() == reminder.getMinute() &&
+                                   Objects.equals(r.getTaskId(), reminder.getTaskId());
+                       }
+                   });
         saveRemindersToProperties(reminders);
         cachedReminders = reminders;
         remindersDirty = false;
+    }
+
+    private java.time.LocalDateTime computeNextOccurrence(Reminder r, java.time.LocalDateTime now) {
+        if (r == null) return null;
+        if (!r.isRecurring()) {
+            try {
+                return java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        // recurring: search next 7 days inclusive
+        for (int offset = 0; offset < 7; offset++) {
+            java.time.LocalDate date = now.toLocalDate().plusDays(offset);
+            int dow = date.getDayOfWeek().getValue(); // 1=Mon..7=Sun
+            if ((r.getDaysBitmask() & (1 << (dow - 1))) != 0) {
+                java.time.LocalDateTime cand = date.atTime(r.getHour(), r.getMinute());
+                if (cand.isAfter(now) || !cand.isAfter(now)) {
+                    // return the first matching day (could be today even if past)
+                    return cand;
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -282,7 +375,8 @@ public class ReminderManager {
         LocalDateTime now = LocalDateTime.now();
 
         for (Reminder r : allReminders) {
-            LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+            LocalDateTime reminderTime = computeNextOccurrence(r, now);
+            if (reminderTime == null) continue;
             // Show reminders that are:
             // 1. Due within the next minutesAhead minutes, OR
             // 2. Overdue but within the last hour (to avoid showing very old reminders)
@@ -334,14 +428,8 @@ public class ReminderManager {
                 continue;
             }
 
-            LocalDateTime reminderTime = LocalDateTime.of(
-                    reminder.getYear(),
-                    reminder.getMonth(),
-                    reminder.getDay(),
-                    reminder.getHour(),
-                    reminder.getMinute()
-            );
-
+            LocalDateTime reminderTime = computeNextOccurrence(reminder, now);
+            if (reminderTime == null) continue;
             if (reminderTime.isAfter(now)) {
                 if (nextTime == null || reminderTime.isBefore(nextTime)) {
                     nextTime = reminderTime;

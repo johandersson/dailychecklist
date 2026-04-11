@@ -28,6 +28,9 @@ public class Reminder {
     private final int hour;
     private final int minute;
     private final String taskId; // optional, may be null
+    private final boolean recurring;
+    // bit 0 = Monday, bit 6 = Sunday
+    private final int daysBitmask;
 
     public Reminder(String checklistName, int year, int month, int day, int hour, int minute) {
         this(checklistName, year, month, day, hour, minute, null);
@@ -41,6 +44,24 @@ public class Reminder {
         this.hour = hour;
         this.minute = minute;
         this.taskId = (taskId == null || taskId.trim().isEmpty()) ? null : taskId;
+        this.recurring = false;
+        this.daysBitmask = 0;
+    }
+
+    /**
+     * Create a recurring reminder that repeats on the given days of week at hour:minute.
+     * daysBitmask: bit0=Monday .. bit6=Sunday
+     */
+    public Reminder(String checklistName, int daysBitmask, int hour, int minute, String taskId) {
+        this.checklistName = checklistName;
+        this.year = 0;
+        this.month = 0;
+        this.day = 0;
+        this.hour = hour;
+        this.minute = minute;
+        this.taskId = (taskId == null || taskId.trim().isEmpty()) ? null : taskId;
+        this.recurring = daysBitmask != 0;
+        this.daysBitmask = daysBitmask;
     }
 
     // Getters
@@ -51,6 +72,8 @@ public class Reminder {
     public int getHour() { return hour; }
     public int getMinute() { return minute; }
     public String getTaskId() { return taskId; }
+    public boolean isRecurring() { return recurring; }
+    public int getDaysBitmask() { return daysBitmask; }
 
     @Override
     public boolean equals(Object obj) {
@@ -59,12 +82,14 @@ public class Reminder {
         Reminder reminder = (Reminder) obj;
          return year == reminder.year && month == reminder.month && day == reminder.day &&
              hour == reminder.hour && minute == reminder.minute &&
+             recurring == reminder.recurring &&
+             daysBitmask == reminder.daysBitmask &&
              Objects.equals(checklistName, reminder.checklistName) &&
              Objects.equals(taskId, reminder.taskId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(checklistName, taskId, year, month, day, hour, minute);
+        return Objects.hash(checklistName, taskId, year, month, day, hour, minute, recurring, daysBitmask);
     }
 }

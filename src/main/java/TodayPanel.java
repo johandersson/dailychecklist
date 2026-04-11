@@ -276,11 +276,25 @@ public class TodayPanel extends JPanel {
         List<Reminder> allReminders = taskManager.getReminders();
         List<Reminder> todays = new ArrayList<>();
 
+        int todayDowBit = 1 << (today.getDayOfWeek().getValue() - 1); // 1=Mon..7=Sun
+
         for (Reminder reminder : allReminders) {
-            if (reminder.getYear() == today.getYear() &&
-                reminder.getMonth() == today.getMonthValue() &&
-                reminder.getDay() == today.getDayOfMonth()) {
-                todays.add(reminder);
+            try {
+                if (reminder.isRecurring()) {
+                    if ((reminder.getDaysBitmask() & todayDowBit) != 0) {
+                        todays.add(reminder);
+                    }
+                    continue;
+                }
+
+                // Non-recurring: match exact date
+                if (reminder.getYear() == today.getYear() &&
+                    reminder.getMonth() == today.getMonthValue() &&
+                    reminder.getDay() == today.getDayOfMonth()) {
+                    todays.add(reminder);
+                }
+            } catch (Exception ex) {
+                // skip malformed reminders
             }
         }
 

@@ -94,6 +94,25 @@ public class ReminderDialog extends JDialog {
         setAlwaysOnTop(true);
         setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
         setResizable(false);
+        // Ensure the dialog repaints and regains proper stacking when moved across screens
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentMoved(java.awt.event.ComponentEvent e) {
+                // schedule repaint on EDT to avoid flicker across monitors / DPI changes
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    try {
+                        revalidate();
+                        repaint();
+                        // Try to nudge window manager to refresh stacking
+                        toFront();
+                    } catch (Exception ignore) {}
+                });
+            }
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                javax.swing.SwingUtilities.invokeLater(() -> { revalidate(); repaint(); });
+            }
+        });
     }
 
     private JPanel buildTopPanel(String checklistName, String breadcrumbText, String timeString, String dateString) {

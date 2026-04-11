@@ -178,10 +178,20 @@ public class DailyChecklist {
             }
             
             // Also check for old reminders to clean up (less frequent check)
-            LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-            if (now.minusHours(1).isAfter(reminderTime)) {
-                checklistManager.removeReminder(r);
-                shownReminders.remove(r); // Clean up from shown reminders too
+            // Recurring reminders do not have a concrete year/month/day (stored as 0),
+            // so skip cleanup for recurring reminders and guard against invalid dates.
+            if (!r.isRecurring()) {
+                try {
+                    LocalDateTime reminderTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+                    if (now.minusHours(1).isAfter(reminderTime)) {
+                        checklistManager.removeReminder(r);
+                        shownReminders.remove(r); // Clean up from shown reminders too
+                    }
+                } catch (java.time.DateTimeException dte) {
+                    // Invalid stored date: log and skip cleanup for this reminder
+                    java.util.logging.Logger.getLogger(DailyChecklist.class.getName()).log(java.util.logging.Level.WARNING,
+                        "Invalid reminder date for reminder, skipping cleanup: " + r, dte);
+                }
             }
         }
     }

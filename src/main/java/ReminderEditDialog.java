@@ -25,8 +25,11 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.stream.IntStream;
 import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JRadioButton;
+import javax.swing.ButtonGroup;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -49,6 +52,9 @@ public class ReminderEditDialog extends JDialog {
     // UI Components
     private JComboBox<Integer> yearBox, monthBox, dayBox, hourBox, minuteBox;
     private JButton saveButton;
+    private DaySelectorPanel daySelector;
+    private JRadioButton dateRadio;
+    private JRadioButton recurringRadio;
 
     public ReminderEditDialog(TaskManager taskManager, String checklistName, Reminder existingReminder, Runnable onSave) {
         this(taskManager, checklistName, existingReminder, onSave, null);
@@ -73,6 +79,19 @@ public class ReminderEditDialog extends JDialog {
         setModal(true);
         setLayout(new BorderLayout());
         setResizable(false);
+        // Force repaint/revalidate when the dialog is moved across screens (multi-monitor DPI issues)
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentMoved(java.awt.event.ComponentEvent e) {
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    try { revalidate(); repaint(); toFront(); } catch (Exception ignore) {}
+                });
+            }
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                javax.swing.SwingUtilities.invokeLater(() -> { revalidate(); repaint(); });
+            }
+        });
     }
 
     private void initializeUI() {
@@ -121,6 +140,76 @@ public class ReminderEditDialog extends JDialog {
 
         // Preset buttons
         addPresetSection(panel, gbc);
+
+        // Explicit choice: Date-specific vs Recurring
+        gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2;
+        JPanel choicePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        dateRadio = new JRadioButton("Date-specific (one-time)");
+        dateRadio.setToolTipText("Send a one-time reminder on the chosen date");
+        recurringRadio = new JRadioButton("Recurring weekly");
+        recurringRadio.setToolTipText("Repeat the reminder on selected weekdays");
+        ButtonGroup bg = new ButtonGroup();
+        bg.add(dateRadio);
+        bg.add(recurringRadio);
+        choicePanel.add(dateRadio);
+        choicePanel.add(recurringRadio);
+        panel.add(choicePanel, gbc);
+
+        // Recurrence (weekly days) selector
+        gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 2;
+        JLabel repeatLabel = new JLabel("Repeat (weekly):");
+        repeatLabel.setFont(repeatLabel.getFont().deriveFont(Font.BOLD));
+        panel.add(repeatLabel, gbc);
+
+        gbc.gridy = 9; gbc.gridwidth = 2;
+        daySelector = new DaySelectorPanel();
+        panel.add(daySelector, gbc);
+        if (existingReminder != null && existingReminder.isRecurring()) {
+            daySelector.setSelectedDaysBitmask(existingReminder.getDaysBitmask());
+            recurringRadio.setSelected(true);
+        } else {
+            dateRadio.setSelected(true);
+        }
+
+        // Disable date fields when recurring is chosen or when editing a daily checklist task reminder
+        Runnable updateDateState = () -> {
+            boolean recurringSelected = recurringRadio.isSelected();
+            boolean isDailyTask = false;
+            if (taskIdParam != null && taskManager != null) {
+                Task t = taskManager.getTaskById(taskIdParam);
+                if (t != null && (t.getType() == TaskType.MORNING || t.getType() == TaskType.EVENING)) {
+                    isDailyTask = true;
+                }
+            }
+            boolean disableDate = recurringSelected || isDailyTask;
+            yearBox.setEnabled(!disableDate);
+            monthBox.setEnabled(!disableDate);
+            dayBox.setEnabled(!disableDate);
+            // If task is a daily task, disallow recurring selection as well
+            daySelector.setEnabled(!isDailyTask && recurringRadio.isEnabled());
+            // Ensure UI radio availability for daily tasks
+            if (isDailyTask) {
+                recurringRadio.setEnabled(false);
+                dateRadio.setSelected(true);
+            } else {
+                recurringRadio.setEnabled(true);
+            }
+        };
+        // update on changes: radio clicks and day selector clicks
+        dateRadio.addActionListener(e -> updateDateState.run());
+        recurringRadio.addActionListener(e -> updateDateState.run());
+        daySelector.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                // if user toggles days, ensure recurring radio is selected for clarity
+                if (daySelector.getSelectedDaysBitmask() != 0) {
+                    recurringRadio.setSelected(true);
+                }
+                updateDateState.run();
+            }
+        });
+        // initial state
+        updateDateState.run();
 
         return panel;
     }
@@ -296,10 +385,21 @@ public class ReminderEditDialog extends JDialog {
             // Validate date
             java.time.LocalDateTime.of(year, month, day, hour, minute);
 
-            if (existingReminder == null) {
-                handleNewReminder(year, month, day, hour, minute);
+            int daysMask = 0;
+            if (recurringRadio != null && recurringRadio.isSelected()) {
+                daysMask = daySelector != null ? daySelector.getSelectedDaysBitmask() : 0;
+                if (daysMask == 0) {
+                    JOptionPane.showMessageDialog(this, "Please select at least one weekday for a recurring reminder.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
             } else {
-                handleEditReminder(year, month, day, hour, minute);
+                // Date-specific selected: ensure no weekday recurrence is applied
+                daysMask = 0;
+            }
+            if (existingReminder == null) {
+                handleNewReminder(year, month, day, hour, minute, daysMask);
+            } else {
+                handleEditReminder(year, month, day, hour, minute, daysMask);
             }
             // Close the dialog first so windowing focus events settle, then run onSave
             // Close the dialog and run the onSave callback immediately afterwards.
@@ -318,7 +418,7 @@ public class ReminderEditDialog extends JDialog {
         }
     }
 
-    private void handleNewReminder(int year, int month, int day, int hour, int minute) {
+    private void handleNewReminder(int year, int month, int day, int hour, int minute, int daysMask) {
         // Determine which existing reminders to consider based on taskIdParam
         java.util.List<Reminder> existingReminders = taskManager.getReminders().stream()
             .filter(r -> r.getChecklistName().equals(checklistName))
@@ -338,14 +438,48 @@ public class ReminderEditDialog extends JDialog {
             }
         }
 
-        Reminder newReminder = new Reminder(checklistName, year, month, day, hour, minute, taskIdParam);
+        // If the reminder targets a daily checklist task, force the date to today and disallow recurrence
+        boolean isDailyTask = false;
+        if (taskIdParam != null && taskManager != null) {
+            Task t = taskManager.getTaskById(taskIdParam);
+            if (t != null && (t.getType() == TaskType.MORNING || t.getType() == TaskType.EVENING)) {
+                isDailyTask = true;
+            }
+        }
+
+        Reminder newReminder;
+        if (isDailyTask) {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            newReminder = new Reminder(checklistName, today.getYear(), today.getMonthValue(), today.getDayOfMonth(), hour, minute, taskIdParam);
+        } else if (daysMask != 0) {
+            newReminder = new Reminder(checklistName, daysMask, hour, minute, taskIdParam);
+        } else {
+            newReminder = new Reminder(checklistName, year, month, day, hour, minute, taskIdParam);
+        }
         taskManager.addReminder(newReminder);
         // Reminder added; panels will show the update directly
     }
 
-    private void handleEditReminder(int year, int month, int day, int hour, int minute) {
+    private void handleEditReminder(int year, int month, int day, int hour, int minute, int daysMask) {
         taskManager.removeReminder(existingReminder);
-        Reminder newReminder = new Reminder(checklistName, year, month, day, hour, minute, taskIdParam != null ? taskIdParam : existingReminder.getTaskId());
+        String taskIdToUse = taskIdParam != null ? taskIdParam : existingReminder.getTaskId();
+        boolean isDailyTask = false;
+        if (taskIdToUse != null && taskManager != null) {
+            Task t = taskManager.getTaskById(taskIdToUse);
+            if (t != null && (t.getType() == TaskType.MORNING || t.getType() == TaskType.EVENING)) {
+                isDailyTask = true;
+            }
+        }
+
+        Reminder newReminder;
+        if (isDailyTask) {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            newReminder = new Reminder(checklistName, today.getYear(), today.getMonthValue(), today.getDayOfMonth(), hour, minute, taskIdToUse);
+        } else if (daysMask != 0) {
+            newReminder = new Reminder(checklistName, daysMask, hour, minute, taskIdToUse);
+        } else {
+            newReminder = new Reminder(checklistName, year, month, day, hour, minute, taskIdToUse);
+        }
         taskManager.addReminder(newReminder);
         // Reminder changed; panels will show the update directly
     }

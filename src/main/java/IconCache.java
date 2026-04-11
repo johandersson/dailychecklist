@@ -41,6 +41,10 @@ public final class IconCache {
     private static final ConcurrentMap<String, Icon> reminderClockCache = new ConcurrentHashMap<>();
     private static final ConcurrentLinkedQueue<String> reminderClockKeys = new ConcurrentLinkedQueue<>();
     private static final int MAX_REMINDER_ICONS = 200;
+    // Weekday icon cache
+    private static final ConcurrentMap<String, Icon> weekdayIconCache = new ConcurrentHashMap<>();
+    private static final ConcurrentLinkedQueue<String> weekdayIconKeys = new ConcurrentLinkedQueue<>();
+    private static final int MAX_WEEKDAY_ICONS = 200;
     // NOTE: application icon is provided by AppIcon.getAppIcon()
 
     public static Icon getChecklistDocumentIcon() {
@@ -81,6 +85,23 @@ public final class IconCache {
             while (reminderClockKeys.size() > MAX_REMINDER_ICONS) {
                 String old = reminderClockKeys.poll();
                 if (old != null) reminderClockCache.remove(old);
+            }
+            return icon;
+        });
+    }
+
+    /**
+     * Get a rendered weekday circle icon. Abbrev is a short two-letter string.
+     */
+    public static Icon getWeekdayIcon(String abbrev, java.awt.Color color, boolean selected, int size) {
+        String key = (abbrev == null ? "" : abbrev) + "-" + (color == null ? "#000000" : Integer.toHexString(color.getRGB())) + "-" + selected + "-" + size;
+        return weekdayIconCache.computeIfAbsent(key, k -> {
+            WeekdayCircleIcon raw = new WeekdayCircleIcon(abbrev, color, selected, size);
+            javax.swing.ImageIcon icon = renderToImageIcon(raw);
+            weekdayIconKeys.add(k);
+            while (weekdayIconKeys.size() > MAX_WEEKDAY_ICONS) {
+                String old = weekdayIconKeys.poll();
+                if (old != null) weekdayIconCache.remove(old);
             }
             return icon;
         });

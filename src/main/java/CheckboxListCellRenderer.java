@@ -287,9 +287,21 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         if (taskManager != null) {
             Reminder reminder = taskManager.getReminderForTask(task.getId());
             if (reminder != null) {
-                tip.append(String.format("Reminder: %04d-%02d-%02d %02d:%02d", 
-                    reminder.getYear(), reminder.getMonth(), reminder.getDay(), 
-                    reminder.getHour(), reminder.getMinute()));
+                if (reminder.isRecurring()) {
+                    String[] abbr = {"Mo","Tu","We","Th","Fr","Sa","Su"};
+                    StringBuilder days = new StringBuilder();
+                    for (int d = 1; d <= 7; d++) {
+                        if ((reminder.getDaysBitmask() & (1 << (d - 1))) != 0) {
+                            if (days.length() > 0) days.append(",");
+                            days.append(abbr[d - 1]);
+                        }
+                    }
+                    tip.append(String.format("Repeats: %s %02d:%02d", days.toString(), reminder.getHour(), reminder.getMinute()));
+                } else {
+                    tip.append(String.format("Reminder: %04d-%02d-%02d %02d:%02d", 
+                        reminder.getYear(), reminder.getMonth(), reminder.getDay(), 
+                        reminder.getHour(), reminder.getMinute()));
+                }
             }
         }
         
@@ -498,20 +510,12 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
     private void drawWeekdayCircleIfNeeded(Graphics2D g2) {
         if (!isWeekdayTask) return;
-        int circleSize = 30;
         int areaX = getWidth() - UiLayout.WEEKDAY_ICON_AREA;
-        int circleX = areaX + (UiLayout.WEEKDAY_ICON_AREA - circleSize) / 2;
-        int circleY = getHeight() / 2 - circleSize / 2;
-        g2.setColor(weekdayColor != null ? weekdayColor : new Color(120, 120, 120));
-        g2.fillOval(circleX, circleY, circleSize, circleSize);
-
-        // Draw the weekday abbreviation inside the circle (centered)
-        g2.setColor(Color.WHITE);
-        g2.setFont(circleFont);
-        FontMetrics fm = g2.getFontMetrics();
-        int textX = circleX + (circleSize - fm.stringWidth(weekdayAbbreviation != null ? weekdayAbbreviation : "")) / 2;
-        int textCenterY = circleY + circleSize / 2 + (fm.getAscent() - fm.getDescent()) / 2;
-        g2.drawString(weekdayAbbreviation != null ? weekdayAbbreviation : "", textX, textCenterY);
+        int iconSize = Math.min(30, UiLayout.WEEKDAY_ICON_AREA - 4);
+        int iconX = areaX + (UiLayout.WEEKDAY_ICON_AREA - iconSize) / 2;
+        int iconY = getHeight() / 2 - iconSize / 2;
+        javax.swing.Icon ic = IconCache.getWeekdayIcon(weekdayAbbreviation, weekdayColor, false, iconSize);
+        ic.paintIcon(this, g2, iconX, iconY);
     }
 
     private void drawNoteIconIfNeeded(Graphics2D g2) {
@@ -563,7 +567,22 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
 
     private ReminderClockIcon.State computeState(Reminder r) {
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        java.time.LocalDateTime dt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+        java.time.LocalDateTime dt;
+        if (r.isRecurring()) {
+            // compute next occurrence starting from today
+            dt = null;
+            for (int offset = 0; offset < 7; offset++) {
+                java.time.LocalDate date = now.toLocalDate().plusDays(offset);
+                int dow = date.getDayOfWeek().getValue(); // 1=Mon..7=Sun
+                if ((r.getDaysBitmask() & (1 << (dow - 1))) != 0) {
+                    dt = date.atTime(r.getHour(), r.getMinute());
+                    break;
+                }
+            }
+            if (dt == null) return ReminderClockIcon.State.FUTURE;
+        } else {
+            dt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+        }
         if (dt.isBefore(now)) {
             long minutesOverdue = java.time.Duration.between(dt, now).toMinutes();
             if (minutesOverdue > 60) return ReminderClockIcon.State.VERY_OVERDUE;
