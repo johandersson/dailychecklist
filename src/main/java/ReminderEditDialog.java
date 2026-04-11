@@ -196,8 +196,15 @@ public class ReminderEditDialog extends JDialog {
             daySelector.setEnabled(!isDailyTask && recurringSelected);
             // Ensure UI radio availability for daily tasks
             if (isDailyTask) {
-                recurringRadio.setEnabled(false);
-                dateRadio.setSelected(true);
+                // If editing an existing recurring reminder that targets a daily task,
+                // keep the recurring radio enabled so the user can view/change its days,
+                // but prevent creating a new recurring reminder for daily tasks.
+                if (existingReminder != null && existingReminder.isRecurring()) {
+                    recurringRadio.setEnabled(true);
+                } else {
+                    recurringRadio.setEnabled(false);
+                    dateRadio.setSelected(true);
+                }
             } else {
                 recurringRadio.setEnabled(true);
             }
@@ -227,6 +234,9 @@ public class ReminderEditDialog extends JDialog {
         } else {
             dateRadio.setSelected(true);
         }
+        // Ensure radios are explicitly enabled by default so user can switch
+        dateRadio.setEnabled(true);
+        recurringRadio.setEnabled(true);
         // update on changes: radio clicks and day selector clicks
         dateRadio.addActionListener(e -> updateDateState.run());
         recurringRadio.addActionListener(e -> updateDateState.run());
