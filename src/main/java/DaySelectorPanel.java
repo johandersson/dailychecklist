@@ -79,7 +79,14 @@ public class DaySelectorPanel extends JPanel {
         int w = getWidth();
         int h = getHeight();
         int preferred = Math.min(28, Math.max(20, h - 6));
-        int spacing = (w - preferred * 7) / 8;
+        // compute actual icon widths and spacing using the icon's reported size to avoid clipping
+        int[] iconWidths = new int[7];
+        for (int i = 0; i < 7; i++) {
+            javax.swing.Icon tmp = IconCache.getWeekdayIcon(ABBR[i], COLORS[i % COLORS.length], false, preferred);
+            iconWidths[i] = tmp.getIconWidth();
+        }
+        int totalIconsWidth = 0; for (int iw : iconWidths) totalIconsWidth += iw;
+        int spacing = (w - totalIconsWidth) / 8;
         if (spacing < 4) spacing = 4;
         int x = spacing;
 
@@ -89,7 +96,7 @@ public class DaySelectorPanel extends JPanel {
             javax.swing.Icon icon = IconCache.getWeekdayIcon(ABBR[i], bg, selected, preferred);
             int y = (h - icon.getIconHeight()) / 2;
             icon.paintIcon(this, g2, x, y);
-            x += preferred + spacing;
+            x += icon.getIconWidth() + spacing;
         }
 
         g2.dispose();

@@ -18,6 +18,7 @@
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Dimension;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -69,7 +70,7 @@ public class ReminderDialog extends JDialog {
         String timeString = String.format("%02d:%02d", reminder.getHour(), reminder.getMinute());
         String dateString = String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
 
-        JPanel topPanel = buildTopPanel(checklistName, breadcrumbText, timeString, dateString);
+        JPanel topPanel = buildTopPanel(checklistName, breadcrumbText, timeString, dateString, reminder);
         JLabel messageLabel = buildMessageLabel();
         JPanel notePanel = buildNotePanel(reminder);
         JPanel buttonPanel = buildButtonPanel(reminder);
@@ -87,7 +88,11 @@ public class ReminderDialog extends JDialog {
         add(buttonPanel, BorderLayout.SOUTH);
 
         pack();
-        setLocationRelativeTo(parent);
+        // Ensure dialog minimum size to avoid clipping day icons
+        int minW = Math.max(520, getWidth());
+        int minH = Math.max(260, getHeight());
+        setMinimumSize(new Dimension(minW, minH));
+        centerOverParent(parent);
     }
 
     private void initDialogSettings(JFrame parent) {
@@ -100,12 +105,14 @@ public class ReminderDialog extends JDialog {
             public void componentMoved(java.awt.event.ComponentEvent e) {
                 // schedule repaint on EDT to avoid flicker across monitors / DPI changes
                 javax.swing.SwingUtilities.invokeLater(() -> {
-                    try {
-                        revalidate();
-                        repaint();
-                        // Try to nudge window manager to refresh stacking
-                        toFront();
-                    } catch (Exception ignore) {}
+                        try {
+                            // Invalidate cached weekday icons when moving across displays
+                            try { IconCache.invalidateWeekdayIcons(); } catch (Throwable ignore) {}
+                            revalidate();
+                            repaint();
+                            // Try to nudge window manager to refresh stacking
+                            toFront();
+                        } catch (Exception ignore) {}
                 });
             }
             @Override
@@ -115,7 +122,7 @@ public class ReminderDialog extends JDialog {
         });
     }
 
-    private JPanel buildTopPanel(String checklistName, String breadcrumbText, String timeString, String dateString) {
+    private JPanel buildTopPanel(String checklistName, String breadcrumbText, String timeString, String dateString, Reminder reminder) {
         JPanel topPanel = new JPanel(new BorderLayout());
         String titleHtml = formatTitleHtml(checklistName, timeString, dateString);
         JLabel titleLabel = new JLabel(titleHtml);
@@ -132,7 +139,48 @@ public class ReminderDialog extends JDialog {
             crumbWrap.add(crumb);
             topPanel.add(crumbWrap, BorderLayout.SOUTH);
         }
+        // Add recurrence badges if this is a recurring reminder
+        if (reminder != null && reminder.isRecurring()) {
+            JPanel rec = buildRecurrencePanel(reminder);
+            topPanel.add(rec, BorderLayout.SOUTH);
+        }
         return topPanel;
+    }
+
+    private void centerOverParent(JFrame parent) {
+        if (parent == null) {
+            setLocationRelativeTo(null);
+            return;
+        }
+        java.awt.Rectangle pb = parent.getBounds();
+        int w = Math.max(getWidth(), 520);
+        int h = Math.max(getHeight(), 260);
+        int x = pb.x + (pb.width - w) / 2;
+        int y = pb.y + (pb.height - h) / 2;
+        try {
+            java.awt.Rectangle screen = parent.getGraphicsConfiguration().getBounds();
+            if (x < screen.x) x = screen.x + 10;
+            if (y < screen.y) y = screen.y + 10;
+            if (x + w > screen.x + screen.width) x = screen.x + screen.width - w - 10;
+            if (y + h > screen.y + screen.height) y = screen.y + screen.height - h - 10;
+        } catch (Exception ignore) {}
+        setSize(w, h);
+        setLocation(x, y);
+    }
+
+    private JPanel buildRecurrencePanel(Reminder reminder) {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 6));
+        p.setOpaque(false);
+        String[] abbr = {"Mo","Tu","We","Th","Fr","Sa","Su"};
+        java.awt.Color[] cols = { new java.awt.Color(165,42,42), new java.awt.Color(0,90,156), new java.awt.Color(139,128,0), new java.awt.Color(34,139,34), new java.awt.Color(139,69,19), new java.awt.Color(255,69,0), new java.awt.Color(199,21,133) };
+        for (int i = 0; i < 7; i++) {
+            boolean selected = (reminder.getDaysBitmask() & (1 << i)) != 0;
+            javax.swing.Icon icon = IconCache.getWeekdayIcon(abbr[i], cols[i], selected, 28);
+            JLabel lbl = new JLabel(icon);
+            lbl.setToolTipText(abbr[i]);
+            p.add(lbl);
+        }
+        return p;
     }
 
     private String formatTitleHtml(String checklistName, String timeString, String dateString) {

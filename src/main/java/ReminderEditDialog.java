@@ -84,7 +84,7 @@ public class ReminderEditDialog extends JDialog {
             @Override
             public void componentMoved(java.awt.event.ComponentEvent e) {
                 javax.swing.SwingUtilities.invokeLater(() -> {
-                    try { revalidate(); repaint(); toFront(); } catch (Exception ignore) {}
+                    try { IconCache.invalidateWeekdayIcons(); revalidate(); repaint(); toFront(); } catch (Exception ignore) {}
                 });
             }
             @Override

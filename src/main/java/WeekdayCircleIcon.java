@@ -1,8 +1,11 @@
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import javax.swing.Icon;
 
 /**
@@ -27,36 +30,47 @@ public class WeekdayCircleIcon implements Icon {
 
     @Override
     public void paintIcon(Component c, Graphics g, int x, int y) {
-        int circleSize = size;
-        int ox = x;
-        int oy = y;
+        Graphics2D g2 = (Graphics2D) g.create();
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-        // fill circle
-        g.setColor(bg);
-        g.fillOval(ox, oy, circleSize, circleSize);
+            int pad = 3; // padding for outer ring
+            int circleSize = size;
+            int ox = x + pad;
+            int oy = y + pad;
 
-        // draw outer ring when selected
-        if (selected) {
-            g.setColor(java.awt.Color.BLACK);
-            g.drawOval(ox - 2, oy - 2, circleSize + 4, circleSize + 4);
+            // fill circle
+            g2.setColor(bg);
+            g2.fillOval(ox, oy, circleSize, circleSize);
+
+            // draw outer ring when selected
+            if (selected) {
+                g2.setColor(Color.black);
+                g2.setStroke(new BasicStroke(2f));
+                g2.drawOval(ox - 2, oy - 2, circleSize + 4, circleSize + 4);
+            }
+
+            // draw text centered
+            g2.setFont(font);
+            FontMetrics fm = g2.getFontMetrics();
+            g2.setColor(java.awt.Color.WHITE);
+            int tx = ox + (circleSize - fm.stringWidth(text)) / 2;
+            int ty = oy + circleSize / 2 + (fm.getAscent() - fm.getDescent()) / 2;
+            g2.drawString(text, tx, ty);
+        } finally {
+            g2.dispose();
         }
-
-        // draw text centered
-        g.setFont(font);
-        FontMetrics fm = g.getFontMetrics();
-        g.setColor(java.awt.Color.WHITE);
-        int tx = ox + (circleSize - fm.stringWidth(text)) / 2;
-        int ty = oy + circleSize / 2 + (fm.getAscent() - fm.getDescent()) / 2;
-        g.drawString(text, tx, ty);
     }
 
     @Override
     public int getIconWidth() {
-        return size + (selected ? 4 : 0);
+        // include padding for outer ring
+        return size + 6;
     }
 
     @Override
     public int getIconHeight() {
-        return size + (selected ? 4 : 0);
+        return size + 6;
     }
 }

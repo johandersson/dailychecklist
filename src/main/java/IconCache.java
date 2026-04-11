@@ -107,6 +107,15 @@ public final class IconCache {
         });
     }
 
+    /**
+     * Invalidate cached weekday icons so they can be re-rendered (useful when moving
+     * windows between screens with different DPI scales).
+     */
+    public static void invalidateWeekdayIcons() {
+        weekdayIconCache.clear();
+        weekdayIconKeys.clear();
+    }
+
     static {
         // Pre-render static icons via helper to reduce duplication
         ZzzIcon rawZzz = new ZzzIcon();
