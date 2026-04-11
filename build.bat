@@ -12,12 +12,11 @@ echo.
 echo Compiling Java sources...
 echo Compiling all Java files with proper classpath (targeting Java 17 for test coverage compatibility)...
 javac --release 17 -cp "src\main\java" -d build\classes src\main\java\*.java
-if %errorlevel% neq 0 (
-    echo ERROR: Java compilation failed
-    echo.
-    pause
-    exit /b %errorlevel%
-)
+    if %errorlevel% neq 0 (
+        echo ERROR: Java compilation failed
+        echo.
+        exit /b %errorlevel%
+    )
 echo Java compilation complete.
 echo.
 
@@ -28,7 +27,6 @@ if exist src\main\resources (
     if %errorlevel% neq 0 (
         echo ERROR: Failed to copy resources
         echo.
-        pause
         exit /b %errorlevel%
     )
 ) else (
@@ -54,10 +52,9 @@ if exist build\dailychecklist.jar (
     echo Removing existing JAR file...
     del build\dailychecklist.jar
     if %errorlevel% neq 0 (
-        echo ERROR: Cannot delete existing JAR file. Please close the application and try again.
-        echo.
-        pause
-        exit /b 1
+    echo ERROR: Cannot delete existing JAR file. Please close the application and try again.
+    echo.
+    exit /b 1
     )
 )
 
@@ -66,7 +63,6 @@ jar cfm build\dailychecklist.jar src\main\resources\META-INF\MANIFEST.MF -C buil
 if %errorlevel% neq 0 (
     echo ERROR: JAR creation failed
     echo.
-    pause
     exit /b %errorlevel%
 )
 
@@ -79,4 +75,3 @@ echo.
 echo You can now run the application with:
 echo java -jar build\dailychecklist.jar
 echo.
-pause

@@ -53,6 +53,7 @@ public class ReminderDialog extends JDialog {
     private final String[] weekdayAbbr = {"Mo","Tu","We","Th","Fr","Sa","Su"};
     private final Color[] weekdayCols = { new Color(165,42,42), new Color(0,90,156), new Color(139,128,0), new Color(34,139,34), new Color(139,69,19), new Color(255,69,0), new Color(199,21,133) };
     private int weekdayIconSize = 36;
+    private int recurrenceDaysMask = 0;
 
     @SuppressWarnings("this-escape")
     public ReminderDialog(JFrame parent, Reminder reminder, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow, Runnable onMarkAsDone) {
@@ -161,6 +162,7 @@ public class ReminderDialog extends JDialog {
         }
         // Add recurrence badges if this is a recurring reminder
         if (reminder != null && reminder.isRecurring()) {
+            recurrenceDaysMask = reminder.getDaysBitmask();
             JComponent rec = buildRecurrencePanel(reminder);
             southWrap.add(rec);
         }
@@ -244,7 +246,7 @@ public class ReminderDialog extends JDialog {
                 Object o = lbl.getClientProperty("weekdayIndex");
                 if (o instanceof Integer) {
                     int i = ((Integer) o).intValue();
-                    boolean selected = false;
+                    boolean selected = (recurrenceDaysMask & (1 << i)) != 0;
                     try {
                         // attempt to read current reminder selection via tooltip/compare; fallback to existing icon state
                         String tip = lbl.getToolTipText();
