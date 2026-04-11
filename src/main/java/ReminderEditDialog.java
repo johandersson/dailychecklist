@@ -129,46 +129,57 @@ public class ReminderEditDialog extends JDialog {
     }
 
     private JPanel createMainPanel() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.anchor = GridBagConstraints.WEST;
+        JPanel main = new JPanel();
+        main.setLayout(new BoxLayout(main, BoxLayout.Y_AXIS));
 
         // Date section
-        addDateSection(panel, gbc);
+        JPanel datePanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbcDate = new GridBagConstraints();
+        gbcDate.insets = new Insets(5,5,5,5);
+        gbcDate.anchor = GridBagConstraints.WEST;
+        addDateSection(datePanel, gbcDate);
+        main.add(datePanel);
 
         // Time section
-        addTimeSection(panel, gbc);
+        JPanel timePanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbcTime = new GridBagConstraints();
+        gbcTime.insets = new Insets(5,5,5,5);
+        gbcTime.anchor = GridBagConstraints.WEST;
+        addTimeSection(timePanel, gbcTime);
+        main.add(timePanel);
 
         // Preset buttons
-        addPresetSection(panel, gbc);
+        JPanel presetPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbcPreset = new GridBagConstraints();
+        gbcPreset.insets = new Insets(5,5,5,5);
+        gbcPreset.anchor = GridBagConstraints.WEST;
+        addPresetSection(presetPanel, gbcPreset);
+        main.add(presetPanel);
 
         // Explicit choice: Date-specific vs Recurring
-        gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 2;
         JPanel choicePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         dateRadio = new JRadioButton("Date-specific (one-time)");
         dateRadio.setToolTipText("Send a one-time reminder on the chosen date");
         recurringRadio = new JRadioButton("Recurring weekly");
         recurringRadio.setToolTipText("Repeat the reminder on selected weekdays");
         ButtonGroup bg = new ButtonGroup();
-        bg.add(dateRadio);
-        bg.add(recurringRadio);
-        choicePanel.add(dateRadio);
-        choicePanel.add(recurringRadio);
-        panel.add(choicePanel, gbc);
+        bg.add(dateRadio); bg.add(recurringRadio);
+        choicePanel.add(dateRadio); choicePanel.add(recurringRadio);
+        main.add(choicePanel);
 
-        // Recurrence (weekly days) selector
-        gbc.gridx = 0; gbc.gridy = 9; gbc.gridwidth = 2;
+        // Recurrence label and selector
+        JPanel repeatWrap = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel repeatLabel = new JLabel("Repeat (weekly):");
         repeatLabel.setFont(repeatLabel.getFont().deriveFont(Font.BOLD));
-        panel.add(repeatLabel, gbc);
+        repeatWrap.add(repeatLabel);
+        main.add(repeatWrap);
 
-        gbc.gridy = 10; gbc.gridwidth = 2;
         daySelector = new DaySelectorPanel();
         javax.swing.JScrollPane dayScroller = new javax.swing.JScrollPane(daySelector, javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         dayScroller.setBorder(BorderFactory.createEmptyBorder());
         dayScroller.setPreferredSize(new java.awt.Dimension(520, 56));
-        panel.add(dayScroller, gbc);
+        main.add(dayScroller);
+
         if (existingReminder != null && existingReminder.isRecurring()) {
             daySelector.setSelectedDaysBitmask(existingReminder.getDaysBitmask());
             recurringRadio.setSelected(true);
@@ -216,7 +227,7 @@ public class ReminderEditDialog extends JDialog {
         // initial state
         updateDateState.run();
 
-        return panel;
+        return main;
     }
 
     private void addDateSection(JPanel panel, GridBagConstraints gbc) {
