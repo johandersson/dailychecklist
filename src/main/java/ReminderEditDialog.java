@@ -165,7 +165,10 @@ public class ReminderEditDialog extends JDialog {
 
         gbc.gridy = 10; gbc.gridwidth = 2;
         daySelector = new DaySelectorPanel();
-        panel.add(daySelector, gbc);
+        javax.swing.JScrollPane dayScroller = new javax.swing.JScrollPane(daySelector, javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        dayScroller.setBorder(BorderFactory.createEmptyBorder());
+        dayScroller.setPreferredSize(new java.awt.Dimension(520, 56));
+        panel.add(dayScroller, gbc);
         if (existingReminder != null && existingReminder.isRecurring()) {
             daySelector.setSelectedDaysBitmask(existingReminder.getDaysBitmask());
             recurringRadio.setSelected(true);

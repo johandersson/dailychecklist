@@ -26,7 +26,7 @@ public class DaySelectorPanel extends JPanel {
     };
 
     public DaySelectorPanel() {
-        setPreferredSize(new Dimension(260, 36));
+        setPreferredSize(new Dimension(480, 40));
         setOpaque(false);
         addMouseListener(new MouseAdapter() {
             @Override
@@ -42,16 +42,23 @@ public class DaySelectorPanel extends JPanel {
 
     private int indexAt(int x, int y) {
         int w = getWidth();
-        int preferred = Math.min(32, Math.max(20, w / 9));
-        // determine spacing based on preferred icon size
-        int spacing = (w - preferred * 7) / 8;
+        int h = getHeight();
+        int preferred = Math.min(28, Math.max(20, h - 6));
+        int[] iconWidths = new int[7];
+        int totalIconsWidth = 0;
+        for (int i = 0; i < 7; i++) {
+            javax.swing.Icon tmp = IconCache.getWeekdayIcon(ABBR[i], COLORS[i % COLORS.length], false, preferred);
+            iconWidths[i] = tmp.getIconWidth();
+            totalIconsWidth += iconWidths[i];
+        }
+        int spacing = (w - totalIconsWidth) / 8;
         if (spacing < 4) spacing = 4;
         int cx = spacing;
         for (int i = 0; i < 7; i++) {
             int left = cx;
-            int right = cx + preferred;
+            int right = cx + iconWidths[i];
             if (x >= left && x <= right) return i;
-            cx += preferred + spacing;
+            cx += iconWidths[i] + spacing;
         }
         return -1;
     }
