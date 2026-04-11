@@ -25,6 +25,7 @@ import javax.swing.BoxLayout;
 import java.awt.Window;
 import java.awt.KeyboardFocusManager;
 import java.awt.Color;
+import java.awt.Component;
 import javax.swing.JScrollPane;
 import javax.swing.JComponent;
 import javax.swing.BorderFactory;
