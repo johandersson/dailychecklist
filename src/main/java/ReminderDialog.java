@@ -19,6 +19,9 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Dimension;
+import java.awt.GraphicsEnvironment;
+import java.awt.Point;
+import javax.swing.BoxLayout;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -98,7 +101,7 @@ public class ReminderDialog extends JDialog {
     private void initDialogSettings(JFrame parent) {
         setAlwaysOnTop(true);
         setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-        setResizable(false);
+        setResizable(true);
         // Ensure the dialog repaints and regains proper stacking when moved across screens
         addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
@@ -130,56 +133,90 @@ public class ReminderDialog extends JDialog {
         titleLabel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
         topPanel.add(titleLabel, BorderLayout.CENTER);
 
+        JPanel southWrap = new JPanel();
+        southWrap.setOpaque(false);
+        southWrap.setLayout(new BoxLayout(southWrap, BoxLayout.Y_AXIS));
         if (breadcrumbText != null && !breadcrumbText.trim().isEmpty()) {
             SubtaskBreadcrumb crumb = new SubtaskBreadcrumb();
             crumb.setFontToUse(FontManager.getTaskListFont().deriveFont(Font.PLAIN, FontManager.SIZE_SMALL));
             crumb.setText(breadcrumbText);
             crumb.setPreferredSize(new java.awt.Dimension(400, 20));
             JPanel crumbWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+            crumbWrap.setOpaque(false);
             crumbWrap.add(crumb);
-            topPanel.add(crumbWrap, BorderLayout.SOUTH);
+            southWrap.add(crumbWrap);
         }
         // Add recurrence badges if this is a recurring reminder
         if (reminder != null && reminder.isRecurring()) {
             JPanel rec = buildRecurrencePanel(reminder);
-            topPanel.add(rec, BorderLayout.SOUTH);
+            southWrap.add(rec);
+        }
+        if (southWrap.getComponentCount() > 0) {
+            topPanel.add(southWrap, BorderLayout.SOUTH);
         }
         return topPanel;
     }
 
     private void centerOverParent(JFrame parent) {
-        if (parent == null) {
+        int w = Math.max(getWidth(), 640);
+        int h = Math.max(getHeight(), 320);
+        if (parent == null || !parent.isShowing()) {
+            setSize(w, h);
             setLocationRelativeTo(null);
             return;
         }
-        java.awt.Rectangle pb = parent.getBounds();
-        int w = Math.max(getWidth(), 520);
-        int h = Math.max(getHeight(), 260);
-        int x = pb.x + (pb.width - w) / 2;
-        int y = pb.y + (pb.height - h) / 2;
         try {
-            java.awt.Rectangle screen = parent.getGraphicsConfiguration().getBounds();
-            if (x < screen.x) x = screen.x + 10;
-            if (y < screen.y) y = screen.y + 10;
-            if (x + w > screen.x + screen.width) x = screen.x + screen.width - w - 10;
-            if (y + h > screen.y + screen.height) y = screen.y + screen.height - h - 10;
-        } catch (Exception ignore) {}
-        setSize(w, h);
-        setLocation(x, y);
+            Point ownerOnScreen = parent.getLocationOnScreen();
+            int ownerCenterX = ownerOnScreen.x + parent.getWidth() / 2;
+            int ownerCenterY = ownerOnScreen.y + parent.getHeight() / 2;
+
+            java.awt.Rectangle deviceBounds = null;
+            java.awt.GraphicsDevice[] devices = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+            for (java.awt.GraphicsDevice d : devices) {
+                java.awt.Rectangle b = d.getDefaultConfiguration().getBounds();
+                if (b.contains(ownerCenterX, ownerCenterY)) {
+                    deviceBounds = b;
+                    break;
+                }
+            }
+            if (deviceBounds == null) {
+                deviceBounds = parent.getGraphicsConfiguration().getBounds();
+            }
+
+            int x = deviceBounds.x + (deviceBounds.width - w) / 2;
+            int y = deviceBounds.y + (deviceBounds.height - h) / 2;
+            // nudge inside bounds
+            if (x < deviceBounds.x) x = deviceBounds.x + 8;
+            if (y < deviceBounds.y) y = deviceBounds.y + 8;
+            if (x + w > deviceBounds.x + deviceBounds.width) x = deviceBounds.x + deviceBounds.width - w - 8;
+            if (y + h > deviceBounds.y + deviceBounds.height) y = deviceBounds.y + deviceBounds.height - h - 8;
+
+            setSize(w, h);
+            setLocation(x, y);
+        } catch (Exception ex) {
+            // Fallback
+            setSize(w, h);
+            setLocationRelativeTo(parent);
+        }
     }
 
     private JPanel buildRecurrencePanel(Reminder reminder) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 6));
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 6));
         p.setOpaque(false);
         String[] abbr = {"Mo","Tu","We","Th","Fr","Sa","Su"};
         java.awt.Color[] cols = { new java.awt.Color(165,42,42), new java.awt.Color(0,90,156), new java.awt.Color(139,128,0), new java.awt.Color(34,139,34), new java.awt.Color(139,69,19), new java.awt.Color(255,69,0), new java.awt.Color(199,21,133) };
+        int iconSize = 36; // increase size to avoid clipping
         for (int i = 0; i < 7; i++) {
             boolean selected = (reminder.getDaysBitmask() & (1 << i)) != 0;
-            javax.swing.Icon icon = IconCache.getWeekdayIcon(abbr[i], cols[i], selected, 28);
+            javax.swing.Icon icon = IconCache.getWeekdayIcon(abbr[i], cols[i], selected, iconSize);
             JLabel lbl = new JLabel(icon);
             lbl.setToolTipText(abbr[i]);
+            lbl.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 2));
             p.add(lbl);
         }
+        // Make sure panel requests enough width so the last icon isn't chopped
+        int totalWidth = (iconSize + 4) * 7 + 10 * 6 + 20; // icons + gaps + padding
+        p.setPreferredSize(new java.awt.Dimension(totalWidth, iconSize + 12));
         return p;
     }
 
