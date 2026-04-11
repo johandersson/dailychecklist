@@ -77,6 +77,17 @@ public class DaySelectorPanel extends JPanel {
         daysBitmask = (daysBitmask & bit) == 0 ? (daysBitmask | bit) : (daysBitmask & ~bit);
     }
 
+    /**
+     * Handle a click at coordinates relative to this component.
+     */
+    public void clickAt(int x, int y) {
+        int idx = indexAt(x, y);
+        if (idx >= 0) {
+            toggle(idx);
+            repaint();
+        }
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

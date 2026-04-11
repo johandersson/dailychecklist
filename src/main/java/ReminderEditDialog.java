@@ -178,6 +178,20 @@ public class ReminderEditDialog extends JDialog {
         javax.swing.JScrollPane dayScroller = new javax.swing.JScrollPane(daySelector, javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         dayScroller.setBorder(BorderFactory.createEmptyBorder());
         dayScroller.setPreferredSize(new java.awt.Dimension(520, 56));
+        // Forward clicks on the scroller's viewport to the day selector so clicks work when scrolled
+        dayScroller.getViewport().addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                java.awt.Point viewPos = dayScroller.getViewport().getViewPosition();
+                int relX = e.getX() + viewPos.x;
+                int relY = e.getY() + viewPos.y;
+                daySelector.clickAt(relX, relY);
+                // ensure recurring radio is selected when user clicks days
+                if (daySelector.getSelectedDaysBitmask() != 0) {
+                    recurringRadio.setSelected(true);
+                }
+            }
+        });
         main.add(dayScroller);
 
         if (existingReminder != null && existingReminder.isRecurring()) {
