@@ -178,31 +178,8 @@ public class ReminderEditDialog extends JDialog {
         javax.swing.JScrollPane dayScroller = new javax.swing.JScrollPane(daySelector, javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         dayScroller.setBorder(BorderFactory.createEmptyBorder());
         dayScroller.setPreferredSize(new java.awt.Dimension(520, 56));
-        // Forward clicks on the scroller's viewport to the day selector so clicks work when scrolled
-        dayScroller.getViewport().addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                java.awt.Point viewPos = dayScroller.getViewport().getViewPosition();
-                int relX = e.getX() + viewPos.x;
-                int relY = e.getY() + viewPos.y;
-                daySelector.clickAt(relX, relY);
-                // ensure recurring radio is selected when user clicks days
-                if (daySelector.getSelectedDaysBitmask() != 0) {
-                    recurringRadio.setSelected(true);
-                }
-            }
-        });
-        main.add(dayScroller);
-
-        if (existingReminder != null && existingReminder.isRecurring()) {
-            daySelector.setSelectedDaysBitmask(existingReminder.getDaysBitmask());
-            recurringRadio.setSelected(true);
-        } else {
-            dateRadio.setSelected(true);
-        }
-
-        // Disable date fields when recurring is chosen or when editing a daily checklist task reminder
-        Runnable updateDateState = () -> {
+        // Prepare update runnable early so viewport clicks can trigger state updates
+        final Runnable updateDateState = () -> {
             boolean recurringSelected = recurringRadio.isSelected();
             boolean isDailyTask = false;
             if (taskIdParam != null && taskManager != null) {
@@ -215,8 +192,8 @@ public class ReminderEditDialog extends JDialog {
             yearBox.setEnabled(!disableDate);
             monthBox.setEnabled(!disableDate);
             dayBox.setEnabled(!disableDate);
-            // If task is a daily task, disallow recurring selection as well
-            daySelector.setEnabled(!isDailyTask && recurringRadio.isEnabled());
+            // The selector should be active only when recurring is selected (not merely enabled)
+            daySelector.setEnabled(!isDailyTask && recurringSelected);
             // Ensure UI radio availability for daily tasks
             if (isDailyTask) {
                 recurringRadio.setEnabled(false);
@@ -225,6 +202,31 @@ public class ReminderEditDialog extends JDialog {
                 recurringRadio.setEnabled(true);
             }
         };
+
+        // Forward clicks on the scroller's viewport to the day selector so clicks work when scrolled
+        dayScroller.getViewport().addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                java.awt.Point viewPos = dayScroller.getViewport().getViewPosition();
+                int relX = e.getX() + viewPos.x;
+                int relY = e.getY() + viewPos.y;
+                daySelector.clickAt(relX, relY);
+                // ensure recurring radio is selected when user clicks days
+                if (daySelector.getSelectedDaysBitmask() != 0) {
+                    recurringRadio.setSelected(true);
+                }
+                // Update dependent UI state (enable/disable date fields and selector)
+                try { updateDateState.run(); } catch (Exception ignore) {}
+            }
+        });
+        main.add(dayScroller);
+
+        if (existingReminder != null && existingReminder.isRecurring()) {
+            daySelector.setSelectedDaysBitmask(existingReminder.getDaysBitmask());
+            recurringRadio.setSelected(true);
+        } else {
+            dateRadio.setSelected(true);
+        }
         // update on changes: radio clicks and day selector clicks
         dateRadio.addActionListener(e -> updateDateState.run());
         recurringRadio.addActionListener(e -> updateDateState.run());
