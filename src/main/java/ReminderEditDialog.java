@@ -71,6 +71,8 @@ public class ReminderEditDialog extends JDialog {
         initializeDialog();
         initializeUI();
         pack();
+        // Ensure minimum size so controls don't overlap and allow resizing
+        setMinimumSize(new java.awt.Dimension(640, 420));
         setLocationRelativeTo(null);
     }
 
@@ -78,7 +80,7 @@ public class ReminderEditDialog extends JDialog {
         setTitle(existingReminder == null ? "Add Reminder for " + checklistName : "Edit Reminder for " + checklistName);
         setModal(true);
         setLayout(new BorderLayout());
-        setResizable(false);
+        setResizable(true);
         // Force repaint/revalidate when the dialog is moved across screens (multi-monitor DPI issues)
         addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
@@ -142,7 +144,7 @@ public class ReminderEditDialog extends JDialog {
         addPresetSection(panel, gbc);
 
         // Explicit choice: Date-specific vs Recurring
-        gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 2;
         JPanel choicePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         dateRadio = new JRadioButton("Date-specific (one-time)");
         dateRadio.setToolTipText("Send a one-time reminder on the chosen date");
@@ -156,12 +158,12 @@ public class ReminderEditDialog extends JDialog {
         panel.add(choicePanel, gbc);
 
         // Recurrence (weekly days) selector
-        gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 9; gbc.gridwidth = 2;
         JLabel repeatLabel = new JLabel("Repeat (weekly):");
         repeatLabel.setFont(repeatLabel.getFont().deriveFont(Font.BOLD));
         panel.add(repeatLabel, gbc);
 
-        gbc.gridy = 9; gbc.gridwidth = 2;
+        gbc.gridy = 10; gbc.gridwidth = 2;
         daySelector = new DaySelectorPanel();
         panel.add(daySelector, gbc);
         if (existingReminder != null && existingReminder.isRecurring()) {
