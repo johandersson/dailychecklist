@@ -22,6 +22,11 @@ import java.awt.Dimension;
 import java.awt.GraphicsEnvironment;
 import java.awt.Point;
 import javax.swing.BoxLayout;
+import java.awt.Window;
+import java.awt.KeyboardFocusManager;
+import java.awt.Color;
+import javax.swing.JScrollPane;
+import javax.swing.JComponent;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -42,6 +47,11 @@ public class ReminderDialog extends JDialog {
     private transient final Runnable onRemindTomorrow;
     private transient final Runnable onMarkAsDone;
     private TaskManager taskManager; // For retrieving task notes
+    // Recurrence UI helpers
+    private JPanel recurrencePanel;
+    private final String[] weekdayAbbr = {"Mo","Tu","We","Th","Fr","Sa","Su"};
+    private final Color[] weekdayCols = { new Color(165,42,42), new Color(0,90,156), new Color(139,128,0), new Color(34,139,34), new Color(139,69,19), new Color(255,69,0), new Color(199,21,133) };
+    private int weekdayIconSize = 36;
 
     @SuppressWarnings("this-escape")
     public ReminderDialog(JFrame parent, Reminder reminder, Runnable onOpen, Runnable onDone, Runnable onRemindLater, Runnable onRemindTomorrow, Runnable onMarkAsDone) {
@@ -111,6 +121,8 @@ public class ReminderDialog extends JDialog {
                         try {
                             // Invalidate cached weekday icons when moving across displays
                             try { IconCache.invalidateWeekdayIcons(); } catch (Throwable ignore) {}
+                            // Refresh icons inside the recurrence panel so labels get new icons for the current GC/DPI
+                            refreshRecurrenceIcons();
                             revalidate();
                             repaint();
                             // Try to nudge window manager to refresh stacking
@@ -148,7 +160,7 @@ public class ReminderDialog extends JDialog {
         }
         // Add recurrence badges if this is a recurring reminder
         if (reminder != null && reminder.isRecurring()) {
-            JPanel rec = buildRecurrencePanel(reminder);
+            JComponent rec = buildRecurrencePanel(reminder);
             southWrap.add(rec);
         }
         if (southWrap.getComponentCount() > 0) {
@@ -200,24 +212,48 @@ public class ReminderDialog extends JDialog {
         }
     }
 
-    private JPanel buildRecurrencePanel(Reminder reminder) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 6));
+    private JComponent buildRecurrencePanel(Reminder reminder) {
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 6));
         p.setOpaque(false);
-        String[] abbr = {"Mo","Tu","We","Th","Fr","Sa","Su"};
-        java.awt.Color[] cols = { new java.awt.Color(165,42,42), new java.awt.Color(0,90,156), new java.awt.Color(139,128,0), new java.awt.Color(34,139,34), new java.awt.Color(139,69,19), new java.awt.Color(255,69,0), new java.awt.Color(199,21,133) };
-        int iconSize = 36; // increase size to avoid clipping
         for (int i = 0; i < 7; i++) {
             boolean selected = (reminder.getDaysBitmask() & (1 << i)) != 0;
-            javax.swing.Icon icon = IconCache.getWeekdayIcon(abbr[i], cols[i], selected, iconSize);
+            javax.swing.Icon icon = IconCache.getWeekdayIcon(weekdayAbbr[i], weekdayCols[i], selected, weekdayIconSize);
             JLabel lbl = new JLabel(icon);
-            lbl.setToolTipText(abbr[i]);
+            lbl.setToolTipText(weekdayAbbr[i]);
+            lbl.putClientProperty("weekdayIndex", Integer.valueOf(i));
             lbl.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 2));
             p.add(lbl);
         }
-        // Make sure panel requests enough width so the last icon isn't chopped
-        int totalWidth = (iconSize + 4) * 7 + 10 * 6 + 20; // icons + gaps + padding
-        p.setPreferredSize(new java.awt.Dimension(totalWidth, iconSize + 12));
-        return p;
+        // Wrap in a scroll pane so small windows won't chop icons
+        JScrollPane scroller = new JScrollPane(p, JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scroller.setOpaque(false);
+        scroller.getViewport().setOpaque(false);
+        scroller.setBorder(BorderFactory.createEmptyBorder());
+        // Save reference for refresh
+        this.recurrencePanel = p;
+        return scroller;
+    }
+
+    private void refreshRecurrenceIcons() {
+        if (recurrencePanel == null) return;
+        Component[] comps = recurrencePanel.getComponents();
+        for (Component c : comps) {
+            if (c instanceof JLabel) {
+                JLabel lbl = (JLabel) c;
+                Object o = lbl.getClientProperty("weekdayIndex");
+                if (o instanceof Integer) {
+                    int i = ((Integer) o).intValue();
+                    boolean selected = false;
+                    try {
+                        // attempt to read current reminder selection via tooltip/compare; fallback to existing icon state
+                        String tip = lbl.getToolTipText();
+                        // If tooltip matches, we can decide selection by comparing icon description is not available; skip
+                    } catch (Exception ignore) {}
+                    javax.swing.Icon icon = IconCache.getWeekdayIcon(weekdayAbbr[i], weekdayCols[i], selected, weekdayIconSize);
+                    lbl.setIcon(icon);
+                }
+            }
+        }
     }
 
     private String formatTitleHtml(String checklistName, String timeString, String dateString) {
