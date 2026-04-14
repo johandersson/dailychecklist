@@ -192,22 +192,12 @@ public class ReminderEditDialog extends JDialog {
             yearBox.setEnabled(!disableDate);
             monthBox.setEnabled(!disableDate);
             dayBox.setEnabled(!disableDate);
-            // The selector should be active only when recurring is selected (not merely enabled)
-            daySelector.setEnabled(!isDailyTask && recurringSelected);
-            // Ensure UI radio availability for daily tasks
-            if (isDailyTask) {
-                // If editing an existing recurring reminder that targets a daily task,
-                // keep the recurring radio enabled so the user can view/change its days,
-                // but prevent creating a new recurring reminder for daily tasks.
-                if (existingReminder != null && existingReminder.isRecurring()) {
-                    recurringRadio.setEnabled(true);
-                } else {
-                    recurringRadio.setEnabled(false);
-                    dateRadio.setSelected(true);
-                }
-            } else {
-                recurringRadio.setEnabled(true);
-            }
+            // The selector should be active when recurring is selected.
+            // Allow recurring selection for daily tasks as well.
+            daySelector.setEnabled(recurringSelected);
+            // Always allow toggling between Date and Recurring unless there is
+            // an explicit reason to lock the radios elsewhere.
+            recurringRadio.setEnabled(true);
         };
 
         // Forward clicks on the scroller's viewport to the day selector so clicks work when scrolled
@@ -490,12 +480,15 @@ public class ReminderEditDialog extends JDialog {
         }
 
         Reminder newReminder;
-        if (isDailyTask) {
+        if (isDailyTask && daysMask == 0) {
+            // No weekdays selected: keep daily behavior and force date to today
             java.time.LocalDate today = java.time.LocalDate.now();
             newReminder = new Reminder(checklistName, today.getYear(), today.getMonthValue(), today.getDayOfMonth(), hour, minute, taskIdParam);
         } else if (daysMask != 0) {
+            // Weekday(s) chosen: create a recurring weekly reminder even for daily tasks
             newReminder = new Reminder(checklistName, daysMask, hour, minute, taskIdParam);
         } else {
+            // Explicit date selected (non-daily task)
             newReminder = new Reminder(checklistName, year, month, day, hour, minute, taskIdParam);
         }
         taskManager.addReminder(newReminder);
@@ -514,10 +507,12 @@ public class ReminderEditDialog extends JDialog {
         }
 
         Reminder newReminder;
-        if (isDailyTask) {
+        if (isDailyTask && daysMask == 0) {
+            // Preserve daily behavior when no weekdays chosen
             java.time.LocalDate today = java.time.LocalDate.now();
             newReminder = new Reminder(checklistName, today.getYear(), today.getMonthValue(), today.getDayOfMonth(), hour, minute, taskIdToUse);
         } else if (daysMask != 0) {
+            // If weekdays selected, convert to recurring reminder
             newReminder = new Reminder(checklistName, daysMask, hour, minute, taskIdToUse);
         } else {
             newReminder = new Reminder(checklistName, year, month, day, hour, minute, taskIdToUse);
