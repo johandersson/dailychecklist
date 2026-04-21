@@ -64,11 +64,24 @@ public final class ApplicationConfiguration {
 
     // File paths
     public static final String USER_HOME = System.getProperty("user.home");
-    public static final String APPLICATION_DATA_DIR = USER_HOME + File.separator + ".dailychecklist";
-    public static final String BACKUP_DIRECTORY = USER_HOME + File.separator + BACKUP_DIRECTORY_NAME;
-    public static final String SETTINGS_FILE_PATH = USER_HOME + File.separator + ".dailychecklist" + File.separator + SETTINGS_FILE_NAME;
-    public static final String REMINDERS_FILE_PATH = USER_HOME + File.separator + ".dailychecklist" + File.separator + REMINDERS_FILE_NAME;
-    public static final String CHECKLIST_NAMES_FILE_PATH = USER_HOME + File.separator + ".dailychecklist" + File.separator + CHECKLIST_NAMES_FILE_NAME;
+    public static final String APPLICATION_DATA_DIR;
+    public static final String BACKUP_DIRECTORY;
+    public static final String SETTINGS_FILE_PATH;
+    public static final String REMINDERS_FILE_PATH;
+    public static final String CHECKLIST_NAMES_FILE_PATH;
+
+    static {
+        String configured = System.getProperty("dailychecklist.data.dir");
+        if (configured != null && !configured.isEmpty()) {
+            APPLICATION_DATA_DIR = configured;
+        } else {
+            APPLICATION_DATA_DIR = USER_HOME + File.separator + ".dailychecklist";
+        }
+        BACKUP_DIRECTORY = APPLICATION_DATA_DIR + File.separator + BACKUP_DIRECTORY_NAME;
+        SETTINGS_FILE_PATH = APPLICATION_DATA_DIR + File.separator + SETTINGS_FILE_NAME;
+        REMINDERS_FILE_PATH = APPLICATION_DATA_DIR + File.separator + REMINDERS_FILE_NAME;
+        CHECKLIST_NAMES_FILE_PATH = APPLICATION_DATA_DIR + File.separator + CHECKLIST_NAMES_FILE_NAME;
+    }
 
     // XML Configuration
     public static final String XML_ROOT_ELEMENT = "tasks";

@@ -564,6 +564,7 @@ public class XMLTaskRepository implements TaskRepository {
                 rebuildMapsFromCachedTasks();
             }
             tasksCacheDirty = false;
+            lastModifiedTime = System.currentTimeMillis();
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -597,6 +598,7 @@ public class XMLTaskRepository implements TaskRepository {
             if (!replaced) cachedTasks.add(task);
             rebuildMapsFromCachedTasks();
             tasksCacheDirty = false;
+            lastModifiedTime = System.currentTimeMillis();
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -761,6 +763,7 @@ public class XMLTaskRepository implements TaskRepository {
             cachedTasks.removeIf(t -> t.getId().equals(task.getId()));
             rebuildMapsFromCachedTasks();
             tasksCacheDirty = false;
+            lastModifiedTime = System.currentTimeMillis();
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -839,6 +842,7 @@ public class XMLTaskRepository implements TaskRepository {
                 cachedTasks = new ArrayList<>(tasks);
                 rebuildMapsFromCachedTasks();
                 tasksCacheDirty = false;
+                lastModifiedTime = System.currentTimeMillis();
             } finally {
                 rwLock.writeLock().unlock();
             }

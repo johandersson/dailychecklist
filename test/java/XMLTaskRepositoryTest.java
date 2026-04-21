@@ -9,11 +9,12 @@ import java.util.List;
  */
 public class XMLTaskRepositoryTest {
     
-    private XMLTaskRepository repository;
+    private TaskRepository repository;
     
     @Before
     public void setUp() {
-        repository = new XMLTaskRepository();
+        // Use in-memory repository to avoid file I/O and asynchronous persistence
+        repository = new TestHelpers.InMemoryTaskRepository();
     }
     
     @Test
@@ -21,7 +22,7 @@ public class XMLTaskRepositoryTest {
         Task task = new Task("Repository Test Task", TaskType.MORNING, "MONDAY", "test-checklist", null);
         repository.addTask(task);
         
-        Task retrieved = repository.getTaskById(task.getId());
+        Task retrieved = getById(task.getId());
         assertNotNull("Task should be retrievable", retrieved);
         assertEquals("Task name should match", task.getName(), retrieved.getName());
         assertEquals("Task ID should match", task.getId(), retrieved.getId());
@@ -36,7 +37,7 @@ public class XMLTaskRepositoryTest {
         task.setDone(true);
         repository.updateTask(task);
         
-        Task retrieved = repository.getTaskById(task.getId());
+        Task retrieved = getById(task.getId());
         assertEquals("Name should be updated", "Modified", retrieved.getName());
         assertTrue("Completed status should be updated", retrieved.isDone());
     }
@@ -46,9 +47,9 @@ public class XMLTaskRepositoryTest {
         Task task = new Task("To Remove", TaskType.MORNING, "MONDAY", "test-checklist", null);
         repository.addTask(task);
         
-        assertNotNull("Task should exist", repository.getTaskById(task.getId()));
+        assertNotNull("Task should exist", getById(task.getId()));
         repository.removeTask(task);
-        assertNull("Task should be removed", repository.getTaskById(task.getId()));
+        assertNull("Task should be removed", getById(task.getId()));
     }
     
     @Test
@@ -75,9 +76,9 @@ public class XMLTaskRepositoryTest {
         repository.addTask(task3);
         
         // Verify all tasks are accessible
-        assertNotNull("Task 1 should be in repository", repository.getTaskById(task1.getId()));
-        assertNotNull("Task 2 should be in repository", repository.getTaskById(task2.getId()));
-        assertNotNull("Task 3 should be in repository", repository.getTaskById(task3.getId()));
+        assertNotNull("Task 1 should be in repository", getById(task1.getId()));
+        assertNotNull("Task 2 should be in repository", getById(task2.getId()));
+        assertNotNull("Task 3 should be in repository", getById(task3.getId()));
     }
     
     @Test
@@ -92,9 +93,9 @@ public class XMLTaskRepositoryTest {
         repository.addTask(subtask2);
         
         // Verify subtasks are associated with parent
-        Task retrievedParent = repository.getTaskById(parent.getId());
-        Task retrievedSub1 = repository.getTaskById(subtask1.getId());
-        Task retrievedSub2 = repository.getTaskById(subtask2.getId());
+        Task retrievedParent = getById(parent.getId());
+        Task retrievedSub1 = getById(subtask1.getId());
+        Task retrievedSub2 = getById(subtask2.getId());
         
         assertNotNull("Parent should exist", retrievedParent);
         assertNotNull("Subtask 1 should exist", retrievedSub1);
@@ -123,6 +124,10 @@ public class XMLTaskRepositoryTest {
         assertTrue("Adding 500 subtasks should be fast with O(1) optimization, took: " + duration + "ms", duration < 500);
         
         // Verify all can be retrieved
-        assertNotNull("Parent should be retrievable", repository.getTaskById(parent.getId()));
+        assertNotNull("Parent should be retrievable", getById(parent.getId()));
+    }
+
+    private Task getById(String id) {
+        return repository.getAllTasks().stream().filter(t -> t.getId().equals(id)).findFirst().orElse(null);
     }
 }

@@ -9,7 +9,7 @@ echo.
 REM Define library versions
 set JUNIT_VERSION=4.13.2
 set HAMCREST_VERSION=1.3
-set JACOCO_VERSION=0.8.11
+set JACOCO_VERSION=0.8.13
 
 REM Define library files
 set JUNIT_JAR=junit-%JUNIT_VERSION%.jar

@@ -94,7 +94,8 @@ public class TaskManager {
     }
 
     public Task getTaskById(String id) {
-        if (repository instanceof XMLTaskRepository xmlRepo) {
+        if (repository instanceof XMLTaskRepository) {
+            XMLTaskRepository xmlRepo = (XMLTaskRepository) repository;
             return xmlRepo.getTaskById(id);
         }
         // Fallback: linear search
@@ -163,7 +164,8 @@ public class TaskManager {
      * visible to other panels without waiting for the coalescer.
      */
     public void updateTaskImmediate(Task task) {
-        if (repository instanceof XMLTaskRepository xmlRepo) {
+        if (repository instanceof XMLTaskRepository) {
+            XMLTaskRepository xmlRepo = (XMLTaskRepository) repository;
             java.util.List<Task> single = new java.util.ArrayList<>();
             single.add(task);
             xmlRepo.updateTasks(single);
@@ -179,7 +181,8 @@ public class TaskManager {
      * Returns true if successful, false if failed.
      */
     public boolean updateTaskQuiet(Task task) {
-        if (repository instanceof XMLTaskRepository xmlRepo) {
+        if (repository instanceof XMLTaskRepository) {
+            XMLTaskRepository xmlRepo = (XMLTaskRepository) repository;
             return xmlRepo.updateTaskQuiet(task);
         }
         // Fallback for other repository types
@@ -196,7 +199,8 @@ public class TaskManager {
      * Returns true if successful.
      */
     public boolean updateTasksQuiet(java.util.List<Task> tasks) {
-        if (repository instanceof XMLTaskRepository xmlRepo) {
+        if (repository instanceof XMLTaskRepository) {
+            XMLTaskRepository xmlRepo = (XMLTaskRepository) repository;
             return xmlRepo.updateTasksQuiet(tasks);
         }
         try {
@@ -211,7 +215,8 @@ public class TaskManager {
      * Atomically updates multiple tasks and notifies listeners.
      */
     public void updateTasks(java.util.List<Task> tasks) {
-        if (repository instanceof XMLTaskRepository xmlRepo) {
+        if (repository instanceof XMLTaskRepository) {
+            XMLTaskRepository xmlRepo = (XMLTaskRepository) repository;
             // Preserve checklistId for tasks where incoming checklistId is null
             if (tasks != null) {
                 for (Task t : tasks) {
@@ -264,7 +269,8 @@ public class TaskManager {
 
     public List<Task> getTasks(TaskType type, Checklist checklist) {
         // Use optimized method if available
-        if (repository instanceof XMLTaskRepository xmlRepo) {
+        if (repository instanceof XMLTaskRepository) {
+            XMLTaskRepository xmlRepo = (XMLTaskRepository) repository;
             return xmlRepo.getTasks(type, checklist);
         }
         // Fallback: linear search
@@ -439,7 +445,8 @@ public class TaskManager {
      * Manually creates a backup of all data.
      */
     public void createManualBackup() {
-        if (repository instanceof XMLTaskRepository xmlRepo) {
+        if (repository instanceof XMLTaskRepository) {
+            XMLTaskRepository xmlRepo = (XMLTaskRepository) repository;
             xmlRepo.createManualBackup();
         }
     }

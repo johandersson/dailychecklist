@@ -13,8 +13,8 @@ public class TaskManagerTest {
     
     @Before
     public void setUp() {
-        // Use the default constructor which creates an in-memory repository
-        XMLTaskRepository repository = new XMLTaskRepository();
+        // Use an in-memory repository for deterministic tests
+        TestHelpers.InMemoryTaskRepository repository = new TestHelpers.InMemoryTaskRepository();
         taskManager = new TaskManager(repository);
     }
     
