@@ -297,7 +297,12 @@ public class DailyChecklist {
             t.setDoneDate(new Date(System.currentTimeMillis()));
             checklistManager.updateTask(t);
         }
-        checklistManager.removeReminder(reminder);
+        // For recurring reminders, do NOT remove the recurring schedule when marking as done.
+        // Marking as done should only apply to today's occurrence (the task is marked done),
+        // but the reminder should remain for future occurrences.
+        if (!reminder.isRecurring()) {
+            checklistManager.removeReminder(reminder);
+        }
         checklistPanel.updateTasks();
         customChecklistsOverviewPanel.updateTasks();
         if (frame != null) {
@@ -309,7 +314,10 @@ public class DailyChecklist {
 
     private void markChecklistDoneAndFocus(Reminder reminder) {
         String checklistName = reminder.getChecklistName();
-        removeRemindersForChecklist(checklistName);
+        // Do not remove recurring checklist-level reminders when marking as done for today.
+        if (checklistName != null && !reminder.isRecurring()) {
+            removeRemindersForChecklist(checklistName);
+        }
         if (checklistName == null || checklistName.trim().isEmpty()) return;
 
         Checklist checklist = findChecklistByName(checklistName);

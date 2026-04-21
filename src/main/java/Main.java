@@ -23,10 +23,11 @@ public class Main {
     private static DailyChecklist checklist;
 
     public static void main(String[] args) {
-        // Start the application
-        SwingUtilities.invokeLater(() -> {
-            startApplication();
-        });
+        // Install global exception handlers (EDT + other threads) before anything else
+        GlobalExceptionHandler.install();
+
+        // Start the application on the EDT
+        SwingUtilities.invokeLater(() -> startApplication());
     }
 
     private static void startApplication() {

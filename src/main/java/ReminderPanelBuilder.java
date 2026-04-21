@@ -56,12 +56,34 @@ public final class ReminderPanelBuilder {
 
     private static ReminderClockIcon.State computeState(Reminder r) {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime remTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
-        if (remTime.isBefore(now)) {
-            return Duration.between(remTime, now).toHours() > 1 ? ReminderClockIcon.State.VERY_OVERDUE : ReminderClockIcon.State.OVERDUE;
-        } else if (remTime.isBefore(now.plusMinutes(60))) {
-            return ReminderClockIcon.State.DUE_SOON;
-        } else {
+        LocalDateTime remTime = null;
+        try {
+            if (r.isRecurring()) {
+                // find next occurrence within 7 days
+                for (int offset = 0; offset < 7; offset++) {
+                    java.time.LocalDate date = now.toLocalDate().plusDays(offset);
+                    int dow = date.getDayOfWeek().getValue(); // 1=Mon..7=Sun
+                    if ((r.getDaysBitmask() & (1 << (dow - 1))) != 0) {
+                        remTime = date.atTime(r.getHour(), r.getMinute());
+                        break;
+                    }
+                }
+                if (remTime == null) {
+                    remTime = now.plusDays(7).withHour(r.getHour()).withMinute(r.getMinute());
+                }
+            } else {
+                remTime = LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+            }
+
+            if (remTime.isBefore(now)) {
+                return Duration.between(remTime, now).toHours() > 1 ? ReminderClockIcon.State.VERY_OVERDUE : ReminderClockIcon.State.OVERDUE;
+            } else if (remTime.isBefore(now.plusMinutes(60))) {
+                return ReminderClockIcon.State.DUE_SOON;
+            } else {
+                return ReminderClockIcon.State.FUTURE;
+            }
+        } catch (Exception ex) {
+            // On any parsing/invalid date issue, fallback to FUTURE
             return ReminderClockIcon.State.FUTURE;
         }
     }
@@ -80,7 +102,21 @@ public final class ReminderPanelBuilder {
     }
 
     private static String tooltipFor(Reminder r) {
-        String tip = String.format("Reminder: %04d-%02d-%02d %02d:%02d", r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+        String tip;
+        if (r.isRecurring()) {
+            // Build weekday list
+            String[] names = {"Mon","Tue","Wed","Thu","Fri","Sat","Sun"};
+            StringBuilder days = new StringBuilder();
+            for (int i = 0; i < 7; i++) {
+                if ((r.getDaysBitmask() & (1 << i)) != 0) {
+                    if (days.length() > 0) days.append(',');
+                    days.append(names[i]);
+                }
+            }
+            tip = String.format("Recurring: %s at %02d:%02d", days.length() == 0 ? "(every day)" : days.toString(), r.getHour(), r.getMinute());
+        } else {
+            tip = String.format("Reminder: %04d-%02d-%02d %02d:%02d", r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+        }
         return "<html><p style='font-family:Arial,sans-serif;font-size:11px;margin:0;'>" + tip + "</p></html>";
     }
 

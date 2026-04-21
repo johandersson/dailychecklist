@@ -83,7 +83,8 @@ public class ReminderDialog extends JDialog {
         }
 
         String timeString = String.format("%02d:%02d", reminder.getHour(), reminder.getMinute());
-        String dateString = String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
+        // For recurring reminders year/month/day are 0; don't show an invalid date in the dialog
+        String dateString = reminder.isRecurring() ? null : String.format("%04d-%02d-%02d", reminder.getYear(), reminder.getMonth(), reminder.getDay());
 
         JPanel topPanel = buildTopPanel(checklistName, breadcrumbText, timeString, dateString, reminder);
         JLabel messageLabel = buildMessageLabel();
@@ -260,9 +261,10 @@ public class ReminderDialog extends JDialog {
     }
 
     private String formatTitleHtml(String checklistName, String timeString, String dateString) {
+        String datePart = (dateString == null || dateString.trim().isEmpty()) ? "" : " on " + dateString;
         return "<html><div style='text-align:center;padding:6px;'><h2 style='color: #2E86AB;margin:0 0 4px 0;font-size:16px;'>⏰ Reminder</h2>" +
                 "<div style='font-size:14px;font-weight:bold;color:#333;margin-bottom:4px;'>" + checklistName + "</div>" +
-                "<div style='color:#666;font-size:11px;'>Scheduled for: " + timeString + " on " + dateString + "</div></div></html>";
+                "<div style='color:#666;font-size:11px;'>Scheduled for: " + timeString + datePart + "</div></div></html>";
     }
 
     private JPanel buildNotePanel(Reminder reminder) {
