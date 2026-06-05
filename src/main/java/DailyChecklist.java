@@ -262,6 +262,11 @@ public class DailyChecklist {
 
     private Runnable handleReminderDismiss(Reminder reminder) {
         return () -> {
+            // For recurring reminders, do NOT delete — just leave in shownReminders
+            // so it won't fire again this session. It will reappear next session/day.
+            if (reminder.isRecurring()) {
+                return;
+            }
             if (reminder.getTaskId() != null) {
                 checklistManager.removeReminder(reminder);
             } else {
@@ -417,7 +422,12 @@ public class DailyChecklist {
             newTime.getMinute(),
             originalReminder.getTaskId()
         );
-        checklistManager.removeReminder(originalReminder);
+        // For recurring reminders, keep the recurring schedule intact.
+        // Just add a one-time snooze reminder — the recurring one is already
+        // in shownReminders so it won't fire again this session.
+        if (!originalReminder.isRecurring()) {
+            checklistManager.removeReminder(originalReminder);
+        }
         checklistManager.addReminder(newReminder);
     }
 
@@ -425,6 +435,12 @@ public class DailyChecklist {
      * Reschedules a reminder to occur tomorrow at the same time.
      */
     private void rescheduleReminderTomorrow(Reminder originalReminder) {
+        // For recurring reminders, do NOT delete the recurring schedule.
+        // The recurring one is already in shownReminders so it won't fire again today.
+        // It will naturally fire again on its next scheduled day.
+        if (originalReminder.isRecurring()) {
+            return;
+        }
         LocalDateTime tomorrow = LocalDateTime.now().plusDays(1);
         Reminder newReminder = new Reminder(
             originalReminder.getChecklistName(),
