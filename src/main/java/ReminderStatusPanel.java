@@ -49,12 +49,28 @@ public class ReminderStatusPanel extends JPanel {
 
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         java.time.LocalDateTime remTime = ReminderSelector.reminderDateTime(display);
+        if (remTime == null) {
+            remTime = now;
+        }
         ReminderClockIcon.State state = remTime.isBefore(now)
                 ? (java.time.Duration.between(remTime, now).toHours() > 1 ? ReminderClockIcon.State.VERY_OVERDUE : ReminderClockIcon.State.OVERDUE)
                 : (remTime.isBefore(now.plusMinutes(60)) ? ReminderClockIcon.State.DUE_SOON : ReminderClockIcon.State.FUTURE);
 
         javax.swing.Icon icon = IconCache.getReminderClockIcon(display.getHour(), display.getMinute(), state, false);
-        String text = String.format("%04d-%02d-%02d %02d:%02d", display.getYear(), display.getMonth(), display.getDay(), display.getHour(), display.getMinute());
+        String text;
+        if (display.isRecurring()) {
+            String[] names = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+            StringBuilder days = new StringBuilder();
+            for (int i = 0; i < 7; i++) {
+                if ((display.getDaysBitmask() & (1 << i)) != 0) {
+                    if (days.length() > 0) days.append(',');
+                    days.append(names[i]);
+                }
+            }
+            text = String.format("Recurring: %s %02d:%02d", days.length() == 0 ? "(every day)" : days.toString(), display.getHour(), display.getMinute());
+        } else {
+            text = String.format("%04d-%02d-%02d %02d:%02d", display.getYear(), display.getMonth(), display.getDay(), display.getHour(), display.getMinute());
+        }
 
         javax.swing.JPanel small = new javax.swing.JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         small.setOpaque(false);

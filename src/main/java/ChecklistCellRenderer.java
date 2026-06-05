@@ -119,7 +119,8 @@ public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
         long bestDiff = Long.MAX_VALUE;
         for (Reminder r : reminders) {
             if (!java.util.Objects.equals(r.getChecklistName(), checklistName)) continue;
-            java.time.LocalDateTime dt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+            java.time.LocalDateTime dt = ReminderSelector.reminderDateTime(r);
+            if (dt == null) continue;
             long diff = Math.abs(java.time.Duration.between(now, dt).toMinutes());
             if (diff < bestDiff) {
                 bestDiff = diff;
@@ -131,7 +132,8 @@ public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
 
     private ReminderClockIcon.State computeState(Reminder r) {
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        java.time.LocalDateTime dt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+        java.time.LocalDateTime dt = ReminderSelector.reminderDateTime(r);
+        if (dt == null) return ReminderClockIcon.State.FUTURE;
         if (dt.isBefore(now)) {
             long minutesOverdue = java.time.Duration.between(dt, now).toMinutes();
             if (minutesOverdue > 60) return ReminderClockIcon.State.VERY_OVERDUE;

@@ -14,11 +14,8 @@ public final class GlobalExceptionHandler {
         // Handler for non-EDT threads
         Thread.setDefaultUncaughtExceptionHandler((thread, t) -> {
             DebugLog.d("Uncaught exception in thread %s: %s", thread.getName(), t.toString());
-            // Ensure dialog is shown on EDT
             try {
-                SwingUtilities.invokeLater(() -> {
-                    HtmlErrorDialog.showHtmlError(null, buildStartupMessage(thread.getName()), t);
-                });
+                HtmlErrorDialog.showHtmlError(null, buildStartupMessage(thread.getName()), t);
             } catch (Throwable showEx) {
                 // As a last resort, print to stderr
                 System.err.println("Failed to show error dialog: " + showEx.getMessage());

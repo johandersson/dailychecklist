@@ -150,6 +150,75 @@
 		<li><b>Future</b> — scheduled more than 60 minutes away.</li>
 	</ul>
 
+	<h2>Manifesto-Style Checklist Guide</h2>
+	<p><b>Copyright note:</b> The Checklist Manifesto is copyrighted by its author and publisher. The text below is an original, app-specific summary inspired by those ideas, not a reproduction of the book.</p>
+	<p><b>Non-endorsement note:</b> This program is not endorsed, sponsored, approved, or affiliated in any way with the author of The Checklist Manifesto.</p>
+	<p><b>Open source note:</b> Daily Checklist is open source software released under the GPL, so you are welcome to use, study, modify, and share it within the terms of that license.</p>
+	<p><b>Core idea:</b> Create short, essential, structured checklists using tasks, subtasks, and headings. Focus on preventing mistakes, not documenting everything.</p>
+
+	<h3>1. Define the checklist's purpose</h3>
+	<p>Each checklist should solve one repeatable problem such as a morning routine, project startup, or shutdown sequence. Use a clear checklist name so its intent is obvious.</p>
+
+	<h3>2. List only the critical steps</h3>
+	<p>Gawande's rule: include only what people forget.</p>
+	<ul>
+		<li>Use <b>tasks</b> for the must-do steps</li>
+		<li>Keep names short</li>
+		<li>Avoid unnecessary detail</li>
+	</ul>
+
+	<h3>3. Structure with headings</h3>
+	<p>Daily Checklist supports headings using <code>#</code>. Use them to create flow:</p>
+	<pre>#Preparation
+#Execution
+#Wrap-Up</pre>
+	<p>This mirrors the manifesto's emphasis on process phases.</p>
+
+	<h3>4. Choose checklist type (READ-DO or DO-CONFIRM)</h3>
+	<p>Add headings to signal how the checklist should be used:</p>
+	<pre>#READ-DO
+#DO-CONFIRM</pre>
+	<p>READ-DO = follow step by step<br>DO-CONFIRM = verify after doing the work</p>
+
+	<h3>5. Use subtasks for clarity</h3>
+	<p>Daily Checklist supports <b>one level</b> of subtasks. Use them when a task has 2-10 small checks:</p>
+	<pre>Verify environment
+	OS version
+	Security patches
+	Network config</pre>
+	<p>This keeps the main list clean while ensuring nothing is skipped.</p>
+
+	<h3>6. Keep it short</h3>
+	<p>Long checklists fail. Aim for <b>5-9 tasks per section</b>. Use headings and subtasks to avoid clutter.</p>
+
+	<h3>7. Add review/communication steps</h3>
+	<p>Even solo users benefit from pause points:</p>
+	<ul>
+		<li>Review plan</li>
+		<li>Check risks</li>
+		<li>Confirm priorities</li>
+	</ul>
+	<p>These match the manifesto's emphasis on coordination and reflection.</p>
+
+	<h3>8. Refine regularly</h3>
+	<p>Daily Checklist makes iteration easy: edit tasks, batch-update, reorder, simplify. Remove steps that do not add value.</p>
+
+	<h3>Example (ready for batch entry)</h3>
+	<pre>#Morning Startup (READ-DO)
+Open workspace
+	Turn on laptop
+	Open dashboard
+Review priorities
+	Calendar
+	Reminders
+	Top 3 tasks
+
+#Midday Check (DO-CONFIRM)
+Progress review
+	Morning tasks done?
+	Any blockers?
+Plan afternoon</pre>
+
 	<p>For more details see the <a href="https://github.com/yourrepo/dailychecklist">project repository</a> or the README.md.</p>
 
 	<p>Enjoy staying productive!</p>

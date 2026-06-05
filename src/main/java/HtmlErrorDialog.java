@@ -41,72 +41,88 @@ public class HtmlErrorDialog extends JDialog {
     }
 
     public static void showHtmlError(java.awt.Component parent, String htmlMessage, Throwable t) {
-        java.awt.Frame owner = parent instanceof java.awt.Frame frame ? frame : null;
-        HtmlErrorDialog d = new HtmlErrorDialog(owner, "Error - Daily Checklist");
+        Runnable show = () -> {
+            java.awt.Frame owner = parent instanceof java.awt.Frame frame ? frame : null;
+            HtmlErrorDialog d = new HtmlErrorDialog(owner, "Error - Daily Checklist");
 
-        JLabel html = new JLabel(htmlMessage);
-        html.setFont(FontManager.getTaskListFont());
+            JLabel html = new JLabel(htmlMessage);
+            html.setFont(FontManager.getTaskListFont());
 
-        JTextArea trace = new JTextArea();
-        trace.setEditable(false);
-        trace.setFont(FontManager.getSmallFont());
-        trace.setLineWrap(true);
-        trace.setWrapStyleWord(true);
-        if (t != null) {
-            StringWriter sw = new StringWriter();
-            t.printStackTrace(new PrintWriter(sw));
-            String stack = sw.toString();
-            trace.setText(stack);
-            trace.setCaretPosition(0);
-            // Also write the stack trace to the debug log file for offline diagnosis
-            DebugLog.d("Exception shown to user: %s", stack);
-        }
-
-        JScrollPane scroll = new JScrollPane(trace);
-        scroll.setPreferredSize(new Dimension(600, 240));
-        scroll.setVisible(false);
-
-        JPanel content = new JPanel(new BorderLayout());
-        content.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        content.add(html, BorderLayout.NORTH);
-        content.add(scroll, BorderLayout.CENTER);
-
-        JPanel btns = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        JButton details = new JButton("Show details");
-        details.setFont(FontManager.getButtonFont());
-        details.addActionListener((ActionEvent e) -> {
-            boolean showing = scroll.isVisible();
-            scroll.setVisible(!showing);
-            details.setText(showing ? "Show details" : "Hide details");
-            d.pack();
-        });
-        JButton copy = new JButton("Copy");
-        copy.setFont(FontManager.getButtonFont());
-        copy.setToolTipText("Copy error details to clipboard");
-        copy.addActionListener(e -> {
-            StringBuilder sb = new StringBuilder();
-            sb.append("Error\n");
-            // Strip HTML tags for clipboard
-            String plainMessage = htmlMessage.replaceAll("<[^>]*>", "").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
-            sb.append(plainMessage).append("\n\n");
+            JTextArea trace = new JTextArea();
+            trace.setEditable(false);
+            trace.setFont(FontManager.getSmallFont());
+            trace.setLineWrap(true);
+            trace.setWrapStyleWord(true);
             if (t != null) {
-                sb.append("Stack Trace:\n");
-                sb.append(trace.getText());
+                StringWriter sw = new StringWriter();
+                t.printStackTrace(new PrintWriter(sw));
+                String stack = sw.toString();
+                trace.setText(stack);
+                trace.setCaretPosition(0);
+                // Also write the stack trace to the debug log file for offline diagnosis
+                DebugLog.d("Exception shown to user: %s", stack);
             }
-            StringSelection selection = new StringSelection(sb.toString());
-            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
-        });
-        JButton close = new JButton("Close");
-        close.setFont(FontManager.getButtonFont());
-        close.addActionListener(e -> d.dispose());
-        btns.add(details);
-        btns.add(copy);
-        btns.add(close);
 
-        d.add(content, BorderLayout.CENTER);
-        d.add(btns, BorderLayout.SOUTH);
-        d.pack();
-        d.setLocationRelativeTo(parent);
-        d.setVisible(true);
+            JScrollPane scroll = new JScrollPane(trace);
+            scroll.setPreferredSize(new Dimension(600, 240));
+            boolean showDetailsByDefault = t != null;
+            scroll.setVisible(showDetailsByDefault);
+
+            JPanel content = new JPanel(new BorderLayout());
+            content.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+            content.add(html, BorderLayout.NORTH);
+            content.add(scroll, BorderLayout.CENTER);
+
+            JPanel btns = new JPanel(new FlowLayout(FlowLayout.CENTER));
+            JButton details = new JButton(showDetailsByDefault ? "Hide details" : "Show details");
+            details.setFont(FontManager.getButtonFont());
+            details.addActionListener((ActionEvent e) -> {
+                boolean showing = scroll.isVisible();
+                scroll.setVisible(!showing);
+                details.setText(showing ? "Show details" : "Hide details");
+                d.pack();
+            });
+            JButton copy = new JButton("Copy");
+            copy.setFont(FontManager.getButtonFont());
+            copy.setToolTipText("Copy error details to clipboard");
+            copy.addActionListener(e -> {
+                StringBuilder sb = new StringBuilder();
+                sb.append("Error\n");
+                // Strip HTML tags for clipboard
+                String plainMessage = htmlMessage.replaceAll("<[^>]*>", "").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
+                sb.append(plainMessage).append("\n\n");
+                if (t != null) {
+                    sb.append("Stack Trace:\n");
+                    sb.append(trace.getText());
+                }
+                StringSelection selection = new StringSelection(sb.toString());
+                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
+            });
+            JButton close = new JButton("Close");
+            close.setFont(FontManager.getButtonFont());
+            close.addActionListener(e -> d.dispose());
+            btns.add(details);
+            btns.add(copy);
+            btns.add(close);
+
+            d.add(content, BorderLayout.CENTER);
+            d.add(btns, BorderLayout.SOUTH);
+            d.pack();
+            d.setLocationRelativeTo(parent);
+            d.setVisible(true);
+        };
+
+        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+            show.run();
+        } else {
+            try {
+                javax.swing.SwingUtilities.invokeAndWait(show);
+            } catch (Exception ex) {
+                if (t != null) {
+                    t.printStackTrace();
+                }
+                ex.printStackTrace();
+            }
+        }
     }
 }

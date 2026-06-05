@@ -73,6 +73,29 @@ public final class ReminderSelector {
     }
 
     public static java.time.LocalDateTime reminderDateTime(Reminder r) {
-        return java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+        if (r == null) {
+            return null;
+        }
+        if (!r.isRecurring()) {
+            try {
+                return java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+            } catch (Exception ex) {
+                return null;
+            }
+        }
+
+        if (r.getDaysBitmask() == 0) {
+            return null;
+        }
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        for (int offset = 0; offset < 7; offset++) {
+            java.time.LocalDate date = now.toLocalDate().plusDays(offset);
+            int dow = date.getDayOfWeek().getValue();
+            if ((r.getDaysBitmask() & (1 << (dow - 1))) != 0) {
+                return date.atTime(r.getHour(), r.getMinute());
+            }
+        }
+        return null;
     }
 }

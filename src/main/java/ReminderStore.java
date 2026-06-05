@@ -99,7 +99,7 @@ public final class ReminderStore {
                         final String errorMsg = "Invalid reminder data in properties file (key: " + key + ", value: " + value + ")\\n\\n" +
                                 "This reminder will be skipped. If the reminder name contains commas, it will be fixed when you next add or remove a reminder.";
                         if (parentComponent != null) {
-                            javax.swing.SwingUtilities.invokeLater(() -> ErrorDialog.showError(parentComponent, errorMsg, e));
+                            ErrorDialog.showError(parentComponent, errorMsg, e);
                         }
                     }
                 }
@@ -170,7 +170,7 @@ public final class ReminderStore {
                         // Show error for this specific reminder but continue loading others
                         final String errorMsg = "Invalid reminder data in XML file (reminder #" + i + ")";
                         if (parentComponent != null) {
-                            javax.swing.SwingUtilities.invokeLater(() -> ErrorDialog.showError(parentComponent, errorMsg, e));
+                            ErrorDialog.showError(parentComponent, errorMsg, e);
                         }
                     }
                 }
@@ -186,7 +186,7 @@ public final class ReminderStore {
             // Show error dialog for other XML parsing errors
             final String errorMsg = "Failed to load reminders from XML file";
             if (parentComponent != null) {
-                javax.swing.SwingUtilities.invokeLater(() -> ErrorDialog.showError(parentComponent, errorMsg, e));
+                ErrorDialog.showError(parentComponent, errorMsg, e);
             }
         }
 

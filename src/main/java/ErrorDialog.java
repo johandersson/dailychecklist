@@ -80,6 +80,10 @@ public class ErrorDialog extends JDialog {
         JScrollPane scroll = new JScrollPane(trace);
         scroll.setPreferredSize(new Dimension(600, 240));
         scroll.setVisible(false);
+        if (t != null) {
+            trace.setVisible(true);
+            scroll.setVisible(true);
+        }
         content.add(scroll, BorderLayout.CENTER);
 
         // Buttons
@@ -127,10 +131,24 @@ public class ErrorDialog extends JDialog {
     }
 
     public static void showError(java.awt.Component parent, String message, Throwable t) {
-        java.awt.Frame owner = parent instanceof java.awt.Frame frame ? frame : null;
-        ErrorDialog d = new ErrorDialog(owner, "Error - Daily Checklist", message, t);
-        d.setLocationRelativeTo(parent);
-        d.setVisible(true);
+        Runnable show = () -> {
+            java.awt.Frame owner = parent instanceof java.awt.Frame frame ? frame : null;
+            ErrorDialog d = new ErrorDialog(owner, "Error - Daily Checklist", message, t);
+            d.setLocationRelativeTo(parent);
+            d.setVisible(true);
+        };
+        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+            show.run();
+        } else {
+            try {
+                javax.swing.SwingUtilities.invokeAndWait(show);
+            } catch (Exception ex) {
+                if (t != null) {
+                    t.printStackTrace();
+                }
+                ex.printStackTrace();
+            }
+        }
     }
 
     public static void showError(java.awt.Component parent, String message) {

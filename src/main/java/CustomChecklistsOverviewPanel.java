@@ -89,7 +89,8 @@ public class CustomChecklistsOverviewPanel extends JPanel {
                         long bestDiff = Long.MAX_VALUE;
                         for (Reminder r : reminders) {
                             if (!java.util.Objects.equals(r.getChecklistName(), c.getName())) continue;
-                            java.time.LocalDateTime dt = java.time.LocalDateTime.of(r.getYear(), r.getMonth(), r.getDay(), r.getHour(), r.getMinute());
+                            java.time.LocalDateTime dt = ReminderSelector.reminderDateTime(r);
+                            if (dt == null) continue;
                             long diff = Math.abs(java.time.Duration.between(now, dt).toMinutes());
                             if (diff < bestDiff) { bestDiff = diff; nearest = r; }
                         }
