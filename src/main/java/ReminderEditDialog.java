@@ -68,6 +68,8 @@ public class ReminderEditDialog extends JDialog {
         this.onSave = onSave;
         this.taskIdParam = taskIdParam;
 
+        setIconImage(IconCache.getAppIcon());
+
         initializeDialog();
         initializeUI();
         pack();

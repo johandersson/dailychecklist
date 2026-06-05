@@ -454,12 +454,14 @@ public class ChecklistPanel extends JPanel {
     }
 
     private JMenuItem createSetTaskReminderMenuItem(JList<Task> list, int index) {
-        JMenuItem setTaskReminderItem = new JMenuItem("Set task reminder");
+        Task task = list.getModel().getElementAt(index);
+        Reminder existing = taskManager.getReminders().stream()
+            .filter(r -> Objects.equals(r.getChecklistName(), checklist.getName()))
+            .filter(r -> Objects.equals(r.getTaskId(), task.getId()))
+            .findFirst().orElse(null);
+
+        JMenuItem setTaskReminderItem = new JMenuItem(existing != null ? "Edit reminder" : "Set reminder");
         setTaskReminderItem.addActionListener(event -> {
-            Task task = list.getModel().getElementAt(index);
-            Reminder existing = taskManager.getReminders().stream()
-                .filter(r -> Objects.equals(r.getTaskId(), task.getId()))
-                .findFirst().orElse(null);
             String checklistName = task.getType() == TaskType.MORNING ? "MORNING" : task.getType() == TaskType.EVENING ? "EVENING" : null;
             ReminderEditDialog dialog = new ReminderEditDialog(taskManager, checklistName, existing, () -> updateTasks(), task.getId());
             dialog.setVisible(true);

@@ -413,13 +413,14 @@ public class CustomChecklistPanel extends JPanel {
     }
 
     private JMenuItem createSetTaskReminderItem(JList<Task> list, int index) {
-        JMenuItem item = new JMenuItem("Set task reminder");
+        Task task = list.getModel().getElementAt(index);
+        Reminder existing = taskManager.getReminders().stream()
+            .filter(r -> Objects.equals(r.getChecklistName(), checklist.getName()))
+            .filter(r -> Objects.equals(r.getTaskId(), task.getId()))
+            .findFirst().orElse(null);
+
+        JMenuItem item = new JMenuItem(existing != null ? "Edit reminder" : "Set reminder");
         item.addActionListener(event -> {
-            Task task = list.getModel().getElementAt(index);
-            Reminder existing = taskManager.getReminders().stream()
-                .filter(r -> Objects.equals(r.getChecklistName(), checklist.getName()))
-                .filter(r -> Objects.equals(r.getTaskId(), task.getId()))
-                .findFirst().orElse(null);
             ReminderEditDialog dialog = new ReminderEditDialog(taskManager, checklist.getName(), existing, () -> {
                 if (updateAllPanels != null) updateAllPanels.run();
                 updateTasks();
