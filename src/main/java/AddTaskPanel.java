@@ -240,71 +240,74 @@ public class AddTaskPanel extends JPanel {
                 return;
             }
             
+            // Validate selection before processing any tasks
+            boolean hasSelection = checklistName != null ||
+                (addMorningRadioButton != null && addMorningRadioButton.isSelected()) ||
+                (addEveningRadioButton != null && addEveningRadioButton.isSelected());
+            if (!hasSelection) {
+                JOptionPane.showMessageDialog(this, "Please select Morning or Evening.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (weekdayComboBox != null && weekdayComboBox.isEnabled() && weekdayComboBox.getSelectedItem() == null) {
+                JOptionPane.showMessageDialog(this, "Please select a valid weekday.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // Determine task type
+            TaskType type;
+            if (checklistName != null) {
+                type = TaskType.CUSTOM;
+            } else if (addMorningRadioButton.isSelected()) {
+                type = TaskType.MORNING;
+            } else if (addEveningRadioButton.isSelected()) {
+                type = TaskType.EVENING;
+            } else {
+                JOptionPane.showMessageDialog(this, "Invalid selection.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            String selectedWeekday = (weekdayComboBox != null && weekdayComboBox.isEnabled() && type != TaskType.CUSTOM) ? (String) weekdayComboBox.getSelectedItem() : null;
+            
+            // Resolve checklist ID if needed
+            String checklistIdForTask = null;
+            if (checklistName != null) {
+                Checklist found = taskManager.getCustomChecklists().stream()
+                        .filter(c -> checklistName.equals(c.getName()))
+                        .findFirst()
+                        .orElse(null);
+                if (found != null) checklistIdForTask = found.getId();
+            }
+            
             java.util.List<Task> addedTasks = new java.util.ArrayList<>();
             Task lastParentTask = null;
+            // Track parents that already received a heading in this batch
+            java.util.Set<String> parentsWithHeading = new java.util.HashSet<>();
             
             for (String line : lines) {
                 if (line.trim().isEmpty()) {
                     continue; // Skip empty lines
                 }
                 
-                // Validate selection before processing any tasks
-                boolean hasSelection = checklistName != null ||
-                    (addMorningRadioButton != null && addMorningRadioButton.isSelected()) ||
-                    (addEveningRadioButton != null && addEveningRadioButton.isSelected());
-                if (!hasSelection) {
-                    JOptionPane.showMessageDialog(this, "Please select Morning or Evening.", "Validation Error", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-                if (weekdayComboBox != null && weekdayComboBox.isEnabled() && weekdayComboBox.getSelectedItem() == null) {
-                    JOptionPane.showMessageDialog(this, "Please select a valid weekday.", "Validation Error", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
+                // Detect indentation: tab or 2+ leading spaces
+                boolean isIndented = line.startsWith("\t") || line.startsWith("  ");
                 
-                // Determine task type
-                TaskType type;
-                if (checklistName != null) {
-                    type = TaskType.CUSTOM;
-                } else if (addMorningRadioButton.isSelected()) {
-                    type = TaskType.MORNING;
-                } else if (addEveningRadioButton.isSelected()) {
-                    type = TaskType.EVENING;
-                } else {
-                    JOptionPane.showMessageDialog(this, "Invalid selection.", "Error", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-                String selectedWeekday = (weekdayComboBox != null && weekdayComboBox.isEnabled() && type != TaskType.CUSTOM) ? (String) weekdayComboBox.getSelectedItem() : null;
-                
-                // Resolve checklist ID if needed
-                String checklistIdForTask = null;
-                if (checklistName != null) {
-                    Checklist found = taskManager.getCustomChecklists().stream()
-                            .filter(c -> checklistName.equals(c.getName()))
-                            .findFirst()
-                            .orElse(null);
-                    if (found != null) checklistIdForTask = found.getId();
-                }
-                
-                // Check if line starts with tab (subtask or heading)
-                if (line.startsWith("\t")) {
-                    String content = line.substring(1).trim(); // Remove tab and trim
+                if (isIndented) {
+                    // Strip leading whitespace (tabs or spaces)
+                    String content = line.replaceFirst("^[\\t ]+", "");
                     if (!content.isEmpty() && lastParentTask != null) {
                         // Check if it's a heading (starts with #)
                         if (content.startsWith("#")) {
                             String headingText = content.substring(1).trim();
                             if (!headingText.isEmpty()) {
-                                // Check if parent already has a heading
-                                boolean alreadyHasHeading = false;
-                                for (Task existingSubtask : taskManager.getSubtasks(lastParentTask.getId())) {
-                                    if (existingSubtask.getType() == TaskType.HEADING) {
-                                        alreadyHasHeading = true;
-                                        break;
-                                    }
+                                // Check if parent already has a heading (persisted or in this batch)
+                                boolean alreadyHasHeading = parentsWithHeading.contains(lastParentTask.getId());
+                                if (!alreadyHasHeading) {
+                                    alreadyHasHeading = hasHeadingForParent(lastParentTask.getId());
                                 }
                                 if (!alreadyHasHeading) {
                                     Task heading = new Task(headingText, TaskType.HEADING, null, checklistIdForTask, lastParentTask.getId());
                                     taskManager.addTask(heading);
                                     addedTasks.add(heading);
+                                    parentsWithHeading.add(lastParentTask.getId());
                                 }
                             }
                         } else {
@@ -315,13 +318,44 @@ public class AddTaskPanel extends JPanel {
                         }
                     }
                 } else {
-                    // Parent task (no tab indent)
-                    String taskName = line.trim();
-                    if (!taskName.isEmpty()) {
-                        Task newTask = new Task(taskName, type, selectedWeekday, checklistIdForTask);
+                    // Top-level line: check if it's a heading annotation for the NEXT task
+                    String trimmed = line.trim();
+                    if (trimmed.startsWith("#")) {
+                        // Top-level heading: will be attached to the next non-indented task
+                        // We defer it — store the text and apply when next parent is created
+                        String headingText = trimmed.substring(1).trim();
+                        if (!headingText.isEmpty()) {
+                            // Look ahead: create a pending heading for the next parent
+                            // Store temporarily and attach after next parent task is added
+                            if (lastParentTask == null) {
+                                // No parent yet — store as deferred heading
+                                deferredHeadingText = headingText;
+                                deferredHeadingChecklistId = checklistIdForTask;
+                            } else {
+                                // Heading above a new section — defer for next parent
+                                deferredHeadingText = headingText;
+                                deferredHeadingChecklistId = checklistIdForTask;
+                            }
+                        }
+                    } else if (!trimmed.isEmpty()) {
+                        // Parent task
+                        Task newTask = new Task(trimmed, type, selectedWeekday, checklistIdForTask);
                         taskManager.addTask(newTask);
                         addedTasks.add(newTask);
-                        lastParentTask = newTask; // Track for potential subtasks
+                        lastParentTask = newTask;
+                        
+                        // Attach deferred heading from a preceding # line
+                        if (deferredHeadingText != null) {
+                            boolean alreadyHasHeading = parentsWithHeading.contains(lastParentTask.getId());
+                            if (!alreadyHasHeading) {
+                                Task heading = new Task(deferredHeadingText, TaskType.HEADING, null, deferredHeadingChecklistId, lastParentTask.getId());
+                                taskManager.addTask(heading);
+                                addedTasks.add(heading);
+                                parentsWithHeading.add(lastParentTask.getId());
+                            }
+                            deferredHeadingText = null;
+                            deferredHeadingChecklistId = null;
+                        }
                     }
                 }
             }
@@ -338,5 +372,18 @@ public class AddTaskPanel extends JPanel {
                 weekdayComboBox.setSelectedIndex(0);
             }
         };
+    }
+    
+    // Transient state used during batch parsing
+    private transient String deferredHeadingText;
+    private transient String deferredHeadingChecklistId;
+
+    private boolean hasHeadingForParent(String parentId) {
+        for (Task t : taskManager.getAllTasks()) {
+            if (t.getType() == TaskType.HEADING && parentId.equals(t.getParentId())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -36,6 +36,7 @@ public final class IconCache {
     private static final javax.swing.Icon ADD_SUBTASK_ICON;
     private static final javax.swing.Icon CHECKMARK_ICON;
     private static final javax.swing.Icon NOTE_ICON;
+    private static final javax.swing.Icon RECURRING_ICON;
 
     // Key format: hour-minute-state-showTime
     private static final ConcurrentMap<String, Icon> reminderClockCache = new ConcurrentHashMap<>();
@@ -61,6 +62,10 @@ public final class IconCache {
 
     public static Icon getReminderClockIcon(int hour, int minute, ReminderClockIcon.State state) {
         return getReminderClockIcon(hour, minute, state, false);
+    }
+
+    public static Icon getRecurringReminderIcon() {
+        return RECURRING_ICON;
     }
 
     public static Icon getAddSubtaskIcon() {
@@ -128,6 +133,8 @@ public final class IconCache {
         ADD_SUBTASK_ICON = renderToImageIcon(new AddSubtaskIcon(16));
 
         CHECKMARK_ICON = renderToImageIcon(new CheckmarkIcon(16));
+
+        RECURRING_ICON = renderToImageIcon(new RecurringReminderIcon());
     }
 
     private static ImageIcon renderToImageIcon(javax.swing.Icon raw) {

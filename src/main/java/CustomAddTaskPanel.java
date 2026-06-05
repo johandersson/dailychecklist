@@ -40,40 +40,70 @@ public class CustomAddTaskPanel extends BaseAddTaskPanel {
             String[] lines = taskField.getText().split("\\n");
             int addedCount = 0;
             Task lastParentTask = null;
+            // Track parents that already received a heading in this batch
+            java.util.Set<String> parentsWithHeading = new java.util.HashSet<>();
+            String deferredHeading = null;
             
             for (String line : lines) {
                 if (line.trim().isEmpty()) {
                     continue; // Skip empty lines
                 }
                 
-                // Check if line starts with tab (subtask)
-                if (line.startsWith("\t")) {
-                    String subtaskName = line.substring(1).trim(); // Remove tab and trim
-                    if (!subtaskName.isEmpty() && lastParentTask != null) {
-                        // Create subtask with parent reference
-                        Task subtask = new Task(subtaskName, TaskType.CUSTOM, null, checklistName, lastParentTask.getId());
-                        System.out.println("[DEBUG] CustomAddTaskPanel: about to add subtask -> " + subtask);
-                        taskManager.addTask(subtask);
-                        // Read back authoritative copy from manager/repository and log
-                        try {
-                            Task stored = taskManager.getTaskById(subtask.getId());
-                            System.out.println("[DEBUG] CustomAddTaskPanel: stored subtask -> " + stored);
-                        } catch (Throwable ignore) {}
-                        addedCount++;
+                // Detect indentation: tab or 2+ leading spaces
+                boolean isIndented = line.startsWith("\t") || line.startsWith("  ");
+                
+                if (isIndented) {
+                    // Strip all leading whitespace (tabs or spaces)
+                    String content = line.replaceFirst("^[\\t ]+", "");
+                    if (!content.isEmpty() && lastParentTask != null) {
+                        // Check if it's a heading (starts with #)
+                        if (content.startsWith("#")) {
+                            String headingText = content.substring(1).trim();
+                            if (!headingText.isEmpty()) {
+                                boolean alreadyHasHeading = parentsWithHeading.contains(lastParentTask.getId());
+                                if (!alreadyHasHeading) {
+                                    alreadyHasHeading = hasHeadingForParent(lastParentTask.getId());
+                                }
+                                if (!alreadyHasHeading) {
+                                    Task heading = new Task(headingText, TaskType.HEADING, null, checklistName, lastParentTask.getId());
+                                    taskManager.addTask(heading);
+                                    parentsWithHeading.add(lastParentTask.getId());
+                                    addedCount++;
+                                }
+                            }
+                        } else {
+                            // Regular subtask
+                            Task subtask = new Task(content, TaskType.CUSTOM, null, checklistName, lastParentTask.getId());
+                            taskManager.addTask(subtask);
+                            addedCount++;
+                        }
                     }
                 } else {
-                    // Parent task (no tab indent)
-                    String taskName = line.trim();
-                    if (!taskName.isEmpty()) {
-                        Task newTask = new Task(taskName, TaskType.CUSTOM, null, checklistName);
-                        System.out.println("[DEBUG] CustomAddTaskPanel: about to add parent task -> " + newTask);
+                    // Top-level line
+                    String trimmed = line.trim();
+                    if (trimmed.startsWith("#")) {
+                        // Top-level heading annotation — defer and attach to next parent
+                        String headingText = trimmed.substring(1).trim();
+                        if (!headingText.isEmpty()) {
+                            deferredHeading = headingText;
+                        }
+                    } else if (!trimmed.isEmpty()) {
+                        // Parent task
+                        Task newTask = new Task(trimmed, TaskType.CUSTOM, null, checklistName);
                         taskManager.addTask(newTask);
-                        try {
-                            Task stored = taskManager.getTaskById(newTask.getId());
-                            System.out.println("[DEBUG] CustomAddTaskPanel: stored parent task -> " + stored);
-                        } catch (Throwable ignore) {}
-                        lastParentTask = newTask; // Track for potential subtasks
+                        lastParentTask = newTask;
                         addedCount++;
+                        
+                        // Attach deferred heading from preceding # line
+                        if (deferredHeading != null) {
+                            if (!parentsWithHeading.contains(lastParentTask.getId())) {
+                                Task heading = new Task(deferredHeading, TaskType.HEADING, null, checklistName, lastParentTask.getId());
+                                taskManager.addTask(heading);
+                                parentsWithHeading.add(lastParentTask.getId());
+                                addedCount++;
+                            }
+                            deferredHeading = null;
+                        }
                     }
                 }
             }
@@ -82,8 +112,6 @@ public class CustomAddTaskPanel extends BaseAddTaskPanel {
                 JOptionPane.showMessageDialog(this, "No valid tasks to add.", "Validation Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            String message = String.format("Added %d tasks to %s successfully.", addedCount, checklistName);
-            JOptionPane.showMessageDialog(this, message, "Tasks Added", JOptionPane.INFORMATION_MESSAGE);
             taskField.setText("");
             updateTasks.run();
         };
@@ -92,5 +120,14 @@ public class CustomAddTaskPanel extends BaseAddTaskPanel {
     @Override
     protected int getButtonRow() {
         return 1;
+    }
+
+    private boolean hasHeadingForParent(String parentId) {
+        for (Task t : taskManager.getAllTasks()) {
+            if (t.getType() == TaskType.HEADING && parentId.equals(t.getParentId())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -535,6 +535,7 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         if (taskReminder == null) return;
         ReminderClockIcon.State state = computeState(taskReminder);
         javax.swing.Icon icon = IconCache.getReminderClockIcon(taskReminder.getHour(), taskReminder.getMinute(), state, true);
+        javax.swing.Icon recurring = taskReminder.isRecurring() ? IconCache.getRecurringReminderIcon() : null;
         int iconW = icon.getIconWidth();
         int iconH = icon.getIconHeight();
         // reminder area is left of the note icon area (which is left of the weekday area)
@@ -543,6 +544,16 @@ public class CheckboxListCellRenderer extends JPanel implements ListCellRenderer
         int iconX = areaX + Math.max(2, (UiLayout.REMINDER_ICON_AREA - iconW) / 2);
         int iconY = getHeight() / 2 - iconH / 2;
         icon.paintIcon(this, g2, iconX, iconY);
+
+        if (recurring != null) {
+            int recurringW = recurring.getIconWidth();
+            int gap = 3;
+            int recurringX = iconX - recurringW - gap;
+            if (recurringX < areaX + 2) {
+                recurringX = iconX + iconW + gap;
+            }
+            recurring.paintIcon(this, g2, recurringX, getHeight() / 2 - recurring.getIconHeight() / 2);
+        }
     }
 
     private void drawAddSubtaskIfNeeded(Graphics2D g2) {

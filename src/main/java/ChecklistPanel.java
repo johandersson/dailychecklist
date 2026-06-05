@@ -277,9 +277,11 @@ public class ChecklistPanel extends JPanel {
         final Task parent = (tmpParent == null) ? modelParent : tmpParent;
         boolean alreadyHasHeading = false;
         try {
-            java.util.List<Task> subs = taskManager.getSubtasks(parent.getId());
-            for (Task s : subs) {
-                if (s.getType() == TaskType.HEADING) { alreadyHasHeading = true; break; }
+            for (Task t : taskManager.getAllTasks()) {
+                if (t.getType() == TaskType.HEADING && parent.getId().equals(t.getParentId())) {
+                    alreadyHasHeading = true;
+                    break;
+                }
             }
         } catch (Exception ignored) {}
         boolean isSubtask = parent.getParentId() != null;
@@ -455,10 +457,7 @@ public class ChecklistPanel extends JPanel {
 
     private JMenuItem createSetTaskReminderMenuItem(JList<Task> list, int index) {
         Task task = list.getModel().getElementAt(index);
-        Reminder existing = taskManager.getReminders().stream()
-            .filter(r -> Objects.equals(r.getChecklistName(), checklist.getName()))
-            .filter(r -> Objects.equals(r.getTaskId(), task.getId()))
-            .findFirst().orElse(null);
+        Reminder existing = taskManager.getReminderForTask(task.getId());
 
         JMenuItem setTaskReminderItem = new JMenuItem(existing != null ? "Edit reminder" : "Set reminder");
         setTaskReminderItem.addActionListener(event -> {

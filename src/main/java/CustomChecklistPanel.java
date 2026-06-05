@@ -367,9 +367,11 @@ public class CustomChecklistPanel extends JPanel {
         final Task parent = (tmpParent == null) ? modelParent : tmpParent;
         boolean alreadyHasHeading = false;
         try {
-            java.util.List<Task> subs = taskManager.getSubtasks(parent.getId());
-            for (Task s : subs) {
-                if (s.getType() == TaskType.HEADING) { alreadyHasHeading = true; break; }
+            for (Task t : taskManager.getAllTasks()) {
+                if (t.getType() == TaskType.HEADING && parent.getId().equals(t.getParentId())) {
+                    alreadyHasHeading = true;
+                    break;
+                }
             }
         } catch (Exception ignored) {}
         boolean isSubtask = parent.getParentId() != null;

@@ -28,6 +28,7 @@ public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
     private static final long serialVersionUID = 1L;
 
     private final transient TaskManager taskManager;
+    private Reminder currentReminder;
 
     public ChecklistCellRenderer(TaskManager taskManager) {
         this.taskManager = taskManager;
@@ -60,11 +61,13 @@ public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
     protected Icon getRightIconForValue(Checklist checklist) {
         if (checklist != null) {
             Reminder nearest = nearestReminderForChecklist(checklist.getName());
+            currentReminder = nearest;
             if (nearest != null) {
                 ReminderClockIcon.State state = computeState(nearest);
                 return IconCache.getReminderClockIcon(nearest.getHour(), nearest.getMinute(), state, true);
             }
         }
+        currentReminder = null;
         return null;
     }
 
@@ -99,6 +102,13 @@ public class ChecklistCellRenderer extends IconListCellRenderer<Checklist> {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
+
+        if (currentReminder != null && currentReminder.isRecurring() && rightIcon != null) {
+            javax.swing.Icon recurring = IconCache.getRecurringReminderIcon();
+            int rightIconX = getWidth() - rightIcon.getIconWidth() - 6;
+            int recurringX = rightIconX - recurring.getIconWidth() - 3;
+            recurring.paintIcon(this, g2, recurringX, getHeight() / 2 - recurring.getIconHeight() / 2);
+        }
 
         // Draw extra icon (e.g., Zzz) left of the reserved right icon space so it stays aligned
         Icon extraIcon = getExtraIconForValue(value);

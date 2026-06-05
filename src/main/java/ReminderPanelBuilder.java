@@ -33,8 +33,12 @@ public final class ReminderPanelBuilder {
         JPanel small = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         small.setOpaque(false);
         javax.swing.JLabel iconLabel = createIconLabel(r, state, tip, ma);
+        javax.swing.JLabel recurringLabel = r.isRecurring() ? createRecurringIconLabel(tip, ma) : null;
         textLabel.setToolTipText(tip);
         small.add(iconLabel);
+        if (recurringLabel != null) {
+            small.add(recurringLabel);
+        }
         small.add(textLabel);
         panel.add(small, java.awt.BorderLayout.WEST);
     }
@@ -126,6 +130,13 @@ public final class ReminderPanelBuilder {
         iconLabel.setToolTipText(tooltip);
         iconLabel.addMouseListener(ma);
         return iconLabel;
+    }
+
+    private static javax.swing.JLabel createRecurringIconLabel(String tooltip, java.awt.event.MouseAdapter ma) {
+        javax.swing.JLabel recurringLabel = new javax.swing.JLabel(IconCache.getRecurringReminderIcon());
+        recurringLabel.setToolTipText(tooltip);
+        recurringLabel.addMouseListener(ma);
+        return recurringLabel;
     }
 
     private static java.awt.event.MouseAdapter createPopupMouseAdapter(Reminder r, TaskManager taskManager, Runnable updateAllPanels, Runnable updateTasks, Component parentForDialogs) {

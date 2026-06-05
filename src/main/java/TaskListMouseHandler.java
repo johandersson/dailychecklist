@@ -141,10 +141,10 @@ public class TaskListMouseHandler extends MouseAdapter {
         Task p = taskManager.getTaskById(parent.getId());
         if (p == null) p = parent;
         
-        // Check if parent already has a heading
+        // Check if parent already has a heading (headings excluded from getSubtasks, so scan all)
         boolean alreadyHasHeading = false;
-        for (Task existingSubtask : taskManager.getSubtasks(p.getId())) {
-            if (existingSubtask.getType() == TaskType.HEADING) {
+        for (Task t : taskManager.getAllTasks()) {
+            if (t.getType() == TaskType.HEADING && p.getId().equals(t.getParentId())) {
                 alreadyHasHeading = true;
                 break;
             }

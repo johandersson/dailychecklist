@@ -60,3 +60,4 @@ codestandards/
 
 # Local files (large datasets and generation scripts)
 local/
+.venv/
