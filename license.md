@@ -1,6 +1,6 @@
 ## 📝 License for DailyChecklist
 
-### Copyright (C) 2015 Johan Andersson
+### Copyright (C) 2025 Johan Andersson
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
