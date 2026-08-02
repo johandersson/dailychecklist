@@ -418,6 +418,28 @@ public class TaskManager {
         notifyListeners();
     }
 
+    public List<CalendarEvent> getCalendarEvents() {
+        return repository.getCalendarEvents();
+    }
+
+    public void addCalendarEvent(CalendarEvent event) {
+        repository.addCalendarEvent(event);
+        notifyListeners();
+    }
+
+    /**
+     * Adds multiple calendar events in a single persistence call (used by ICS import).
+     */
+    public void addCalendarEvents(List<CalendarEvent> events) {
+        repository.addCalendarEvents(events);
+        notifyListeners();
+    }
+
+    public void removeCalendarEvent(CalendarEvent event) {
+        repository.removeCalendarEvent(event);
+        notifyListeners();
+    }
+
     public void addChecklist(Checklist checklist) {
         repository.addChecklist(checklist);
         notifyListeners();

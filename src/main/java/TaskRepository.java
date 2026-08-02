@@ -42,6 +42,29 @@ public interface TaskRepository {
     java.time.LocalDateTime getNextReminderTime(java.util.Set<String> openedChecklists);
 
     /**
+     * Gets all imported calendar events (from ICS import). Default implementation
+     * returns an empty list so existing repository implementations remain
+     * backwards compatible without needing to implement calendar support.
+     */
+    default List<CalendarEvent> getCalendarEvents() { return java.util.Collections.emptyList(); }
+
+    /**
+     * Adds a single calendar event. Default implementation is a no-op.
+     */
+    default void addCalendarEvent(CalendarEvent event) {}
+
+    /**
+     * Adds multiple calendar events in one persistence call (used by calendar import).
+     * Default implementation is a no-op.
+     */
+    default void addCalendarEvents(List<CalendarEvent> events) {}
+
+    /**
+     * Removes a calendar event. Default implementation is a no-op.
+     */
+    default void removeCalendarEvent(CalendarEvent event) {}
+
+    /**
      * Gets all custom checklists.
      */
     java.util.Set<Checklist> getChecklists();

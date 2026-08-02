@@ -41,11 +41,16 @@ public class TodayPanel extends JPanel {
     private final int timelineWidth = 80; // Width of the time column
     private final int reminderBlockHeight = 40; // Height of reminder blocks
     private final int reminderBlockWidth = 200; // Width of reminder blocks
+    private final int calendarEventBlockWidth = 200; // Width of imported calendar-event blocks
+    private final int calendarEventAreaGap = 20; // Gap separating calendar events from reminder blocks
+    private final int allDayEventHeight = 24; // Height of an all-day event banner
 
     private LocalDate today;
     private List<Reminder> todaysReminders;
+    private List<CalendarEvent> todaysCalendarEvents;
     private Map<String, Task> taskCache;
     private Map<Rectangle, Reminder> reminderBlockBounds; // Track click regions
+    private Map<Rectangle, CalendarEvent> calendarEventBlockBounds; // Track click regions for imported events
     
     // Cached timeline background image for performance
     private BufferedImage timelineBackgroundCache;
@@ -59,8 +64,10 @@ public class TodayPanel extends JPanel {
         this.taskManager = taskManager;
         this.today = LocalDate.now();
         this.todaysReminders = new ArrayList<>();
+        this.todaysCalendarEvents = new ArrayList<>();
         this.taskCache = new HashMap<>();
         this.reminderBlockBounds = new HashMap<>();
+        this.calendarEventBlockBounds = new HashMap<>();
 
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
@@ -82,26 +89,28 @@ public class TodayPanel extends JPanel {
             }
         });
         
-        // Add mouse listener for clicking reminder blocks
+        // Add mouse listener for clicking reminder and calendar-event blocks
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (!e.isPopupTrigger()) {
-                    handleReminderClick(e.getPoint());
+                    if (!handleReminderClick(e.getPoint())) {
+                        handleCalendarEventClick(e.getPoint());
+                    }
                 }
             }
             
             @Override
             public void mousePressed(MouseEvent e) {
                 if (e.isPopupTrigger()) {
-                    handleReminderRightClick(e.getPoint(), e.getX(), e.getY());
+                    handleRightClick(e.getPoint(), e.getX(), e.getY());
                 }
             }
             
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (e.isPopupTrigger()) {
-                    handleReminderRightClick(e.getPoint(), e.getX(), e.getY());
+                    handleRightClick(e.getPoint(), e.getX(), e.getY());
                 }
             }
         });
@@ -110,20 +119,32 @@ public class TodayPanel extends JPanel {
         addMouseMotionListener(new MouseAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
-                boolean overReminder = false;
+                boolean overBlock = false;
                 Reminder hoveredReminder = null;
+                CalendarEvent hoveredEvent = null;
                 for (Map.Entry<Rectangle, Reminder> entry : reminderBlockBounds.entrySet()) {
                     if (entry.getKey().contains(e.getPoint())) {
-                        overReminder = true;
+                        overBlock = true;
                         hoveredReminder = entry.getValue();
                         break;
                     }
                 }
-                setCursor(overReminder ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
+                if (hoveredReminder == null) {
+                    for (Map.Entry<Rectangle, CalendarEvent> entry : calendarEventBlockBounds.entrySet()) {
+                        if (entry.getKey().contains(e.getPoint())) {
+                            overBlock = true;
+                            hoveredEvent = entry.getValue();
+                            break;
+                        }
+                    }
+                }
+                setCursor(overBlock ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
                 
                 // Update tooltip
                 if (hoveredReminder != null) {
                     setToolTipText(getReminderTooltip(hoveredReminder));
+                } else if (hoveredEvent != null) {
+                    setToolTipText(getCalendarEventTooltip(hoveredEvent));
                 } else {
                     setToolTipText(null);
                 }
@@ -139,8 +160,10 @@ public class TodayPanel extends JPanel {
     public void refreshData() {
         this.today = LocalDate.now();
         this.todaysReminders = getTodaysReminders();
+        this.todaysCalendarEvents = getTodaysCalendarEvents();
         this.taskCache.clear();
         this.reminderBlockBounds.clear();
+        this.calendarEventBlockBounds.clear();
 
         // Cache tasks for reminders
         for (Reminder reminder : todaysReminders) {
@@ -168,26 +191,45 @@ public class TodayPanel extends JPanel {
     
     /**
      * Handle clicks on reminder blocks to jump to the task.
+     * @return true if a reminder block was clicked.
      */
-    private void handleReminderClick(Point clickPoint) {
+    private boolean handleReminderClick(Point clickPoint) {
         for (Map.Entry<Rectangle, Reminder> entry : reminderBlockBounds.entrySet()) {
             if (entry.getKey().contains(clickPoint)) {
                 Reminder reminder = entry.getValue();
                 jumpToReminder(reminder);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Handle clicks on imported calendar-event blocks to show their details.
+     */
+    private void handleCalendarEventClick(Point clickPoint) {
+        for (Map.Entry<Rectangle, CalendarEvent> entry : calendarEventBlockBounds.entrySet()) {
+            if (entry.getKey().contains(clickPoint)) {
+                showCalendarEventDetails(entry.getValue());
                 break;
             }
         }
     }
-    
+
     /**
-     * Handle right-clicks on reminder blocks to show edit menu.
+     * Handle right-clicks on reminder or calendar-event blocks to show a context menu.
      */
-    private void handleReminderRightClick(Point clickPoint, int x, int y) {
+    private void handleRightClick(Point clickPoint, int x, int y) {
         for (Map.Entry<Rectangle, Reminder> entry : reminderBlockBounds.entrySet()) {
             if (entry.getKey().contains(clickPoint)) {
-                Reminder reminder = entry.getValue();
-                showReminderContextMenu(reminder, x, y);
-                break;
+                showReminderContextMenu(entry.getValue(), x, y);
+                return;
+            }
+        }
+        for (Map.Entry<Rectangle, CalendarEvent> entry : calendarEventBlockBounds.entrySet()) {
+            if (entry.getKey().contains(clickPoint)) {
+                showCalendarEventContextMenu(entry.getValue(), x, y);
+                return;
             }
         }
     }
@@ -207,6 +249,48 @@ public class TodayPanel extends JPanel {
         popup.add(deleteItem);
         
         popup.show(this, x, y);
+    }
+
+    /**
+     * Show context menu for an imported calendar-event block.
+     */
+    private void showCalendarEventContextMenu(CalendarEvent event, int x, int y) {
+        JPopupMenu popup = new JPopupMenu();
+
+        JMenuItem detailsItem = new JMenuItem("View Details");
+        detailsItem.addActionListener(e -> showCalendarEventDetails(event));
+        popup.add(detailsItem);
+
+        JMenuItem deleteItem = new JMenuItem("Delete Event");
+        deleteItem.addActionListener(e -> deleteCalendarEvent(event));
+        popup.add(deleteItem);
+
+        popup.show(this, x, y);
+    }
+
+    /**
+     * Show a simple details dialog for an imported calendar event.
+     */
+    private void showCalendarEventDetails(CalendarEvent event) {
+        JOptionPane.showMessageDialog(this, getCalendarEventDetailsText(event), "Calendar Event", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Delete an imported calendar event after confirmation.
+     */
+    private void deleteCalendarEvent(CalendarEvent event) {
+        int confirm = JOptionPane.showConfirmDialog(
+            this,
+            "Remove this imported calendar event?",
+            "Confirm Delete",
+            JOptionPane.YES_NO_OPTION
+        );
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            taskManager.removeCalendarEvent(event);
+            refreshData();
+            repaint();
+        }
     }
     
     /**
@@ -301,6 +385,23 @@ public class TodayPanel extends JPanel {
         return todays;
     }
 
+    /**
+     * Get all imported calendar events that occur today.
+     */
+    private List<CalendarEvent> getTodaysCalendarEvents() {
+        List<CalendarEvent> todays = new ArrayList<>();
+        for (CalendarEvent event : taskManager.getCalendarEvents()) {
+            try {
+                if (event.occursOn(today)) {
+                    todays.add(event);
+                }
+            } catch (Exception ex) {
+                // skip malformed events
+            }
+        }
+        return todays;
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -312,6 +413,7 @@ public class TodayPanel extends JPanel {
         
         // Clear previous bounds before redrawing
         reminderBlockBounds.clear();
+        calendarEventBlockBounds.clear();
 
         // Draw cached timeline background or create it if needed
         if (timelineBackgroundCache == null || cachedWidth != width || cachedHeight != height) {
@@ -323,6 +425,9 @@ public class TodayPanel extends JPanel {
 
         // Draw reminder blocks on top (these change frequently)
         drawReminderBlocks(g2d, width);
+
+        // Draw imported calendar-event blocks in their own non-overlapping area
+        drawCalendarEventBlocks(g2d, width);
         
         // Draw current time marker (red line)
         drawCurrentTimeMarker(g2d, width);
@@ -465,7 +570,81 @@ public class TodayPanel extends JPanel {
         }
         return null;
     }
-    
+
+    /**
+     * X coordinate where the imported-calendar-events column area begins: always
+     * to the right of every reminder block so the two block kinds never overlap.
+     */
+    private int calculateCalendarEventsAreaX() {
+        int reminderColumns = getMaxOverlappingReminders();
+        int reminderAreaWidth = reminderColumns > 0 ? reminderColumns * (reminderBlockWidth + 10) : 0;
+        return timelineWidth + 10 + reminderAreaWidth + calendarEventAreaGap;
+    }
+
+    /**
+     * Draw imported calendar-event blocks. All-day events are shown as stacked
+     * banners at the top; timed events are laid out via {@link CalendarEventLayout}
+     * so concurrent events get their own column instead of overlapping.
+     */
+    private void drawCalendarEventBlocks(Graphics2D g2d, int width) {
+        if (todaysCalendarEvents.isEmpty()) return;
+
+        int areaX = calculateCalendarEventsAreaX();
+
+        List<CalendarEvent> allDayEvents = new ArrayList<>();
+        List<CalendarEvent> timedEvents = new ArrayList<>();
+        for (CalendarEvent event : todaysCalendarEvents) {
+            (event.isAllDay() ? allDayEvents : timedEvents).add(event);
+        }
+
+        for (int i = 0; i < allDayEvents.size(); i++) {
+            int y = 4 + i * (allDayEventHeight + 4);
+            drawCalendarEventBlock(g2d, allDayEvents.get(i), areaX, y, calendarEventBlockWidth, allDayEventHeight, null, null);
+        }
+
+        for (CalendarEventLayout.PositionedEvent pe : CalendarEventLayout.layout(timedEvents, today)) {
+            int y = (pe.start.getHour() - startHour) * hourHeight + (pe.start.getMinute() * hourHeight / 60);
+            int durationMinutes = (pe.end.getHour() * 60 + pe.end.getMinute()) - (pe.start.getHour() * 60 + pe.start.getMinute());
+            int blockHeight = Math.max(reminderBlockHeight, Math.round(durationMinutes * hourHeight / 60f));
+            int x = areaX + pe.column * (calendarEventBlockWidth + 10);
+            drawCalendarEventBlock(g2d, pe.event, x, y, calendarEventBlockWidth, blockHeight, pe.start, pe.end);
+        }
+    }
+
+    /**
+     * Draw a single calendar-event block using a distinct color from reminder blocks.
+     */
+    private void drawCalendarEventBlock(Graphics2D g2d, CalendarEvent event, int x, int y, int blockWidth, int blockHeight, LocalTime start, LocalTime end) {
+        calendarEventBlockBounds.put(new Rectangle(x, y, blockWidth, blockHeight), event);
+
+        g2d.setColor(new Color(0, 150, 136)); // Teal, distinct from reminder steel-blue
+        g2d.fillRoundRect(x, y, blockWidth, blockHeight, 8, 8);
+
+        g2d.setColor(new Color(0, 105, 92));
+        g2d.drawRoundRect(x, y, blockWidth, blockHeight, 8, 8);
+
+        g2d.setColor(Color.WHITE);
+        g2d.setFont(g2d.getFont().deriveFont(Font.BOLD, 11f));
+
+        String title = event.getTitle();
+        if (title.length() > 20) {
+            title = title.substring(0, 17) + "...";
+        }
+        FontMetrics fm = g2d.getFontMetrics();
+        int textY = y + fm.getAscent() + 5;
+        g2d.drawString(title, x + 8, textY);
+
+        String subtitle = getCalendarEventSubtitle(event, start, end);
+        if (subtitle != null && !subtitle.isEmpty() && blockHeight >= reminderBlockHeight) {
+            g2d.setFont(g2d.getFont().deriveFont(Font.PLAIN, 9f));
+            textY += fm.getHeight() + 2;
+            if (subtitle.length() > 25) {
+                subtitle = subtitle.substring(0, 22) + "...";
+            }
+            g2d.drawString(subtitle, x + 8, textY);
+        }
+    }
+
     /**
      * Get tooltip text for a reminder.
      */
@@ -494,6 +673,52 @@ public class TodayPanel extends JPanel {
         
         tooltip.append("</html>");
         return tooltip.toString();
+    }
+
+    /**
+     * Build the compact subtitle line (time range and optional location) shown
+     * below a calendar-event block's title.
+     */
+    private String getCalendarEventSubtitle(CalendarEvent event, LocalTime start, LocalTime end) {
+        String timePart = event.isAllDay() ? "All day" : String.format("%02d:%02d\u2013%02d:%02d", start.getHour(), start.getMinute(), end.getHour(), end.getMinute());
+        if (event.getLocation() != null && !event.getLocation().isEmpty()) {
+            return timePart + " \u2022 " + event.getLocation();
+        }
+        return timePart;
+    }
+
+    /**
+     * Get tooltip text for an imported calendar event.
+     */
+    private String getCalendarEventTooltip(CalendarEvent event) {
+        LocalTime start = event.effectiveStartTime(today);
+        LocalTime end = event.effectiveEndTime(today);
+        StringBuilder tooltip = new StringBuilder("<html>");
+        tooltip.append("<b>").append(event.getTitle()).append("</b><br>");
+        tooltip.append(getCalendarEventSubtitle(event, start, end));
+        if (event.getDescription() != null && !event.getDescription().isEmpty()) {
+            tooltip.append("<br><i>").append(event.getDescription()).append("</i>");
+        }
+        tooltip.append("</html>");
+        return tooltip.toString();
+    }
+
+    /**
+     * Build a plain-text summary for the calendar-event details dialog.
+     */
+    private String getCalendarEventDetailsText(CalendarEvent event) {
+        LocalTime start = event.effectiveStartTime(today);
+        LocalTime end = event.effectiveEndTime(today);
+        StringBuilder sb = new StringBuilder();
+        sb.append(event.getTitle()).append('\n');
+        sb.append(getCalendarEventSubtitle(event, start, end)).append('\n');
+        if (event.getLocation() != null && !event.getLocation().isEmpty()) {
+            sb.append("Location: ").append(event.getLocation()).append('\n');
+        }
+        if (event.getDescription() != null && !event.getDescription().isEmpty()) {
+            sb.append('\n').append(event.getDescription());
+        }
+        return sb.toString();
     }
 
     /**
@@ -577,8 +802,15 @@ public class TodayPanel extends JPanel {
         if (maxOverlapping > 0) {
             reminderAreaWidth = (maxOverlapping * reminderBlockWidth) + ((maxOverlapping - 1) * 10);
         }
+
+        // Add width for imported calendar-event blocks, placed after the reminder area
+        int calendarAreaWidth = 0;
+        int maxCalendarColumns = getMaxOverlappingCalendarEvents();
+        if (maxCalendarColumns > 0) {
+            calendarAreaWidth = calendarEventAreaGap + (maxCalendarColumns * calendarEventBlockWidth) + ((maxCalendarColumns - 1) * 10);
+        }
         
-        int totalWidth = Math.max(600, baseWidth + reminderAreaWidth);
+        int totalWidth = Math.max(600, baseWidth + reminderAreaWidth + calendarAreaWidth);
         
         return new Dimension(totalWidth, hoursToShow * hourHeight + 50);
     }
@@ -604,5 +836,28 @@ public class TodayPanel extends JPanel {
         }
         
         return maxCount;
+    }
+
+    /**
+     * Calculate the maximum number of overlapping columns needed for today's
+     * timed calendar events (all-day events always use a single column).
+     */
+    private int getMaxOverlappingCalendarEvents() {
+        if (todaysCalendarEvents == null || todaysCalendarEvents.isEmpty()) {
+            return 0;
+        }
+        int maxColumns = 0;
+        List<CalendarEvent> timedEvents = new ArrayList<>();
+        for (CalendarEvent event : todaysCalendarEvents) {
+            if (event.isAllDay()) {
+                maxColumns = Math.max(maxColumns, 1);
+            } else {
+                timedEvents.add(event);
+            }
+        }
+        for (CalendarEventLayout.PositionedEvent pe : CalendarEventLayout.layout(timedEvents, today)) {
+            maxColumns = Math.max(maxColumns, pe.columnCount);
+        }
+        return maxColumns;
     }
 }

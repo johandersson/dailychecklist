@@ -33,6 +33,7 @@ public final class ApplicationConfiguration {
     public static final String SETTINGS_FILE_NAME = "settings.properties";
     public static final String REMINDERS_FILE_NAME = "reminders.properties";
     public static final String CHECKLIST_NAMES_FILE_NAME = "checklist-names.properties";
+    public static final String CALENDAR_EVENTS_FILE_NAME = "calendar-events.properties";
 
     // Backup configuration
     public static final int MAX_BACKUP_FILES = 30;
@@ -69,6 +70,7 @@ public final class ApplicationConfiguration {
     public static final String SETTINGS_FILE_PATH;
     public static final String REMINDERS_FILE_PATH;
     public static final String CHECKLIST_NAMES_FILE_PATH;
+    public static final String CALENDAR_EVENTS_FILE_PATH;
 
     static {
         String configured = System.getProperty("dailychecklist.data.dir");
@@ -81,6 +83,7 @@ public final class ApplicationConfiguration {
         SETTINGS_FILE_PATH = APPLICATION_DATA_DIR + File.separator + SETTINGS_FILE_NAME;
         REMINDERS_FILE_PATH = APPLICATION_DATA_DIR + File.separator + REMINDERS_FILE_NAME;
         CHECKLIST_NAMES_FILE_PATH = APPLICATION_DATA_DIR + File.separator + CHECKLIST_NAMES_FILE_NAME;
+        CALENDAR_EVENTS_FILE_PATH = APPLICATION_DATA_DIR + File.separator + CALENDAR_EVENTS_FILE_NAME;
     }
 
     // XML Configuration

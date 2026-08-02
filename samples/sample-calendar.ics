@@ -1,0 +1,65 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Daily Checklist//Sample Calendar//EN
+CALSCALE:GREGORIAN
+
+BEGIN:VEVENT
+UID:sample-standup-20260802@dailychecklist
+DTSTAMP:20260801T120000Z
+SUMMARY:Team Standup
+LOCATION:Meeting Room 1
+DESCRIPTION:Daily 15-minute sync with the team.
+DTSTART:20260802T090000
+DTEND:20260802T093000
+END:VEVENT
+
+BEGIN:VEVENT
+UID:sample-product-sync-20260802@dailychecklist
+DTSTAMP:20260801T120000Z
+SUMMARY:Product Sync
+LOCATION:Conference Room B
+DESCRIPTION:Overlaps with the Team Standup on purpose\, to test the today view's column layout.
+DTSTART:20260802T091500
+DTEND:20260802T100000
+END:VEVENT
+
+BEGIN:VEVENT
+UID:sample-holiday-20260802@dailychecklist
+DTSTAMP:20260801T120000Z
+SUMMARY:Company Holiday
+DTSTART;VALUE=DATE:20260802
+DTEND;VALUE=DATE:20260803
+END:VEVENT
+
+BEGIN:VEVENT
+UID:sample-offsite-20260801@dailychecklist
+DTSTAMP:20260801T120000Z
+SUMMARY:Offsite Conference
+LOCATION:Grand Hotel
+DESCRIPTION:Multi-day event that spans across today to test day-boundary clipping.
+DTSTART:20260801T140000
+DTEND:20260803T110000
+END:VEVENT
+
+BEGIN:VEVENT
+UID:sample-weekly-sync@dailychecklist
+DTSTAMP:20260801T120000Z
+SUMMARY:Weekly Team Sync
+LOCATION:Online
+DESCRIPTION:Recurs every Sunday\, so it should appear on today's view.
+DTSTART:20260802T140000
+DTEND:20260802T143000
+RRULE:FREQ=WEEKLY;BYDAY=SU
+END:VEVENT
+
+BEGIN:VEVENT
+UID:sample-not-today@dailychecklist
+DTSTAMP:20260801T120000Z
+SUMMARY:Future Planning Session
+LOCATION:Room 9
+DESCRIPTION:Occurs on a different date\, should NOT appear on today's view.
+DTSTART:20260805T130000
+DTEND:20260805T140000
+END:VEVENT
+
+END:VCALENDAR

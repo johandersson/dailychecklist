@@ -23,6 +23,7 @@ public class MemorySafetyManager {
     // Reasonable limits to prevent memory overflow and performance issues
     public static final int MAX_TASKS = 100000;
     public static final int MAX_REMINDERS = 10000;
+    public static final int MAX_CALENDAR_EVENTS = 10000;
 
     /**
      * Checks if the given count exceeds the safe limit for tasks.

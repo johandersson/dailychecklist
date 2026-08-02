@@ -326,6 +326,13 @@ public class MenuBarBuilder {
         // Ensure the File menu is added to the menu bar
         menuBar.add(fileMenu);
 
+        // Window menu
+        JMenu windowMenu = new JMenu("Window");
+        JMenuItem importCalendarItem = new JMenuItem("Import Calendar...");
+        importCalendarItem.addActionListener(e -> ImportCalendarAction.importCalendar(parent, taskManager, updateTasks));
+        windowMenu.add(importCalendarItem);
+        menuBar.add(windowMenu);
+
         return menuBar;
     }
 

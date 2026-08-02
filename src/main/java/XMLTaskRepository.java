@@ -36,11 +36,13 @@ public class XMLTaskRepository implements TaskRepository {
     private static String FILE_NAME = ApplicationConfiguration.APPLICATION_DATA_DIR + File.separator + ApplicationConfiguration.DATA_FILE_NAME;
     private static String REMINDER_FILE_NAME = ApplicationConfiguration.APPLICATION_DATA_DIR + File.separator + ApplicationConfiguration.REMINDERS_FILE_NAME;
     private static String CHECKLIST_NAMES_FILE_NAME = ApplicationConfiguration.APPLICATION_DATA_DIR + File.separator + ApplicationConfiguration.CHECKLIST_NAMES_FILE_NAME;
+    private static String CALENDAR_EVENTS_FILE_NAME = ApplicationConfiguration.APPLICATION_DATA_DIR + File.separator + ApplicationConfiguration.CALENDAR_EVENTS_FILE_NAME;
 
     // Component managers
     private TaskStaxHandler taskXmlHandler;
     private ReminderManager reminderManager;
     private ChecklistNameManager checklistNameManager;
+    private CalendarEventManager calendarEventManager;
 
     // Backup system
     private BackupManager backupManager;
@@ -129,6 +131,9 @@ public class XMLTaskRepository implements TaskRepository {
         this.parentComponent = parentComponent;
         if (reminderManager != null) {
             reminderManager.setParentComponent(parentComponent);
+        }
+        if (calendarEventManager != null) {
+            calendarEventManager.setParentComponent(parentComponent);
         }
     }
 
@@ -294,9 +299,11 @@ public class XMLTaskRepository implements TaskRepository {
         reminderManager = new ReminderManager(REMINDER_FILE_NAME, FILE_NAME);
         reminderManager.setParentComponent(parentComponent);
         checklistNameManager = new ChecklistNameManager(CHECKLIST_NAMES_FILE_NAME);
+        calendarEventManager = new CalendarEventManager(CALENDAR_EVENTS_FILE_NAME);
+        calendarEventManager.setParentComponent(parentComponent);
 
         // Initialize backup system (but don't start threads yet)
-        String[] dataFiles = {FILE_NAME, REMINDER_FILE_NAME, CHECKLIST_NAMES_FILE_NAME, ApplicationConfiguration.SETTINGS_FILE_PATH};
+        String[] dataFiles = {FILE_NAME, REMINDER_FILE_NAME, CHECKLIST_NAMES_FILE_NAME, CALENDAR_EVENTS_FILE_NAME, ApplicationConfiguration.SETTINGS_FILE_PATH};
         backupManager = new BackupManager(ApplicationConfiguration.BACKUP_DIRECTORY, ApplicationConfiguration.MAX_BACKUP_FILES, ApplicationConfiguration.BACKUP_INTERVAL_MILLIS, dataFiles, parentComponent);
         backupManager.initialize();
     }
@@ -944,6 +951,26 @@ public class XMLTaskRepository implements TaskRepository {
     @Override
     public LocalDateTime getNextReminderTime(Set<String> openedChecklists) {
         return reminderManager.getNextReminderTime(openedChecklists);
+    }
+
+    @Override
+    public List<CalendarEvent> getCalendarEvents() {
+        return calendarEventManager.getEvents();
+    }
+
+    @Override
+    public void addCalendarEvent(CalendarEvent event) {
+        calendarEventManager.addEvent(event);
+    }
+
+    @Override
+    public void addCalendarEvents(List<CalendarEvent> events) {
+        calendarEventManager.addEvents(events);
+    }
+
+    @Override
+    public void removeCalendarEvent(CalendarEvent event) {
+        calendarEventManager.removeEvent(event);
     }
 
     @Override
