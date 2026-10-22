@@ -33,8 +33,8 @@ public class TaskUpdater {
     public void updateTasks(List<Task> allTasks, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel, boolean showAllWeekdaySpecificTasks, TaskManager taskManager) {
         String currentWeekday = LocalDateTime.now().getDayOfWeek().toString().toLowerCase();
         Collected c = collectVisible(allTasks, showAllWeekdaySpecificTasks, currentWeekday);
-        List<Task> desiredMorning = buildDesiredList(c.morningParents, c.headingByParent, taskManager, showAllWeekdaySpecificTasks, currentWeekday);
-        List<Task> desiredEvening = buildDesiredList(c.eveningParents, c.headingByParent, taskManager, showAllWeekdaySpecificTasks, currentWeekday);
+        List<Task> desiredMorning = buildDesiredList(c.morningParents, c.headingByParent, c.subtasksByParent, showAllWeekdaySpecificTasks, currentWeekday);
+        List<Task> desiredEvening = buildDesiredList(c.eveningParents, c.headingByParent, c.subtasksByParent, showAllWeekdaySpecificTasks, currentWeekday);
 
         // Precompute display data for renderer (no checklist info for daily lists)
         DisplayPrecomputer.precomputeForList(desiredMorning, null, false);
@@ -73,19 +73,17 @@ public class TaskUpdater {
         return c;
     }
 
-    private List<Task> buildDesiredList(List<Task> parents, java.util.Map<String, Task> headingByParent, TaskManager taskManager, boolean showAllWeekdaySpecificTasks, String currentWeekday) {
+    private List<Task> buildDesiredList(List<Task> parents, java.util.Map<String, Task> headingByParent, java.util.Map<String, List<Task>> subtasksByParent, boolean showAllWeekdaySpecificTasks, String currentWeekday) {
         List<Task> desired = new ArrayList<>();
         for (Task parent : parents) {
             Task heading = headingByParent.get(parent.getId());
             if (heading != null) desired.add(heading);
             desired.add(parent);
-            if (taskManager != null) {
-                java.util.List<Task> subs = taskManager.getSubtasksSorted(parent.getId());
-                if (subs != null && !subs.isEmpty()) {
-                    for (Task s : subs) {
-                        boolean showSub = s.getWeekday() == null || showAllWeekdaySpecificTasks || s.getWeekday().toLowerCase().equals(currentWeekday);
-                        if (showSub) desired.add(s);
-                    }
+            java.util.List<Task> subs = subtasksByParent.get(parent.getId());
+            if (subs != null && !subs.isEmpty()) {
+                for (Task s : subs) {
+                    boolean showSub = s.getWeekday() == null || showAllWeekdaySpecificTasks || s.getWeekday().toLowerCase().equals(currentWeekday);
+                    if (showSub) desired.add(s);
                 }
             }
         }
@@ -146,11 +144,11 @@ public class TaskUpdater {
                 if (foundIndex != null && foundIndex > i) {
                     model.removeElementAt(foundIndex);
                     model.add(i, want);
-                    // Update positions for elements that shifted due to the removal
+                    // Moving a later row forward shifts only the intervening rows.
                     currentPositions.remove(want);
                     for (Map.Entry<T, Integer> entry : currentPositions.entrySet()) {
-                        if (entry.getValue() > foundIndex) {
-                            entry.setValue(entry.getValue() - 1);
+                        if (entry.getValue() >= i && entry.getValue() < foundIndex) {
+                            entry.setValue(entry.getValue() + 1);
                         }
                     }
                     currentPositions.put(want, i);

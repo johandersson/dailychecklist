@@ -115,7 +115,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
         checklistList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Same as task lists
         checklistList.setSelectionForeground(java.awt.Color.BLACK);
         checklistList.setTransferHandler(new ChecklistListTransferHandler(
-            listModel, taskManager, this::updateTasks,
+            listModel, taskManager, this::refreshAllPanels,
             name -> javax.swing.SwingUtilities.invokeLater(() -> selectChecklistByName(name))
         ));
         checklistList.setDropMode(DropMode.ON);
@@ -302,7 +302,7 @@ public class CustomChecklistsOverviewPanel extends JPanel {
             // Reuse existing panel from panelMap if available, otherwise create new one
             currentChecklistPanel = panelMap.get(checklist.getId());
             if (currentChecklistPanel == null) {
-                currentChecklistPanel = new CustomChecklistPanel(taskManager, checklist, this::updateTasks);
+                currentChecklistPanel = new CustomChecklistPanel(taskManager, checklist, this::refreshAllPanels);
                 panelMap.put(checklist.getId(), currentChecklistPanel);
             }
             currentChecklistPanel.updateTasks();
@@ -326,6 +326,11 @@ public class CustomChecklistsOverviewPanel extends JPanel {
 
     public void updateTasks() {
         scheduleUpdate();
+    }
+
+    private void refreshAllPanels() {
+        updateTasks();
+        updateTasks.run();
     }
 
     private volatile boolean updateScheduled = false;

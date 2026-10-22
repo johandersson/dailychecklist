@@ -657,8 +657,10 @@ public class ChecklistPanel extends JPanel {
     }
 
     private volatile boolean updateScheduled = false;
+    private final java.util.concurrent.atomic.AtomicLong refreshGeneration = new java.util.concurrent.atomic.AtomicLong();
 
     private void scheduleUpdate() {
+        refreshGeneration.incrementAndGet();
         if (updateScheduled) return;
         updateScheduled = true;
         javax.swing.SwingUtilities.invokeLater(() -> {
@@ -682,10 +684,12 @@ public class ChecklistPanel extends JPanel {
     }
 
     private void loadAndUpdateTasks(java.util.List<Task> selectedMorningTasks, java.util.List<Task> selectedEveningTasks) {
+        long generation = refreshGeneration.get();
+        boolean showAllWeekdays = showWeekdayTasksCheckbox.isSelected();
         // Load tasks in background to avoid blocking EDT
         java.util.concurrent.CompletableFuture.supplyAsync(() -> {
             try {
-                return taskManager.getAllTasks();
+                return taskManager.snapshotTasks();
             } catch (Exception e) {
                 java.util.logging.Logger.getLogger(ChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading tasks in background", e);
                 return null;
@@ -696,12 +700,15 @@ public class ChecklistPanel extends JPanel {
             // Continue on EDT with loaded data
             final List<Task> finalAllTasks = allTasks;
             SwingUtilities.invokeLater(() -> {
+                if (generation != refreshGeneration.get()) return;
                 try {
-                    taskUpdater.updateTasks(finalAllTasks, morningListModel, eveningListModel, showWeekdayTasksCheckbox.isSelected(), taskManager);
+                    taskUpdater.updateTasks(finalAllTasks, morningListModel, eveningListModel, showAllWeekdays, taskManager);
 
                     // Restore selections after updating
                     restoreSelections(morningTaskList, morningListModel, selectedMorningTasks);
                     restoreSelections(eveningTaskList, eveningListModel, selectedEveningTasks);
+                    TaskDropController.restoreSelection(morningTaskList);
+                    TaskDropController.restoreSelection(eveningTaskList);
 
                     morningTaskList.revalidate();
                     morningTaskList.repaint();

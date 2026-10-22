@@ -151,6 +151,9 @@ To build the JAR manually:
   - **View/Edit Reminders**: Manage existing reminders.
 - Right-click tasks within checklists to rename or remove them.
 - Drag and drop tasks between checklists or within checklists (shows visual preview).
+- Multi-selection moves keep task order; moving a parent includes its subtasks and heading. Headings cannot be moved independently, and nesting beyond one subtask level is rejected.
+- Reordering a filtered daily list preserves hidden weekday tasks. Dropping custom tasks onto a checklist in the overview also supports multi-selection.
+- Moves refresh the lists after a successful save; failed moves report an error without applying a partial move.
 
 ### Using Reminders
 

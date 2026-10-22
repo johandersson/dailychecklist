@@ -15,23 +15,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
+import java.util.List;
 import java.util.function.Consumer;
 import javax.swing.DefaultListModel;
 import javax.swing.JList;
 import javax.swing.TransferHandler;
 
-@SuppressWarnings("serial")
 public class ChecklistListTransferHandler extends TransferHandler {
     private static final long serialVersionUID = 1L;
-    private transient final DefaultListModel<Checklist> listModel;
-    private transient final TaskManager taskManager;
-    private transient final Runnable updateTasks;
-    private final Consumer<String> onChecklistDrop;
+    private final DefaultListModel<Checklist> listModel;
+    private final transient TaskManager taskManager;
+    private final transient Runnable updateTasks;
+    private final transient Consumer<String> onChecklistDrop;
 
-    public ChecklistListTransferHandler(DefaultListModel<Checklist> listModel, TaskManager taskManager, Runnable updateTasks, Consumer<String> onChecklistDrop) {
+    public ChecklistListTransferHandler(DefaultListModel<Checklist> listModel,
+            TaskManager taskManager, Runnable updateTasks, Consumer<String> onChecklistDrop) {
         this.listModel = listModel;
         this.taskManager = taskManager;
         this.updateTasks = updateTasks;
@@ -39,77 +39,35 @@ public class ChecklistListTransferHandler extends TransferHandler {
     }
 
     @Override
-    public boolean canImport(TransferHandler.TransferSupport support) {
-        return support.isDataFlavorSupported(DataFlavor.stringFlavor);
+    public boolean canImport(TransferSupport support) {
+        return support.isDrop() && support.getComponent() instanceof JList<?>
+                && TaskTransferable.supports(support.getTransferable());
     }
 
     @Override
-    public boolean importData(TransferHandler.TransferSupport support) {
-        if (!canImport(support) || !support.isDrop()) {
+    public boolean importData(TransferSupport support) {
+        if (!canImport(support)) {
             return false;
         }
-
-        JList.DropLocation dropLocation = (JList.DropLocation) support.getDropLocation();
-        int index = dropLocation.getIndex();
-        if (index < 0 || index >= listModel.getSize()) {
+        int index = ((JList.DropLocation) support.getDropLocation()).getIndex();
+        if (index < 0 || index >= listModel.size()) {
             return false;
         }
-
-        String targetChecklistName = listModel.get(index).getName();
-
+        Checklist target = listModel.get(index);
         try {
-            String data = (String) support.getTransferable().getTransferData(DataFlavor.stringFlavor);
-            String[] parts = data.split(";", 2);
-            if (parts.length != 2) {
-                return false;
-            }
-            String sourceChecklistName = parts[0];
-            String taskId = parts[1];
-
-            Task task = taskManager.getTaskById(taskId);
-            if (task == null) {
-                return false;
-            }
-
-            // Find the target checklist by name
-            Checklist targetChecklist = null;
-            for (Checklist checklist : taskManager.getCustomChecklists()) {
-                if (targetChecklistName.equals(checklist.getName())) {
-                    targetChecklist = checklist;
-                    break;
-                }
-            }
-            if (targetChecklist == null) {
-                return false;
-            }
-
-            // Only allow moving between custom checklists
-            if (!isCustomChecklist(sourceChecklistName) || !isCustomChecklist(targetChecklistName)) {
-                return false;
-            }
-
-            taskManager.moveTaskToChecklist(task, targetChecklist);
-            updateTasks.run();
-            // Notify the overview panel to select the target checklist in the UI
-            if (onChecklistDrop != null) {
-                onChecklistDrop.accept(targetChecklistName);
-            } else {
-                // fallback: try to select in the JList
-                try {
-                    Object comp = support.getComponent();
-                    if (comp instanceof JList<?> list) {
-                        list.setSelectedValue(targetChecklistName, true);
-                    }
-                } catch (Exception ignored) {
-                }
-            }
-            return true;
-        } catch (UnsupportedFlavorException | IOException e) {
+            List<String> ids = TaskTransferable.readIds(support.getTransferable());
+            TaskDropController.validateCustomSelection(taskManager, ids);
+            TaskMovePlanner.Intent intent = new TaskMovePlanner.Intent(ids,
+                    new TaskMovePlanner.Destination(TaskType.CUSTOM, target.getId()), null, null);
+            return TaskDropController.submit(taskManager, intent, null, updateTasks,
+                    () -> {
+                        if (onChecklistDrop != null) {
+                            onChecklistDrop.accept(target.getName());
+                        }
+                    });
+        } catch (UnsupportedFlavorException | IOException | IllegalArgumentException e) {
+            TaskDropController.showFailure(support.getComponent(), e);
             return false;
         }
-    }
-
-    private boolean isCustomChecklist(String name) {
-        return name != null && !name.equals("MORNING") && !name.equals("EVENING");
     }
 }

@@ -31,10 +31,51 @@ public class TaskManager {
     // Batch operation support to prevent race conditions during multi-task operations
     // Use an atomic counter so nested begin/end calls are safe.
     private final AtomicInteger batchCounter = new AtomicInteger(0);
+    private final java.util.concurrent.ExecutorService moveCoordinator =
+        java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+            Thread thread = new Thread(r, "task-move-coordinator");
+            thread.setDaemon(true);
+            return thread;
+        });
 
     public TaskManager(TaskRepository repository) {
         this.repository = repository;
         this.repository.initialize();
+    }
+
+    /** Plans against fresh canonical state and completes only after the durable commit. */
+    public java.util.concurrent.CompletableFuture<List<String>> moveTasks(TaskMovePlanner.Intent intent) {
+        return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            try {
+                List<String> selectedIds = repository.commitMove(intent);
+                invalidateSubtasksCache();
+                notifyListeners();
+                return selectedIds;
+            } catch (Exception exception) {
+                throw new java.util.concurrent.CompletionException(exception);
+            }
+        }, moveCoordinator);
+    }
+
+    /** Detached copy, including notes, completion metadata and nested task values. */
+    public static Task copyTask(Task task) {
+        return copyTask(task, new java.util.IdentityHashMap<>());
+    }
+
+    private static Task copyTask(Task task, java.util.IdentityHashMap<Task, Task> copies) {
+        if (task == null) return null;
+        Task existing = copies.get(task);
+        if (existing != null) return existing;
+        Task copy = TaskMovePlanner.TaskValue.of(task).toTask();
+        copies.put(task, copy);
+        if (task.getSubtasks() != null) {
+            List<Task> children = new ArrayList<>();
+            for (Task child : task.getSubtasks()) children.add(copyTask(child, copies));
+            copy.setSubtasks(children);
+        } else {
+            copy.setSubtasks(null);
+        }
+        return copy;
     }
 
     /** Lightweight listener for model changes. */
@@ -93,6 +134,15 @@ public class TaskManager {
         return repository.getAllTasks();
     }
 
+    /** Detached full-state values for UI workers; never exposes canonical mutable tasks. */
+    public List<Task> snapshotTasks() {
+        synchronized (repository) {
+            List<Task> snapshot = new ArrayList<>();
+            for (Task task : repository.getAllTasks()) snapshot.add(copyTask(task));
+            return snapshot;
+        }
+    }
+
     public Task getTaskById(String id) {
         if (repository instanceof XMLTaskRepository) {
             XMLTaskRepository xmlRepo = (XMLTaskRepository) repository;
@@ -126,7 +176,7 @@ public class TaskManager {
                 }
             }
         }
-        repository.addTask(task);
+        synchronized (repository) { repository.addTask(task); }
         // Debug logging to trace checklist id/name issues for custom tasks
         if (task != null && task.getType() == TaskType.CUSTOM) {
             try {
@@ -147,6 +197,10 @@ public class TaskManager {
     }
 
     public void updateTask(Task task) {
+        synchronized (repository) { updateTaskLocked(task); }
+    }
+
+    private void updateTaskLocked(Task task) {
         // Protect against accidental checklistId removal when callers pass partial Task
         if (task != null && task.getChecklistId() == null) {
             Task existing = getTaskById(task.getId());
@@ -168,9 +222,9 @@ public class TaskManager {
             XMLTaskRepository xmlRepo = (XMLTaskRepository) repository;
             java.util.List<Task> single = new java.util.ArrayList<>();
             single.add(task);
-            xmlRepo.updateTasks(single);
+            synchronized (repository) { xmlRepo.updateTasks(single); }
         } else {
-            repository.updateTask(task);
+            synchronized (repository) { repository.updateTask(task); }
         }
         invalidateSubtasksCache();
         notifyListeners();
@@ -183,11 +237,11 @@ public class TaskManager {
     public boolean updateTaskQuiet(Task task) {
         if (repository instanceof XMLTaskRepository) {
             XMLTaskRepository xmlRepo = (XMLTaskRepository) repository;
-            return xmlRepo.updateTaskQuiet(task);
+            synchronized (repository) { return xmlRepo.updateTaskQuiet(task); }
         }
         // Fallback for other repository types
         try {
-            repository.updateTask(task);
+            synchronized (repository) { repository.updateTask(task); }
             return true;
         } catch (Exception e) {
             return false;
@@ -201,10 +255,10 @@ public class TaskManager {
     public boolean updateTasksQuiet(java.util.List<Task> tasks) {
         if (repository instanceof XMLTaskRepository) {
             XMLTaskRepository xmlRepo = (XMLTaskRepository) repository;
-            return xmlRepo.updateTasksQuiet(tasks);
+            synchronized (repository) { return xmlRepo.updateTasksQuiet(tasks); }
         }
         try {
-            for (Task t : tasks) repository.updateTask(t);
+            synchronized (repository) { for (Task t : tasks) repository.updateTask(t); }
             return true;
         } catch (Exception e) {
             return false;
@@ -215,6 +269,10 @@ public class TaskManager {
      * Atomically updates multiple tasks and notifies listeners.
      */
     public void updateTasks(java.util.List<Task> tasks) {
+        synchronized (repository) { updateTasksLocked(tasks); }
+    }
+
+    private void updateTasksLocked(java.util.List<Task> tasks) {
         if (repository instanceof XMLTaskRepository) {
             XMLTaskRepository xmlRepo = (XMLTaskRepository) repository;
             // Preserve checklistId for tasks where incoming checklistId is null
@@ -245,6 +303,10 @@ public class TaskManager {
     }
 
     public void removeTask(Task task) {
+        synchronized (repository) { removeTaskLocked(task); }
+    }
+
+    private void removeTaskLocked(Task task) {
         // If removing a parent task, also remove its direct subtasks to preserve
         // data integrity and match higher-level behavior expected by callers.
         if (task.getParentId() == null && task.getType() != TaskType.HEADING) {
@@ -359,7 +421,7 @@ public class TaskManager {
                 }
             }
         }
-        repository.setTasks(tasks);
+        synchronized (repository) { repository.setTasks(tasks); }
         invalidateSubtasksCache();
         notifyListeners();
     }
@@ -419,17 +481,17 @@ public class TaskManager {
     }
 
     public void addChecklist(Checklist checklist) {
-        repository.addChecklist(checklist);
+        synchronized (repository) { repository.addChecklist(checklist); }
         notifyListeners();
     }
 
     public void removeChecklist(Checklist checklist) {
-        repository.removeChecklist(checklist);
+        synchronized (repository) { repository.removeChecklist(checklist); }
         notifyListeners();
     }
 
     public void updateChecklistName(Checklist checklist, String newName) {
-        repository.updateChecklistName(checklist, newName);
+        synchronized (repository) { repository.updateChecklistName(checklist, newName); }
         notifyListeners();
     }
 
