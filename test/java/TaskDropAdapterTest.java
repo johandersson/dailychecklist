@@ -93,7 +93,12 @@ public class TaskDropAdapterTest {
             AtomicInteger refreshes = new AtomicInteger();
             TaskTransferHandler handler = new TaskTransferHandler(list, model, manager,
                     manager.checklist.getName(), refreshes::incrementAndGet);
+            assertNull(handler.getDragImage());
+            list.setSelectedIndex(0);
+            assertEquals(200, handler.getDragImage().getWidth(null));
             list.setSelectedIndices(new int[] {0, 1});
+            assertEquals(180, handler.getDragImage().getWidth(null));
+            assertEquals(new java.awt.Point(10, 10), handler.getDragImageOffset());
             Transferable payload = handler.createTransferable(list);
             list.clearSelection();
             model.clear();
@@ -124,10 +129,23 @@ public class TaskDropAdapterTest {
         Task child = task("child", TaskType.CUSTOM, "a");
         Task b = task("b", TaskType.CUSTOM, null);
         manager.tasks.add(a);
+        manager.tasks.add(child);
         TaskMovePlanner.Intent intent = TaskDropController.buildIntent(manager, List.of("a"),
                 CUSTOM, rows(a, child, b), 0, true);
         assertEquals("b", intent.beforeTaskId());
         assertNull(intent.parentId());
+        TaskMovePlanner.Intent insideMovedGroup = TaskDropController.buildIntent(manager,
+                List.of("a"), CUSTOM, rows(a, child, b), 1, true);
+        assertEquals("b", insideMovedGroup.beforeTaskId());
+        assertNull(insideMovedGroup.parentId());
+        TaskMovePlanner.Intent afterMovedGroup = TaskDropController.buildIntent(manager,
+                List.of("a"), CUSTOM, rows(a, child), 1, true);
+        assertNull(afterMovedGroup.beforeTaskId());
+        assertNull(afterMovedGroup.parentId());
+        TaskMovePlanner.Intent mixedSelection = TaskDropController.buildIntent(manager,
+                List.of("a", "child"), CUSTOM, rows(a, child, b), 1, true);
+        assertEquals("b", mixedSelection.beforeTaskId());
+        assertNull(mixedSelection.parentId());
     }
 
     @Test public void crossDailyDropRemainsTopLevel() {
@@ -140,6 +158,11 @@ public class TaskDropAdapterTest {
                 rows(parent, child), 1, false);
         assertEquals("parent", intent.beforeTaskId());
         assertNull(intent.parentId());
+        TaskMovePlanner.Intent append = TaskDropController.buildIntent(manager, List.of("moving"),
+                new TaskMovePlanner.Destination(TaskType.EVENING, null),
+                rows(parent, child), 2, true);
+        assertNull(append.beforeTaskId());
+        assertNull(append.parentId());
     }
 
     @Test public void childInsertionUsesVisibleSiblingIdAndGroupAppendUsesNull() {
@@ -157,8 +180,41 @@ public class TaskDropAdapterTest {
         assertNull(onParent.beforeTaskId());
         TaskMovePlanner.Intent append = TaskDropController.buildIntent(manager,
                 List.of("moving"), CUSTOM, rows(parent, child), 2, true);
-        assertNull(append.parentId());
+        assertEquals("parent", append.parentId());
         assertNull(append.beforeTaskId());
+    }
+
+    @Test public void firstAndLastRootBoundariesPromoteButLastChildBoundaryAppendsToGroup() {
+        Manager manager = new Manager();
+        manager.tasks.add(task("moving", TaskType.CUSTOM, "old"));
+        Task parent = task("parent", TaskType.CUSTOM, null);
+        Task child = task("child", TaskType.CUSTOM, "parent");
+        TaskMovePlanner.Intent first = TaskDropController.buildIntent(manager,
+                List.of("moving"), CUSTOM, rows(parent, child), 0, true);
+        assertNull(first.parentId());
+        assertEquals("parent", first.beforeTaskId());
+        Task heading = task("heading", TaskType.HEADING, "parent");
+        TaskMovePlanner.Intent beforeHeading = TaskDropController.buildIntent(manager,
+                List.of("moving"), CUSTOM, rows(heading, parent, child), 0, true);
+        assertNull(beforeHeading.parentId());
+        assertEquals("parent", beforeHeading.beforeTaskId());
+        TaskMovePlanner.Intent afterRoot = TaskDropController.buildIntent(manager,
+                List.of("moving"), CUSTOM, rows(parent), 1, true);
+        assertNull(afterRoot.parentId());
+        assertNull(afterRoot.beforeTaskId());
+        TaskMovePlanner.Intent afterChild = TaskDropController.buildIntent(manager,
+                List.of("moving"), CUSTOM, rows(parent, child), 2, true);
+        assertEquals("parent", afterChild.parentId());
+        assertNull(afterChild.beforeTaskId());
+        manager.tasks.add(task("root", TaskType.CUSTOM, null));
+        TaskMovePlanner.Intent topLevelAppend = TaskDropController.buildIntent(manager,
+                List.of("root"), CUSTOM, rows(parent, child), 2, true);
+        assertNull(topLevelAppend.parentId());
+        assertNull(topLevelAppend.beforeTaskId());
+        TaskMovePlanner.Intent empty = TaskDropController.buildIntent(manager,
+                List.of("moving"), CUSTOM, rows(), 0, true);
+        assertNull(empty.parentId());
+        assertNull(empty.beforeTaskId());
     }
 
     @Test public void headingsCannotBeDraggedAloneButCanAccompanyTheirParent() {
@@ -245,5 +301,63 @@ public class TaskDropAdapterTest {
         Manager manager = new Manager();
         assertEquals(CUSTOM, TaskDropController.resolveDestination(manager,
                 manager.checklist.getName(), new JList<>(rows())));
+    }
+
+    @Test public void dailyDestinationCannotBeShadowedByCustomDisplayNameForEitherFactory() throws Exception {
+        Manager manager = new Manager();
+        manager.checklist.setName("MORNING");
+        Task dailyTask = task("daily", TaskType.MORNING, null);
+        Task customTask = task("custom", TaskType.CUSTOM, null);
+        TaskMovePlanner.Destination daily =
+                new TaskMovePlanner.Destination(TaskType.MORNING, null);
+        List<JList<Task>> lists = new ArrayList<>();
+        SwingUtilities.invokeAndWait(() -> {
+            lists.add(TaskListFactory.createTaskList(rows(dailyTask), manager, daily, null));
+            DefaultListModel<Task> morning = rows(dailyTask);
+            lists.add(TaskListFactory.createTaskList(morning, manager, "MORNING", null,
+                    morning, rows()));
+            lists.add(TaskListFactory.createTaskList(rows(customTask), manager, CUSTOM, null));
+            lists.add(TaskListFactory.createTaskList(rows(customTask), manager,
+                    "MORNING", null, null, null));
+            assertTrue(lists.get(0).getTransferHandler() instanceof TaskTransferHandler);
+            TaskDropController.submit(manager,
+                    new TaskMovePlanner.Intent(List.of("daily"), daily, null, null),
+                    lists.get(0), null, null);
+        });
+        manager.result.complete(List.of("daily"));
+        SwingUtilities.invokeAndWait(() -> {
+            TaskDropController.restoreSelection(lists.get(1));
+            TaskDropController.restoreSelection(lists.get(0));
+            TaskDropController.restoreSelection(lists.get(2));
+            TaskDropController.restoreSelection(lists.get(3));
+            assertEquals(dailyTask, lists.get(0).getSelectedValue());
+            assertEquals(dailyTask, lists.get(1).getSelectedValue());
+            assertTrue(lists.get(2).isSelectionEmpty());
+            assertTrue(lists.get(3).isSelectionEmpty());
+        });
+    }
+
+    @Test public void factoryBindsCustomIdAcrossRenameAndRetainsLegacyOverload() throws Exception {
+        Manager manager = new Manager();
+        Task moved = task("moved", TaskType.CUSTOM, null);
+        List<JList<Task>> lists = new ArrayList<>();
+        SwingUtilities.invokeAndWait(() -> {
+            lists.add(TaskListFactory.createTaskList(rows(moved), manager, CUSTOM, null));
+            JList<Task> legacy = TaskListFactory.createTaskList(rows(moved), manager,
+                    manager.checklist.getName(), null, null, null);
+            lists.add(legacy);
+            assertTrue(legacy.getTransferHandler() instanceof TaskTransferHandler);
+            manager.checklist.setName("Renamed after the drag handler was constructed");
+            TaskDropController.submit(manager,
+                    new TaskMovePlanner.Intent(List.of("moved"), CUSTOM, null, null),
+                    legacy, null, null);
+        });
+        manager.result.complete(List.of("moved"));
+        SwingUtilities.invokeAndWait(() -> {
+            TaskDropController.restoreSelection(lists.get(0));
+            TaskDropController.restoreSelection(lists.get(1));
+            assertEquals(moved, lists.get(0).getSelectedValue());
+            assertEquals(moved, lists.get(1).getSelectedValue());
+        });
     }
 }

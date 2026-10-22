@@ -17,6 +17,7 @@
  */
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -117,24 +118,34 @@ public final class TaskMovePlanner {
         Set<String> selected = new LinkedHashSet<>(intent.taskIds());
         if (selected.isEmpty()) return Result.reject(Rejection.EMPTY_SELECTION);
         Map<String, TaskValue> byId = new LinkedHashMap<>();
+        Map<String, List<TaskValue>> childrenByParent = new HashMap<>();
         for (TaskValue value : source.tasks()) {
             if (value.id() == null || value.type() == null || byId.put(value.id(), value) != null)
                 return Result.reject(Rejection.INVALID_SNAPSHOT);
+            if (value.parentId() != null)
+                childrenByParent.computeIfAbsent(value.parentId(), key -> new ArrayList<>()).add(value);
         }
         for (TaskValue value : source.tasks()) {
             if (value.parentId() == null) {
                 if (value.type() == TaskType.HEADING) return Result.reject(Rejection.INVALID_SNAPSHOT);
             } else {
                 TaskValue parent = byId.get(value.parentId());
-                if (parent == null || parent.parentId() != null || parent.type() == TaskType.HEADING
+                if (parent == null || (value.type() != TaskType.HEADING && parent.parentId() != null)
+                    || parent.type() == TaskType.HEADING
                     || parent.id().equals(value.id())) return Result.reject(Rejection.INVALID_SNAPSHOT);
+                if (value.type() != TaskType.HEADING && (value.type() != parent.type()
+                    || (parent.type() == TaskType.CUSTOM
+                        && !Objects.equals(value.checklistId(), parent.checklistId()))))
+                    return Result.reject(Rejection.INVALID_SNAPSHOT);
             }
         }
         for (String id : selected) {
             TaskValue value = byId.get(id);
             if (value == null) return Result.reject(Rejection.UNKNOWN_TASK);
-            if (value.type() == TaskType.HEADING) return Result.reject(Rejection.HEADING_SELECTION);
+            if (value.type() == TaskType.HEADING && !selected.contains(value.parentId()))
+                return Result.reject(Rejection.HEADING_SELECTION);
         }
+        selected.removeIf(id -> byId.get(id).type() == TaskType.HEADING);
         List<TaskValue> roots = new ArrayList<>();
         List<String> selectedIds = new ArrayList<>();
         for (TaskValue value : source.tasks()) {
@@ -148,11 +159,18 @@ public final class TaskMovePlanner {
         for (TaskValue root : roots) {
             moving.add(root.id());
             block.add(root.moved(destination, intent.parentId()));
-            for (TaskValue child : source.tasks()) {
-                if (root.id().equals(child.parentId())) {
-                    if (intent.parentId() != null) return Result.reject(Rejection.GRANDCHILD);
-                    moving.add(child.id());
-                    block.add(child.moved(destination, root.id()));
+            for (TaskValue child : childrenByParent.getOrDefault(root.id(), List.of())) {
+                if (intent.parentId() != null && child.type() != TaskType.HEADING)
+                    return Result.reject(Rejection.GRANDCHILD);
+                moving.add(child.id());
+                block.add(child.moved(destination, root.id()));
+                if (child.type() != TaskType.HEADING) {
+                    for (TaskValue metadata : childrenByParent.getOrDefault(child.id(), List.of())) {
+                        if (metadata.type() == TaskType.HEADING) {
+                            moving.add(metadata.id());
+                            block.add(metadata.moved(destination, child.id()));
+                        }
+                    }
                 }
             }
         }
@@ -172,8 +190,9 @@ public final class TaskMovePlanner {
         for (TaskValue value : source.tasks()) if (!moving.contains(value.id())) remaining.add(value);
         int insertion = remaining.size();
         if (intent.beforeTaskId() != null) {
+            Set<String> anchorRoot = Set.of(intent.beforeTaskId());
             for (int i = 0; i < remaining.size(); i++) {
-                if (remaining.get(i).id().equals(intent.beforeTaskId())) { insertion = i; break; }
+                if (inBlock(remaining.get(i), anchorRoot, byId)) { insertion = i; break; }
             }
         } else {
             // Append after the complete last sibling block, including hidden children/headings.
@@ -184,9 +203,8 @@ public final class TaskMovePlanner {
             }
             for (int i = 0; i < remaining.size(); i++) {
                 TaskValue value = remaining.get(i);
-                boolean inGroup = intent.parentId() == null
-                    ? destinationRoots.contains(value.id()) || destinationRoots.contains(value.parentId())
-                    : intent.parentId().equals(value.id()) || intent.parentId().equals(value.parentId());
+                boolean inGroup = inBlock(value, intent.parentId() == null
+                    ? destinationRoots : Set.of(intent.parentId()), byId);
                 if (inGroup) insertion = i + 1;
             }
         }
@@ -197,5 +215,12 @@ public final class TaskMovePlanner {
     private static boolean belongs(TaskValue value, Destination destination) {
         return value.type() == destination.type()
             && (destination.type() != TaskType.CUSTOM || Objects.equals(value.checklistId(), destination.checklistId()));
+    }
+
+    private static boolean inBlock(TaskValue value, Set<String> roots, Map<String, TaskValue> byId) {
+        if (roots.contains(value.id()) || (value.parentId() != null && roots.contains(value.parentId()))) return true;
+        TaskValue parent = byId.get(value.parentId());
+        return value.type() == TaskType.HEADING && parent != null && parent.parentId() != null
+            && roots.contains(parent.parentId());
     }
 }

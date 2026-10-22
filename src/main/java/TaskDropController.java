@@ -47,6 +47,11 @@ public final class TaskDropController {
 
     static TaskMovePlanner.Destination resolveDestination(TaskManager manager,
             String name, JList<Task> list) {
+        return resolveDestination(manager, name, list.getModel());
+    }
+
+    static TaskMovePlanner.Destination resolveDestination(TaskManager manager,
+            String name, ListModel<Task> rows) {
         // A custom checklist is resolved before reserved daily display names.
         for (Checklist checklist : manager.getCustomChecklists()) {
             if (Objects.equals(checklist.getName(), name)) {
@@ -56,8 +61,8 @@ public final class TaskDropController {
         if ("MORNING".equals(name) || "EVENING".equals(name)) {
             return new TaskMovePlanner.Destination(TaskType.valueOf(name), null);
         }
-        if (name == null && list.getModel().getSize() > 0) {
-            Task row = list.getModel().getElementAt(0);
+        if (name == null && rows.getSize() > 0) {
+            Task row = rows.getElementAt(0);
             if (row.getType() == TaskType.MORNING || row.getType() == TaskType.EVENING) {
                 return new TaskMovePlanner.Destination(row.getType(), null);
             }
@@ -97,6 +102,7 @@ public final class TaskDropController {
             int dropIndex, boolean insert) {
         List<Task> tasks = selectedTasks(manager, ids);
         boolean topLevel = tasks.stream().filter(t -> t.getType() != TaskType.HEADING)
+                .filter(t -> t.getParentId() == null || !ids.contains(t.getParentId()))
                 .allMatch(t -> t.getParentId() == null);
         boolean same = tasks.stream().filter(t -> t.getType() != TaskType.HEADING)
                 .allMatch(t -> belongsTo(t, destination));
@@ -111,7 +117,7 @@ public final class TaskDropController {
         String parent = null;
         String before = null;
         boolean forceTopLevel = (same && topLevel) || (!same && crossDaily);
-        if (!forceTopLevel && row != null) {
+        if (!forceTopLevel && row != null && !(insert && dropIndex == 0)) {
             if (row.getParentId() != null) {
                 parent = row.getParentId();
                 if (row.getType() != TaskType.HEADING) {
@@ -119,6 +125,12 @@ public final class TaskDropController {
                 }
             } else if (!insert) {
                 parent = row.getId();
+            }
+        }
+        if (!forceTopLevel && insert && row == null && size > 0) {
+            Task previous = rows.getElementAt(size - 1);
+            if (previous.getParentId() != null && previous.getType() != TaskType.HEADING) {
+                parent = previous.getParentId();
             }
         }
         if (parent == null) {

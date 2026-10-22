@@ -15,8 +15,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.Point;
+import java.awt.RenderingHints;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.List;
 import javax.swing.DefaultListModel;
@@ -44,13 +51,19 @@ public class TaskTransferHandler extends TransferHandler {
     public TaskTransferHandler(JList<Task> list, DefaultListModel<Task> model,
             TaskManager manager, String checklistName, Runnable updateAllPanels,
             DefaultListModel<Task> morning, DefaultListModel<Task> evening) {
-        this.list = list;
-        this.taskManager = manager;
-        this.destination = model == morning && morning != null
+        this(list, manager, model == morning && morning != null
                 ? new TaskMovePlanner.Destination(TaskType.MORNING, null)
                 : model == evening && evening != null
                     ? new TaskMovePlanner.Destination(TaskType.EVENING, null)
-                    : TaskDropController.resolveDestination(manager, checklistName, list);
+                    : TaskDropController.resolveDestination(manager, checklistName, list),
+                updateAllPanels);
+    }
+
+    public TaskTransferHandler(JList<Task> list, TaskManager manager,
+            TaskMovePlanner.Destination destination, Runnable updateAllPanels) {
+        this.list = list;
+        this.taskManager = manager;
+        this.destination = java.util.Objects.requireNonNull(destination);
         this.updateAllPanels = updateAllPanels;
         TaskDropController.register(list, manager, () -> destination);
     }
@@ -64,6 +77,44 @@ public class TaskTransferHandler extends TransferHandler {
     @Override
     public int getSourceActions(JComponent component) {
         return MOVE;
+    }
+
+    @Override
+    public Image getDragImage() {
+        List<Task> selected = list.getSelectedValuesList();
+        if (selected.isEmpty()) {
+            return null;
+        }
+        boolean multiple = selected.size() > 1;
+        String text = multiple ? selected.size() + " tasks" : selected.get(0).getName();
+        if (!multiple && text.length() > 20) {
+            text = text.substring(0, 17) + "...";
+        }
+        int width = multiple ? 180 : 200;
+        BufferedImage image = new BufferedImage(width, 25, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D graphics = image.createGraphics();
+        try {
+            graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON);
+            graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                    RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            graphics.setColor(multiple ? new Color(100, 150, 200, 220)
+                    : new Color(240, 240, 240, 200));
+            graphics.fillRoundRect(0, 0, width, 25, 5, 5);
+            graphics.setColor(multiple ? Color.BLUE : Color.GRAY);
+            graphics.drawRoundRect(0, 0, width - 1, 24, 5, 5);
+            graphics.setColor(multiple ? Color.WHITE : Color.BLACK);
+            graphics.setFont(new Font("SansSerif", multiple ? Font.BOLD : Font.PLAIN, 12));
+            graphics.drawString(text, 5, 17);
+        } finally {
+            graphics.dispose();
+        }
+        return image;
+    }
+
+    @Override
+    public Point getDragImageOffset() {
+        return new Point(10, 10);
     }
 
     @Override

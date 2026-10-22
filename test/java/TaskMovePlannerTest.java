@@ -168,11 +168,72 @@ public class TaskMovePlannerTest {
         assertEquals(TaskMovePlanner.Rejection.UNKNOWN_CHECKLIST, missingChecklist.rejection());
     }
 
+    @Test public void headingSelectionIsAllowedOnlyWithItsSelectedParent() {
+        List<Task> tasks = List.of(task("p", TaskType.MORNING, null), task("h", TaskType.HEADING, "p"),
+            task("q", TaskType.MORNING, null));
+        assertEquals(TaskMovePlanner.Rejection.HEADING_SELECTION,
+            plan(tasks, List.of("h"), MORNING, null, null).rejection());
+        assertEquals(TaskMovePlanner.Rejection.HEADING_SELECTION,
+            plan(tasks, List.of("h", "q"), MORNING, null, null).rejection());
+        TaskMovePlanner.Result result = plan(tasks, List.of("h", "p"), EVENING, null, null);
+        assertTrue(result.accepted());
+        assertEquals(List.of("q", "p", "h"), ids(result.snapshot().toTasks()));
+        assertEquals(List.of("p"), result.selectedIds());
+        assertEquals("p", result.snapshot().toTasks().get(2).getParentId());
+    }
+
+    @Test public void headingMetadataDoesNotPreventNestingAnOtherwiseChildlessTask() {
+        List<Task> tasks = List.of(task("p", TaskType.MORNING, null), task("h", TaskType.HEADING, "p"),
+            task("q", TaskType.MORNING, null));
+        TaskMovePlanner.Result nested = plan(tasks, List.of("p", "h"), MORNING, null, "q");
+        assertTrue(nested.accepted());
+        assertEquals(List.of("q", "p", "h"), ids(nested.snapshot().toTasks()));
+        assertEquals("q", nested.snapshot().toTasks().get(1).getParentId());
+        assertEquals("p", nested.snapshot().toTasks().get(2).getParentId());
+        TaskMovePlanner.Result promoted = plan(nested.snapshot().toTasks(), List.of("p", "h"), EVENING, null, null);
+        assertTrue(promoted.accepted());
+        assertNull(promoted.snapshot().toTasks().get(1).getParentId());
+        assertEquals("p", promoted.snapshot().toTasks().get(2).getParentId());
+    }
+
     @Test public void invalidCanonicalHierarchyOrDuplicateIdsRejectWithoutDroppingAnything() {
         assertEquals(TaskMovePlanner.Rejection.INVALID_SNAPSHOT, plan(
             List.of(task("a", TaskType.MORNING, "missing")), List.of("a"), EVENING, null, null).rejection());
         assertFalse(plan(List.of(task("a", TaskType.MORNING, null), task("a", TaskType.MORNING, null)),
             List.of("a"), EVENING, null, null).accepted());
+    }
+
+    @Test public void rejectsExistingChildMembershipMismatch() {
+        assertEquals(TaskMovePlanner.Rejection.INVALID_SNAPSHOT, plan(
+            List.of(task("p", TaskType.MORNING, null), task("c", TaskType.EVENING, "p")),
+            List.of("p"), EVENING, null, null).rejection());
+        Task child = task("c", TaskType.CUSTOM, "p");
+        child.setChecklistId("different-id");
+        assertEquals(TaskMovePlanner.Rejection.INVALID_SNAPSHOT, plan(
+            List.of(task("p", TaskType.CUSTOM, null), child),
+            List.of("p"), EVENING, null, null).rejection());
+    }
+
+    @Test public void insertingBeforeParentDoesNotSplitLeadingHeadingDecoration() {
+        List<Task> tasks = List.of(task("a", TaskType.MORNING, null),
+            task("h", TaskType.HEADING, "p"), task("p", TaskType.EVENING, null),
+            task("c", TaskType.EVENING, "p"));
+        TaskMovePlanner.Result result = plan(tasks, List.of("a"), EVENING, "p", null);
+        assertTrue(result.accepted());
+        assertEquals(List.of("a", "h", "p", "c"), ids(result.snapshot().toTasks()));
+    }
+
+    @Test public void parentBlockIncludesMetadataAttachedToItsChild() {
+        List<Task> tasks = List.of(task("p", TaskType.MORNING, null), task("c", TaskType.MORNING, "p"),
+            task("h", TaskType.HEADING, "c"), task("q", TaskType.EVENING, null));
+        TaskMovePlanner.Result result = plan(tasks, List.of("p"), EVENING, null, null);
+        assertTrue(result.accepted());
+        List<Task> moved = result.snapshot().toTasks();
+        assertEquals(List.of("q", "p", "c", "h"), ids(moved));
+        assertEquals(TaskType.HEADING, moved.get(3).getType());
+        assertEquals("c", moved.get(3).getParentId());
+        TaskMovePlanner.Result append = plan(moved, List.of("q"), EVENING, null, null);
+        assertEquals(List.of("p", "c", "h", "q"), ids(append.snapshot().toTasks()));
     }
 
     @Test public void managerCopyIsDeepAndPreservesNotesAndCompletion() {
