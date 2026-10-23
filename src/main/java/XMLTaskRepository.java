@@ -51,7 +51,9 @@ public class XMLTaskRepository implements TaskRepository {
     private Map<TaskType, List<Task>> tasksByType = null;
     private Map<String, List<Task>> tasksByChecklist = null;
     private boolean tasksCacheDirty = true;
-    private long lastModifiedTime = 0;
+    private volatile long lastModifiedTime = 0;
+    private volatile boolean moveInProgress;
+    private volatile boolean persistenceInProgress;
     // Cache display computation state to avoid recomputing on reload
     private Map<String, Boolean> taskDisplayDirtyState = new HashMap<>();
     private Map<String, String> taskCachedDisplayFullName = new HashMap<>();
@@ -216,29 +218,15 @@ public class XMLTaskRepository implements TaskRepository {
     }
 
     private void scheduleCoalescedFlushIfNeeded() {
+        if (moveInProgress) return;
         if (coalesceFuture != null && !coalesceFuture.isDone()) return;
         coalesceFuture = coalesceScheduler.schedule(this::flushPendingWrites, COALESCE_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
     }
 
-    private void flushPendingWrites() {
+    private synchronized void flushPendingWrites() {
         try {
             // If there is nothing to flush, return early
             if (pendingWrites.isEmpty() && pendingRemovals.isEmpty()) return;
-
-            // Capture a stable snapshot of the authoritative cachedTasks under read lock
-            List<Task> snapshot;
-            rwLock.readLock().lock();
-            try {
-                if (cachedTasks == null) getCachedTasks();
-                snapshot = new ArrayList<>(cachedTasks);
-            } finally {
-                rwLock.readLock().unlock();
-            }
-
-            // Apply pending removals defensively (in case cachedTasks wasn't updated earlier)
-            if (!pendingRemovals.isEmpty()) {
-                snapshot.removeIf(t -> pendingRemovals.contains(t.getId()));
-            }
 
             // Clear pending sets before persisting to avoid races with new updates
             pendingWrites.clear();
@@ -246,7 +234,7 @@ public class XMLTaskRepository implements TaskRepository {
 
             // Use the quiet retry path for coalesced flushes to avoid showing a dialog
             // for transient background write failures. Persist the full snapshot.
-            submitWithRetriesQuiet("tasks-update-coalesced", () -> persistSetAllTasks(snapshot));
+            submitWithRetriesQuiet("tasks-update-coalesced", this::persistCurrentTasks);
                 } catch (Exception e) {
             MetricsCollector.record("Failed to flush coalesced writes: " + e.getMessage());
         }
@@ -267,6 +255,105 @@ public class XMLTaskRepository implements TaskRepository {
 
     private void persistSetAllTasks(List<Task> tasks) throws Exception {
         taskXmlHandler.setAllTasks(tasks);
+    }
+
+    /** Never enqueue an old full-state snapshot behind a newer durable move. */
+    private void persistCurrentTasks() throws Exception {
+        persistenceInProgress = true;
+        try {
+            List<Task> snapshot;
+            synchronized (this) {
+                if (cachedTasks == null) getCachedTasks();
+                snapshot = TaskMovePlanner.snapshot(cachedTasks).toTasks();
+            }
+            persistSetAllTasks(snapshot);
+        } finally {
+            synchronized (this) {
+                lastModifiedTime = new File(FILE_NAME).lastModified();
+                persistenceInProgress = false;
+            }
+        }
+    }
+
+    /** Failure-injectable checked write; staging is beside the real file for atomic promotion. */
+    protected void persistMoveSnapshot(List<Task> tasks, java.nio.file.Path stagingFile) throws Exception {
+        new TaskStaxHandler(stagingFile.toString()).setAllTasks(tasks);
+    }
+
+    @Override
+    public List<String> commitMove(TaskMovePlanner.Intent intent) throws Exception {
+        java.util.concurrent.CompletableFuture<List<String>> completion = new java.util.concurrent.CompletableFuture<>();
+        writeExecutor.execute(() -> {
+            java.nio.file.Path target = java.nio.file.Paths.get(FILE_NAME).toAbsolutePath();
+            java.nio.file.Path staging = target.resolveSibling(target.getFileName() + ".move." + java.util.UUID.randomUUID());
+            synchronized (this) {
+                moveInProgress = true;
+                if (coalesceFuture != null) coalesceFuture.cancel(false);
+                coalesceFuture = null;
+            }
+            try {
+                while (true) {
+                    TaskMovePlanner.Snapshot before;
+                    TaskMovePlanner.Result result;
+                    synchronized (this) {
+                        if (cachedTasks == null) getCachedTasks();
+                        before = TaskMovePlanner.snapshot(cachedTasks, getChecklists());
+                        result = TaskMovePlanner.plan(before, intent);
+                        if (!result.accepted())
+                            throw new IllegalArgumentException("Move rejected: " + result.rejection());
+                    }
+                    // No repository/model lock is held during disk I/O. An EDT edit can proceed.
+                    persistMoveSnapshot(result.snapshot().toTasks(), staging);
+                    synchronized (this) {
+                        TaskMovePlanner.Snapshot current = TaskMovePlanner.snapshot(cachedTasks, getChecklists());
+                        if (!before.equals(current)) continue; // Recompute; never overwrite an intervening edit.
+                        rwLock.writeLock().lock();
+                        try {
+                            // Only this short atomic promotion/publication holds the model lock.
+                            java.nio.file.Files.move(staging, target,
+                                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                            cachedTasks = result.snapshot().toTasks();
+                            rebuildMapsFromCachedTasks();
+                            tasksCacheDirty = false;
+                            lastModifiedTime = new File(FILE_NAME).lastModified();
+                            pendingWrites.clear();
+                            pendingRemovals.clear();
+                        } finally {
+                            rwLock.writeLock().unlock();
+                        }
+                        completion.complete(result.selectedIds());
+                        break;
+                    }
+                }
+            } catch (Exception failure) {
+                completion.completeExceptionally(failure);
+            } finally {
+                try {
+                    java.nio.file.Files.deleteIfExists(staging);
+                    try (java.nio.file.DirectoryStream<java.nio.file.Path> leftovers =
+                        java.nio.file.Files.newDirectoryStream(target.getParent(), staging.getFileName() + ".tmp.*")) {
+                        for (java.nio.file.Path leftover : leftovers) java.nio.file.Files.deleteIfExists(leftover);
+                    }
+                } catch (java.io.IOException cleanupFailure) {
+                    MetricsCollector.record("Move staging cleanup failed: " + cleanupFailure.getMessage());
+                }
+                synchronized (this) {
+                    moveInProgress = false;
+                    if (!pendingWrites.isEmpty() || !pendingRemovals.isEmpty()) scheduleCoalescedFlushIfNeeded();
+                }
+            }
+        });
+        try {
+            return completion.get();
+        } catch (java.util.concurrent.ExecutionException exception) {
+            Throwable cause = exception.getCause();
+            if (cause instanceof Exception) throw (Exception) cause;
+            throw new RuntimeException(cause);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw exception;
+        }
     }
 
     /**
@@ -349,7 +436,8 @@ public class XMLTaskRepository implements TaskRepository {
         // Check if file has been modified externally
         java.io.File dataFile = new java.io.File(FILE_NAME);
         long currentModified = dataFile.lastModified();
-        if (currentModified > lastModifiedTime) {
+        if (currentModified > lastModifiedTime && !moveInProgress && !persistenceInProgress
+            && pendingWrites.isEmpty() && pendingRemovals.isEmpty()) {
             tasksCacheDirty = true;
             lastModifiedTime = currentModified;
         }
@@ -538,6 +626,7 @@ public class XMLTaskRepository implements TaskRepository {
             return;
         }
 
+        if (cachedTasks == null) getCachedTasks();
         // Update in-memory cache first and persist asynchronously
         rwLock.writeLock().lock();
         try {
@@ -693,7 +782,7 @@ public class XMLTaskRepository implements TaskRepository {
             // Persist asynchronously (with retries/backoff)
             submitWithRetries("tasks-update", () -> {
                 long start = System.nanoTime();
-                persistUpdateTasks(tasks);
+                persistCurrentTasks();
                 long dur = System.nanoTime() - start;
                 MetricsCollector.record("updateTasks wrote " + tasks.size() + " tasks in " + (dur / 1_000_000.0) + " ms");
             });
@@ -747,7 +836,7 @@ public class XMLTaskRepository implements TaskRepository {
                 rwLock.writeLock().unlock();
             }
 
-            submitWithRetries("tasks-update-quiet", () -> persistUpdateTasks(tasks));
+            submitWithRetries("tasks-update-quiet", this::persistCurrentTasks);
             return true;
         } catch (Exception e) {
             return false;
@@ -834,7 +923,7 @@ public class XMLTaskRepository implements TaskRepository {
             // Persist asynchronously on the write executor to avoid blocking
             // the calling thread and to serialize disk writes with other
             // coalesced background flushes (prevents file-in-use collisions).
-            submitWithRetries("setAllTasks", () -> persistSetAllTasks(tasks));
+            submitWithRetries("setAllTasks", this::persistCurrentTasks);
 
             // Update in-memory representation immediately
             rwLock.writeLock().lock();
@@ -952,17 +1041,17 @@ public class XMLTaskRepository implements TaskRepository {
     }
 
     @Override
-    public void addChecklist(Checklist checklist) {
+    public synchronized void addChecklist(Checklist checklist) {
         checklistNameManager.addChecklist(checklist);
     }
 
     @Override
-    public void updateChecklistName(Checklist checklist, String newName) {
+    public synchronized void updateChecklistName(Checklist checklist, String newName) {
         checklistNameManager.updateChecklistName(checklist, newName);
     }
 
     @Override
-    public void removeChecklist(Checklist checklist) {
+    public synchronized void removeChecklist(Checklist checklist) {
         checklistNameManager.removeChecklist(checklist);
     }
 
@@ -979,19 +1068,16 @@ public class XMLTaskRepository implements TaskRepository {
     }
 
     @Override
-    public void shutdown() {
+    public synchronized void shutdown() {
         shutdownBackupSystem();
-        
-        // Clear cache to free memory
-        cachedTasks = null;
-        tasksCacheDirty = true;
-        // Shutdown executor
-        try {
-            writeExecutor.shutdownNow();
-        } catch (Exception ignore) {}
-        try {
-            coalesceScheduler.shutdownNow();
-        } catch (Exception ignore) {}
+        if (coalesceFuture != null) coalesceFuture.cancel(false);
+        coalesceScheduler.shutdownNow();
+        if (!writeExecutor.isShutdown()) {
+            flushPendingWrites();
+            // Accepted commits must finish (and complete their futures), not be discarded.
+            // Retain the canonical cache until the queued writers have consumed it.
+            writeExecutor.shutdown();
+        }
     }
 
     @Override

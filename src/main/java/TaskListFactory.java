@@ -24,19 +24,30 @@ public class TaskListFactory {
     private TaskListFactory() {}
 
     public static JList<Task> createTaskList(DefaultListModel<Task> listModel, TaskManager taskManager, String checklistName, Runnable updateCallback, DefaultListModel<Task> morningListModel, DefaultListModel<Task> eveningListModel) {
+        TaskMovePlanner.Destination destination = listModel == morningListModel && morningListModel != null
+                ? new TaskMovePlanner.Destination(TaskType.MORNING, null)
+                : listModel == eveningListModel && eveningListModel != null
+                    ? new TaskMovePlanner.Destination(TaskType.EVENING, null)
+                    : TaskDropController.resolveDestination(taskManager, checklistName, listModel);
+        return createTaskList(listModel, taskManager, destination, updateCallback);
+    }
+
+    public static JList<Task> createTaskList(DefaultListModel<Task> listModel,
+            TaskManager taskManager, TaskMovePlanner.Destination destination,
+            Runnable updateCallback) {
         JList<Task> taskList = new TaskJList(listModel, taskManager);
         taskList.setCellRenderer(new CheckboxListCellRenderer(taskManager));
         taskList.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         taskList.setSelectionBackground(new java.awt.Color(184, 207, 229)); // Consistent selection color
         taskList.setSelectionForeground(java.awt.Color.BLACK);
+        taskList.setTransferHandler(new TaskTransferHandler(taskList, taskManager,
+                destination, updateCallback));
+        taskList.setDropMode(DropMode.INSERT);
         if (!java.awt.GraphicsEnvironment.isHeadless()) {
             // Enable drag by default for all lists. To avoid accidental drag when clicking
             // the checkbox area, we temporarily disable drag while the mouse is pressed
             // inside the checkbox bounds and re-enable it on release.
             taskList.setDragEnabled(true);
-            taskList.setTransferHandler(new TaskTransferHandler(taskList, listModel, taskManager, checklistName, updateCallback, morningListModel, eveningListModel));
-            taskList.setDropMode(DropMode.INSERT);
-
             taskList.addMouseListener(new TaskListMouseHandler(taskList, listModel, taskManager, updateCallback));
             // Ensure ToolTipManager will query our getToolTipText override
             ToolTipManager.sharedInstance().registerComponent(taskList);

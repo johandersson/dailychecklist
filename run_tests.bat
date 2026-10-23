@@ -99,7 +99,7 @@ echo ========================================
 echo.
 
 REM Run tests with JaCoCo agent
-java -javaagent:lib\%JACOCO_AGENT_JAR%=destfile=build\jacoco.exec -cp "build\test-classes;build\classes;lib\%JUNIT_JAR%;lib\%HAMCREST_JAR%" org.junit.runner.JUnitCore TaskTest TaskManagerTest XMLTaskRepositoryTest ChecklistTest
+java -javaagent:lib\%JACOCO_AGENT_JAR%=destfile=build\jacoco.exec -cp "build\test-classes;build\classes;lib\%JUNIT_JAR%;lib\%HAMCREST_JAR%" org.junit.runner.JUnitCore TaskTest TaskManagerTest XMLTaskRepositoryTest ChecklistTest TaskMovePlannerTest TaskMoveCommitTest TaskDropAdapterTest TaskUpdaterSnapshotTest
 if errorlevel 1 (
     set TEST_FAILED=1
 ) else (

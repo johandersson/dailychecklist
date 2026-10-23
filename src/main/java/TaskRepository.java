@@ -26,6 +26,22 @@ public interface TaskRepository {
     boolean hasUndoneTasks();
     void setTasks(List<Task> tasks);
 
+    /**
+     * Checked, serialized move boundary. The default is for in-memory repositories.
+     * Disk-backed implementations must override this and publish only after saving,
+     * without holding the repository monitor during the write.
+     * Callers must run it off the EDT. Other mutations synchronize on this repository.
+     */
+    default List<String> commitMove(TaskMovePlanner.Intent intent) throws Exception {
+        synchronized (this) {
+            TaskMovePlanner.Result result = TaskMovePlanner.plan(
+                TaskMovePlanner.snapshot(getAllTasks(), getChecklists()), intent);
+            if (!result.accepted()) throw new IllegalArgumentException("Move rejected: " + result.rejection());
+            setTasks(result.snapshot().toTasks());
+            return result.selectedIds();
+        }
+    }
+
     List<Reminder> getReminders();
     void addReminder(Reminder reminder);
     void removeReminder(Reminder reminder);

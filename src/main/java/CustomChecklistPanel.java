@@ -590,8 +590,10 @@ public class CustomChecklistPanel extends JPanel {
     }
 
     private volatile boolean updateScheduled = false;
+    private final java.util.concurrent.atomic.AtomicLong refreshGeneration = new java.util.concurrent.atomic.AtomicLong();
 
     private void scheduleUpdate() {
+        refreshGeneration.incrementAndGet();
         if (updateScheduled) return;
         updateScheduled = true;
         javax.swing.SwingUtilities.invokeLater(() -> {
@@ -614,13 +616,20 @@ public class CustomChecklistPanel extends JPanel {
     }
 
     private void loadAndUpdateTasks(java.util.List<Task> selectedTasks) {
+        long generation = refreshGeneration.get();
         // Load checklist tasks (and headings) in background to avoid blocking EDT
         java.util.concurrent.CompletableFuture.supplyAsync(() -> {
             class ChecklistBundle { List<Task> customs; List<Task> headings; ChecklistBundle(List<Task> c, List<Task> h) { this.customs = c; this.headings = h; } }
             ChecklistBundle bundle = null;
             try {
-                List<Task> customs = taskManager.getTasks(TaskType.CUSTOM, checklist);
-                List<Task> headings = taskManager.getTasks(TaskType.HEADING, checklist);
+                List<Task> snapshot = taskManager.snapshotTasks();
+                List<Task> customs = new java.util.ArrayList<>();
+                List<Task> headings = new java.util.ArrayList<>();
+                for (Task task : snapshot) {
+                    if (task.getType() == TaskType.HEADING) headings.add(task);
+                    else if (task.getType() == TaskType.CUSTOM &&
+                            java.util.Objects.equals(task.getChecklistId(), checklist.getId())) customs.add(task);
+                }
                 bundle = new ChecklistBundle(customs, headings);
             } catch (Exception e) {
                 java.util.logging.Logger.getLogger(CustomChecklistPanel.class.getName()).log(java.util.logging.Level.SEVERE, "Error loading custom checklist tasks", e);
@@ -637,6 +646,7 @@ public class CustomChecklistPanel extends JPanel {
                 final List<Task> finalTasks = bundle.customs;
                 final List<Task> finalHeadings = bundle.headings;
                 SwingUtilities.invokeLater(() -> {
+                    if (generation != refreshGeneration.get()) return;
                     try {
                         List<Task> tasks = finalTasks;
                         List<Task> headings = finalHeadings;
@@ -649,9 +659,12 @@ public class CustomChecklistPanel extends JPanel {
 
                         // For custom checklists we want parents followed by their direct subtasks.
                         java.util.List<Task> parents = new java.util.ArrayList<>();
+                        java.util.Map<String, java.util.List<Task>> subtasksByParent = new java.util.HashMap<>();
                         for (Task t : tasks) {
                             if (t.getParentId() == null) {
                                 parents.add(t);
+                            } else {
+                                subtasksByParent.computeIfAbsent(t.getParentId(), key -> new java.util.ArrayList<>()).add(t);
                             }
                         }
                         java.util.List<Task> desired = new java.util.ArrayList<>();
@@ -659,7 +672,7 @@ public class CustomChecklistPanel extends JPanel {
                             Task heading = headingByParent.get(p.getId());
                             if (heading != null) desired.add(heading);
                             desired.add(p);
-                            java.util.List<Task> subs = taskManager.getSubtasksSorted(p.getId());
+                            java.util.List<Task> subs = subtasksByParent.get(p.getId());
                             if (subs != null && !subs.isEmpty()) {
                                 for (Task s : subs) {
                                     if (p.getChecklistId() == null) {
@@ -684,6 +697,7 @@ public class CustomChecklistPanel extends JPanel {
                                 }
                             }
                         }
+                        TaskDropController.restoreSelection(customTaskList);
 
                         // If we recently added a task, select and ensure visibility for it
                         if (lastAddedTaskId != null) {
