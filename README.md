@@ -23,7 +23,7 @@ Stay organized and boost your productivity with the **Daily Checklist** applicat
 Daily Checklist is built as a **pure Java application with zero external dependencies**, offering several key advantages:
 
 - **No Dependencies**: Runs on any system with Java installed - no additional libraries, frameworks, or package managers required
-- **Small Size**: Lightweight JAR file (under 100KB) with minimal footprint
+- **Small Size**: Lightweight JAR file (under 500KB) with minimal footprint
 - **Fast Startup**: No dependency loading overhead
 - **Secure**: Uses only built-in Java APIs, reducing potential security vulnerabilities from third-party libraries
 - **Portable**: Single JAR file that works across all platforms
