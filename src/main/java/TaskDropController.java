@@ -70,14 +70,14 @@ public final class TaskDropController {
         throw new IllegalArgumentException("The destination checklist no longer exists");
     }
 
-    static List<Task> selectedTasks(TaskManager manager, List<String> ids) {
+    static List<Task> selectedTasks(TaskManager manager, List<String> ids, boolean skipHeadingValidation) {
         List<Task> selected = new ArrayList<>();
         for (String id : ids) {
             Task task = manager.getTaskById(id);
             if (task == null) {
                 throw new IllegalArgumentException("A dragged task no longer exists");
             }
-            if (task.getType() == TaskType.HEADING && !ids.contains(task.getParentId())) {
+            if (!skipHeadingValidation && task.getType() == TaskType.HEADING && !ids.contains(task.getParentId())) {
                 throw new IllegalArgumentException("Headings move only with their parent task");
             }
             selected.add(task);
@@ -85,8 +85,13 @@ public final class TaskDropController {
         return selected;
     }
 
+    static List<Task> selectedTasks(TaskManager manager, List<String> ids) {
+        return selectedTasks(manager, ids, false);
+    }
+
     static void validateCustomSelection(TaskManager manager, List<String> ids) {
-        for (Task task : selectedTasks(manager, ids)) {
+        List<Task> tasks = selectedTasks(manager, ids, true);
+        for (Task task : tasks) {
             if (task.getType() != TaskType.CUSTOM && task.getType() != TaskType.HEADING) {
                 throw new IllegalArgumentException("Only custom tasks can be moved in the overview");
             }
@@ -100,23 +105,48 @@ public final class TaskDropController {
     static TaskMovePlanner.Intent buildIntent(TaskManager manager, List<String> ids,
             TaskMovePlanner.Destination destination, ListModel<Task> rows,
             int dropIndex, boolean insert) {
-        List<Task> tasks = selectedTasks(manager, ids);
-        boolean topLevel = tasks.stream().filter(t -> t.getType() != TaskType.HEADING)
-                .filter(t -> t.getParentId() == null || !ids.contains(t.getParentId()))
+        // Don't validate headings here - TaskMovePlanner.plan() will handle that
+        // Just verify that all tasks exist
+        List<Task> tasks = new ArrayList<>();
+        for (String id : ids) {
+            Task task = manager.getTaskById(id);
+            if (task == null) {
+                throw new IllegalArgumentException("A dragged task no longer exists");
+            }
+            tasks.add(task);
+        }
+        
+        java.util.function.Predicate<Task> isNonHeadingRoot = t -> 
+            t.getType() != TaskType.HEADING && 
+            (t.getParentId() == null || !ids.contains(t.getParentId()));
+        
+        boolean topLevel = tasks.stream()
+                .filter(isNonHeadingRoot)
                 .allMatch(t -> t.getParentId() == null);
-        boolean same = tasks.stream().filter(t -> t.getType() != TaskType.HEADING)
-                .allMatch(t -> belongsTo(t, destination));
+        
+        java.util.function.Predicate<Task> belongsToDestination = t -> 
+            t.getType() == destination.type() &&
+            (destination.type() != TaskType.CUSTOM
+                || java.util.Objects.equals(t.getChecklistId(), destination.checklistId()));
+        
+        boolean same = tasks.stream()
+                .filter(t -> t.getType() != TaskType.HEADING)
+                .allMatch(belongsToDestination);
+        
         boolean crossDaily = destination.type() != TaskType.CUSTOM
                 && tasks.stream().allMatch(t -> t.getType() == TaskType.MORNING
                         || t.getType() == TaskType.EVENING || t.getType() == TaskType.HEADING);
+        
         int size = rows.getSize();
         if (dropIndex < 0 || dropIndex > size || (!insert && dropIndex == size)) {
             throw new IllegalArgumentException("Invalid task drop location");
         }
+        
         Task row = dropIndex < size ? rows.getElementAt(dropIndex) : null;
         String parent = null;
         String before = null;
         boolean forceTopLevel = (same && topLevel) || (!same && crossDaily);
+        
         if (!forceTopLevel && row != null && !(insert && dropIndex == 0)) {
             if (row.getParentId() != null) {
                 parent = row.getParentId();
@@ -127,12 +157,14 @@ public final class TaskDropController {
                 parent = row.getId();
             }
         }
+        
         if (!forceTopLevel && insert && row == null && size > 0) {
             Task previous = rows.getElementAt(size - 1);
             if (previous.getParentId() != null && previous.getType() != TaskType.HEADING) {
                 parent = previous.getParentId();
             }
         }
+        
         if (parent == null) {
             // A visible child is an anchor for its entire canonical parent group.
             for (int i = dropIndex; i < size; i++) {
@@ -158,6 +190,7 @@ public final class TaskDropController {
                 }
             }
         }
+        
         return new TaskMovePlanner.Intent(ids, destination, before, parent);
     }
 
