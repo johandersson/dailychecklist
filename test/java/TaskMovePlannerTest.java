@@ -272,4 +272,141 @@ public class TaskMovePlannerTest {
         assertNotNull("Task p should exist after move", movedP);
         assertEquals("p should now be a subtask of q", "q", movedP.getParentId());
     }
+
+    @Test public void topLevelTaskBecomesChildOfAnotherTopLevelTask() {
+        // Scenario: p and q are both top-level MORNING tasks
+        // Drag p under q to make p a child of q
+        List<Task> tasks = List.of(
+            task("p", TaskType.MORNING, null),
+            task("h1", TaskType.HEADING, "p"),
+            task("q", TaskType.MORNING, null),
+            task("h2", TaskType.HEADING, "q")
+        );
+        
+        // Move p to become a child of q (parentId="q")
+        TaskMovePlanner.Result result = plan(tasks, List.of("p"), MORNING, null, "q");
+        assertTrue("Should accept moving top-level task as child of another top-level task", result.accepted());
+        
+        List<Task> moved = result.snapshot().toTasks();
+        Task movedP = moved.stream().filter(t -> t.getId().equals("p")).findFirst().orElse(null);
+        assertNotNull("Task p should exist after move", movedP);
+        assertEquals("p should now have q as parent", "q", movedP.getParentId());
+        assertEquals("p should still be MORNING type", TaskType.MORNING, movedP.getType());
+        
+        // Verify h1 (heading of p) also moved and kept its parent relationship
+        Task movedH1 = moved.stream().filter(t -> t.getId().equals("h1")).findFirst().orElse(null);
+        assertNotNull("Heading h1 should exist after move", movedH1);
+        assertEquals("h1 should still have p as parent", "p", movedH1.getParentId());
+    }
+
+    @Test public void childTaskBecomesTopLevel() {
+        // Scenario: c is a child of p, p is top-level
+        // Drag c up to make it top-level (remove parent)
+        List<Task> tasks = List.of(
+            task("p", TaskType.MORNING, null),
+            task("c", TaskType.MORNING, "p"),
+            task("h", TaskType.HEADING, "c")
+        );
+        
+        // Move c to top-level (parentId=null)
+        TaskMovePlanner.Result result = plan(tasks, List.of("c"), MORNING, null, null);
+        assertTrue("Should accept moving child task to top-level", result.accepted());
+        
+        List<Task> moved = result.snapshot().toTasks();
+        Task movedC = moved.stream().filter(t -> t.getId().equals("c")).findFirst().orElse(null);
+        assertNotNull("Task c should exist after move", movedC);
+        assertNull("c should have no parent (top-level)", movedC.getParentId());
+        assertEquals("c should still be MORNING type", TaskType.MORNING, movedC.getType());
+        
+        // Verify h (heading of c) stayed with c
+        Task movedH = moved.stream().filter(t -> t.getId().equals("h")).findFirst().orElse(null);
+        assertNotNull("Heading h should exist after move", movedH);
+        assertEquals("h should still have c as parent", "c", movedH.getParentId());
+    }
+
+    @Test public void childTaskBecomesChildOfDifferentParent() {
+        // Scenario: c1 is a child of p1, move c1 to be a child of p2
+        List<Task> tasks = List.of(
+            task("p1", TaskType.MORNING, null),
+            task("c1", TaskType.MORNING, "p1"),
+            task("h1", TaskType.HEADING, "c1"),
+            task("p2", TaskType.MORNING, null),
+            task("c2", TaskType.MORNING, "p2")
+        );
+        
+        // Move c1 to become a child of p2
+        TaskMovePlanner.Result result = plan(tasks, List.of("c1"), MORNING, null, "p2");
+        assertTrue("Should accept moving child from one parent to another", result.accepted());
+        
+        List<Task> moved = result.snapshot().toTasks();
+        Task movedC1 = moved.stream().filter(t -> t.getId().equals("c1")).findFirst().orElse(null);
+        assertNotNull("Task c1 should exist after move", movedC1);
+        assertEquals("c1 should now have p2 as parent", "p2", movedC1.getParentId());
+        assertEquals("c1 should still be MORNING type", TaskType.MORNING, movedC1.getType());
+        
+        // Verify h1 stayed with c1
+        Task movedH1 = moved.stream().filter(t -> t.getId().equals("h1")).findFirst().orElse(null);
+        assertNotNull("Heading h1 should exist after move", movedH1);
+        assertEquals("h1 should still have c1 as parent", "c1", movedH1.getParentId());
+    }
+
+    @Test public void multipleTopLevelTasksMovedTogether() {
+        // Scenario: p1 and p2 are both top-level, move both to become children of p3
+        List<Task> tasks = List.of(
+            task("p1", TaskType.MORNING, null),
+            task("p2", TaskType.MORNING, null),
+            task("p3", TaskType.MORNING, null)
+        );
+        
+        // Move both p1 and p2 to become children of p3
+        TaskMovePlanner.Result result = plan(tasks, List.of("p1", "p2"), MORNING, null, "p3");
+        assertTrue("Should accept moving multiple top-level tasks as children", result.accepted());
+        
+        List<Task> moved = result.snapshot().toTasks();
+        Task movedP1 = moved.stream().filter(t -> t.getId().equals("p1")).findFirst().orElse(null);
+        Task movedP2 = moved.stream().filter(t -> t.getId().equals("p2")).findFirst().orElse(null);
+        
+        assertNotNull("Task p1 should exist after move", movedP1);
+        assertNotNull("Task p2 should exist after move", movedP2);
+        assertEquals("p1 should have p3 as parent", "p3", movedP1.getParentId());
+        assertEquals("p2 should have p3 as parent", "p3", movedP2.getParentId());
+    }
+
+    @Test public void reorderingTopLevelTasks() {
+        // Scenario: p1, p2, p3 are all top-level; reorder them to p2, p1, p3
+        List<Task> tasks = List.of(
+            task("p1", TaskType.MORNING, null),
+            task("p2", TaskType.MORNING, null),
+            task("p3", TaskType.MORNING, null)
+        );
+        
+        // Move p1 to come before p2 (but both stay top-level)
+        TaskMovePlanner.Result result = plan(tasks, List.of("p1"), MORNING, "p2", null);
+        assertTrue("Should accept reordering top-level tasks", result.accepted());
+        
+        List<Task> moved = result.snapshot().toTasks();
+        List<String> taskIds = ids(moved);
+        
+        // p1 should come before p2 in the result
+        int p1Idx = taskIds.indexOf("p1");
+        int p2Idx = taskIds.indexOf("p2");
+        assertTrue("p1 should come before p2", p1Idx < p2Idx);
+    }
+
+    @Test public void moveTaskBetweenDailyTypes() {
+        // Scenario: Move a MORNING task to EVENING
+        List<Task> tasks = List.of(
+            task("m1", TaskType.MORNING, null),
+            task("e1", TaskType.EVENING, null)
+        );
+        
+        // Move m1 from MORNING to EVENING
+        TaskMovePlanner.Result result = plan(tasks, List.of("m1"), EVENING, null, null);
+        assertTrue("Should accept moving task between MORNING and EVENING", result.accepted());
+        
+        List<Task> moved = result.snapshot().toTasks();
+        Task movedM1 = moved.stream().filter(t -> t.getId().equals("m1")).findFirst().orElse(null);
+        assertNotNull("Task m1 should exist after move", movedM1);
+        assertEquals("m1 should now be EVENING type", TaskType.EVENING, movedM1.getType());
+    }
 }
