@@ -57,7 +57,7 @@ import javax.swing.Timer;
                     for (int i = 0; i < circles.length; i++) {
                         circles[i] = new JLabel("\u25CF");
                         circles[i].setFont(new Font("Yu Gothic UI Light", Font.PLAIN, 24));
-                        circles[i].setForeground(Color.LIGHT_GRAY);
+                        circles[i].setForeground(Color.RED);
                         circlePanel.add(circles[i]);
                     }
 
@@ -169,7 +169,7 @@ import javax.swing.Timer;
                         var lightGreen = new Color(192, 219, 165);
                         circles[i].setForeground(lightGreen);
                     } else {
-                        circles[i].setForeground(Color.LIGHT_GRAY);
+                        circles[i].setForeground(Color.RED);
                     }
                 }
             }
