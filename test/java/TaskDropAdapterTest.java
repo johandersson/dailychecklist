@@ -221,8 +221,10 @@ public class TaskDropAdapterTest {
         Manager manager = new Manager();
         manager.tasks.add(task("parent", TaskType.CUSTOM, null));
         manager.tasks.add(task("heading", TaskType.HEADING, "parent"));
-        assertThrows(IllegalArgumentException.class, () -> TaskDropController.buildIntent(
-                manager, List.of("heading"), CUSTOM, rows(), 0, true));
+        // Invalid drag should be silently rejected in canImport() via isValidDragOperation()
+        assertFalse(TaskDropController.isValidDragOperation(manager, List.of("heading")));
+        // Valid drag when heading accompanies its parent
+        assertTrue(TaskDropController.isValidDragOperation(manager, List.of("parent", "heading")));
         TaskMovePlanner.Intent intent = TaskDropController.buildIntent(manager,
                 List.of("parent", "heading"), CUSTOM, rows(), 0, true);
         assertNull(intent.parentId());
