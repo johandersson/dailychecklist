@@ -280,6 +280,73 @@ public class XMLTaskRepository implements TaskRepository {
         new TaskStaxHandler(stagingFile.toString()).setAllTasks(tasks);
     }
 
+    // Functional record to capture atomic state during move: the snapshot we planned from and result
+    private record MoveAttempt(TaskMovePlanner.Snapshot before, TaskMovePlanner.Result result) {}
+
+    // Functional enum for move verification result
+    private enum VerificationOutcome { SAFE_TO_COMMIT, RETRY_NEEDED, ABORT }
+
+    // Atomically capture snapshot + plan result; returns attempt or aborts on corruption
+    private MoveAttempt capturePlanState(TaskMovePlanner.Intent intent) throws Exception {
+        synchronized (this) {
+            if (cachedTasks == null) getCachedTasks();
+            TaskMovePlanner.Snapshot before = TaskMovePlanner.snapshot(cachedTasks, getChecklists());
+            TaskMovePlanner.Result result = TaskMovePlanner.plan(before, intent);
+            if (!result.accepted()) {
+                throw new IllegalArgumentException("Move rejected: " + result.rejection());
+            }
+            return new MoveAttempt(before, result);
+        }
+    }
+
+    // Verify state safety: commit if unchanged, retry if diverged, abort if corrupted
+    private VerificationOutcome verifyStateSafety(MoveAttempt attempt) throws Exception {
+        synchronized (this) {
+            TaskMovePlanner.Snapshot current = TaskMovePlanner.snapshot(cachedTasks, getChecklists());
+            if (attempt.before.equals(current)) {
+                return VerificationOutcome.SAFE_TO_COMMIT;
+            }
+            return VerificationOutcome.RETRY_NEEDED;
+        }
+    }
+
+    // Single-shot move with bounded retry on safe divergence
+    private void attemptMoveWithRetry(java.nio.file.Path target, java.nio.file.Path staging,
+                            TaskMovePlanner.Intent intent,
+                            java.util.concurrent.CompletableFuture<List<String>> completion) throws Exception {
+        final int MAX_RETRIES = 5;
+        for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            MoveAttempt plan = capturePlanState(intent);
+            persistMoveSnapshot(plan.result.snapshot().toTasks(), staging);
+            VerificationOutcome outcome = verifyStateSafety(plan);
+            
+            if (outcome == VerificationOutcome.SAFE_TO_COMMIT) {
+                rwLock.writeLock().lock();
+                try {
+                    java.nio.file.Files.move(staging, target,
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    cachedTasks = plan.result.snapshot().toTasks();
+                    rebuildMapsFromCachedTasks();
+                    tasksCacheDirty = false;
+                    lastModifiedTime = new File(FILE_NAME).lastModified();
+                    pendingWrites.clear();
+                    pendingRemovals.clear();
+                } finally {
+                    rwLock.writeLock().unlock();
+                }
+                completion.complete(plan.result.selectedIds());
+                return;
+            } else if (outcome == VerificationOutcome.RETRY_NEEDED) {
+                if (attempt == MAX_RETRIES - 1) {
+                    java.nio.file.Files.deleteIfExists(staging);
+                    throw new IllegalArgumentException("Move rejected: concurrent edits prevented completion after " + MAX_RETRIES + " attempts");
+                }
+                java.nio.file.Files.deleteIfExists(staging);
+            }
+        }
+    }
+
     @Override
     public List<String> commitMove(TaskMovePlanner.Intent intent) throws Exception {
         java.util.concurrent.CompletableFuture<List<String>> completion = new java.util.concurrent.CompletableFuture<>();
@@ -292,40 +359,7 @@ public class XMLTaskRepository implements TaskRepository {
                 coalesceFuture = null;
             }
             try {
-                while (true) {
-                    TaskMovePlanner.Snapshot before;
-                    TaskMovePlanner.Result result;
-                    synchronized (this) {
-                        if (cachedTasks == null) getCachedTasks();
-                        before = TaskMovePlanner.snapshot(cachedTasks, getChecklists());
-                        result = TaskMovePlanner.plan(before, intent);
-                        if (!result.accepted())
-                            throw new IllegalArgumentException("Move rejected: " + result.rejection());
-                    }
-                    // No repository/model lock is held during disk I/O. An EDT edit can proceed.
-                    persistMoveSnapshot(result.snapshot().toTasks(), staging);
-                    synchronized (this) {
-                        TaskMovePlanner.Snapshot current = TaskMovePlanner.snapshot(cachedTasks, getChecklists());
-                        if (!before.equals(current)) continue; // Recompute; never overwrite an intervening edit.
-                        rwLock.writeLock().lock();
-                        try {
-                            // Only this short atomic promotion/publication holds the model lock.
-                            java.nio.file.Files.move(staging, target,
-                                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
-                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                            cachedTasks = result.snapshot().toTasks();
-                            rebuildMapsFromCachedTasks();
-                            tasksCacheDirty = false;
-                            lastModifiedTime = new File(FILE_NAME).lastModified();
-                            pendingWrites.clear();
-                            pendingRemovals.clear();
-                        } finally {
-                            rwLock.writeLock().unlock();
-                        }
-                        completion.complete(result.selectedIds());
-                        break;
-                    }
-                }
+                attemptMoveWithRetry(target, staging, intent, completion);
             } catch (Exception failure) {
                 completion.completeExceptionally(failure);
             } finally {
