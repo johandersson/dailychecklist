@@ -142,7 +142,7 @@ public final class TaskMovePlanner {
         for (String id : selected) {
             TaskValue value = byId.get(id);
             if (value == null) return Result.reject(Rejection.UNKNOWN_TASK);
-            if (value.type() == TaskType.HEADING && !selected.contains(value.parentId()))
+            if (value.type() == TaskType.HEADING && value.parentId() != null && !selected.contains(value.parentId()))
                 return Result.reject(Rejection.HEADING_SELECTION);
         }
         selected.removeIf(id -> byId.get(id).type() == TaskType.HEADING);
