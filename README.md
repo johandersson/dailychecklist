@@ -8,10 +8,11 @@ Stay organized and boost your productivity with the **Daily Checklist** applicat
 
 - **Daily Task Management**: Add, edit, rename, and remove tasks for your morning and evening routines with flexible scheduling (daily, weekday, or specific days).
 - **Subtasks**: Add subtasks to any daily or custom task. Subtasks appear directly below their parent and are indented. Marking all subtasks as done marks the parent as done, and marking the parent as done marks all subtasks as done. Only one level of subtasks is supported. Reminders that target a subtask will show the subtask's name in the reminder dialog and — when applicable — a small breadcrumb showing the checklist and parent task for context.
+- **Task Notes**: Attach, edit, clear, and persist notes on daily tasks, custom tasks, and subtasks. Notes support up to 20,000 characters, undo/redo, and Ctrl+S to save.
 - **Custom Checklists**: Create named checklists for specific projects, habits, or one-off task lists with support for adding multiple tasks at once.
 - **Today View (Timeline)**: Visual 24-hour timeline showing all reminders for the current day. Click any reminder block to jump directly to the task or checklist. Hover for details.
 - **Search Functionality**: Quickly find tasks across all checklists with real-time search (Ctrl+F) and jump directly to selected tasks.
-- **Reminders**: Set date/time reminders for any checklist with notifications and visual clock icons.
+- **Reminders**: Set one-time or recurring weekly reminders for checklists and individual tasks, with notifications and visual clock icons.
 - **Focus Timer**: Start a customizable timer for any task to maintain focus and track progress with visual indicators.
 - **Split-Pane UI**: Modern interface with daily tasks on the left and custom checklists on the right.
 - **Interactive Features**: Context menus, drag-and-drop reordering with visual feedback, multi-selection (Ctrl+click), keyboard shortcuts, and intuitive clicking (checkbox toggles completion, text selects items).
@@ -41,10 +42,10 @@ Daily Checklist is built as a **pure Java application with zero external depende
 
 1. **Clone or Download**: Get the project files from the repository.
 2. **Build the JAR**:
-   - Run `build.bat` (Windows) to compile and package the application.
-   - This creates `target/dailychecklist.jar`.
+   - Run `build.bat` (Windows) or `./build.sh` (Unix/Linux/macOS) to compile and package the application.
+   - This creates `build/dailychecklist.jar`.
 3. **Run the Application**:
-   - Execute `java -jar target/dailychecklist.jar` to start the app.
+   - Execute `java -jar build/dailychecklist.jar` to start the app.
 
 No additional dependencies are required for runtime.
 
@@ -98,15 +99,17 @@ To build the JAR manually:
 
 ### Managing Daily Tasks
 
-#### Subtasks
-- To add a subtask, use the "Add Task" dialog and select a parent task (if supported), or right-click a task and choose "Add Subtask" (if available).
+#### Subtasks and headings
+- To add a subtask, right-click a task and choose "Add Subtask" or "Add Multiple Subtasks".
 - Subtasks are shown directly below their parent and are indented for clarity.
+- Batch entry accepts one task per line. Indent a line with a tab or at least two spaces to make it a subtask of the preceding task.
+- Prefix a line with `#` to add a heading to the following task; prefix an indented line with `#` to add a heading under the preceding parent. Only one heading is allowed per parent.
 - When all subtasks are marked as done, the parent task is automatically marked as done.
 - Marking a parent task as done will also mark all its subtasks as done. Unmarking a parent will unmark all subtasks.
 - Subtasks are supported in both daily and custom checklists.
 
 #### 1. Add a New Daily Task
-- Click the "Add Task" button (or Ctrl+A).
+- Click the "Add Task" button (or press Ctrl+N).
 - Enter the task name in the text field.
 - Select the time of day (Morning or Evening).
 - Choose the frequency:
@@ -126,6 +129,7 @@ To build the JAR manually:
   - **Rename**: Edit the task name.
   - **Remove**: Delete the task.
 - Drag and drop to reorder tasks (shows visual preview of dragged items).
+- Right-click a task and choose **Add note** to store supporting text. Notes can be edited or cleared later.
 
 ### Managing Custom Checklists
 
@@ -147,9 +151,11 @@ To build the JAR manually:
 - Right-click a checklist name for options:
   - **Rename**: Change the checklist name.
   - **Delete**: Remove the checklist and its tasks.
-  - **Add Reminder**: Set a date/time reminder.
-  - **View/Edit Reminders**: Manage existing reminders.
+  - **Set/Edit Reminder**: Set a one-time or recurring weekly reminder.
+  - **Remove Reminder**: Remove the checklist reminder.
+  - **Copy Outline to Clipboard**: Copy the checklist structure, including headings and subtasks.
 - Right-click tasks within checklists to rename or remove them.
+- Right-click a task to add/edit a note or set/edit a task-level reminder.
 - Drag and drop tasks between checklists or within checklists (shows visual preview).
 - Multi-selection moves keep task order; moving a parent includes its subtasks and heading. Headings cannot be moved independently, and nesting beyond one subtask level is rejected.
 - Reordering a filtered daily list preserves hidden weekday tasks. Dropping custom tasks onto a checklist in the overview also supports multi-selection.
@@ -158,12 +164,12 @@ To build the JAR manually:
 ### Using Reminders
 
 #### 1. Add Reminders
-- Right-click a checklist and select "Add Reminder".
-- Set the date and time.
+- Right-click a checklist or task and select **Set reminder**.
+- Choose **Date-specific (one-time)** or **Recurring weekly**, then set the time and, for recurring reminders, the weekdays.
 - The app checks for reminders every minute.
 
 #### 2. Manage Reminders
-- Right-click a checklist and select "View/Edit Reminders".
+- Right-click a checklist or task and select **Edit reminder**.
 - Edit or delete existing reminders.
 - When reminder time arrives, choose to open the checklist or mark as done.
 
@@ -191,22 +197,20 @@ The "Today" tab provides a visual timeline of all reminders scheduled for the cu
   - Use keyboard shortcuts (Space to pause/resume).
 - When time expires, a notification alerts you.
 
-### Settings
-
-- Access via the menu bar.
-- Configure application preferences.
-
 ### Keyboard Shortcuts
-- **Add Task**: Ctrl+A
-- **Refresh Tasks**: F5
+- **Add Task / Add Checklist Task**: Ctrl+N (uses the active tab)
+- **Refresh Tasks**: Ctrl+R
+- **Search Tasks**: Ctrl+F
 - **Multi-select Tasks**: Ctrl+click (hold Ctrl while clicking multiple tasks)
 - **Range-select Tasks**: Shift+click (select range between first and last clicked task)
 - **Delete Selected Tasks**: Delete key (when tasks are selected)
+- **Undo / Redo**: Ctrl+Z / Ctrl+Y in batch-entry and note editors
+- **Save**: Ctrl+S in batch-entry and note editors
 - **Timer Controls**: Space (pause/resume), Enter (start)
 
 ## Configuration
 
-- **Data Storage**: Tasks (including parent/subtask relationships) are stored in `dailychecklist-tasks.xml`, reminders in `dailychecklist-reminders.properties` in the user home directory. Automatic backups include the full task XML (so subtasks are included in backups).
+- **Data Storage**: Tasks, headings, parent/subtask relationships, and notes are stored in `dailychecklist-tasks.xml`; reminders are stored in `dailychecklist-reminders.properties` in the user home directory. Automatic backups include the full task XML and reminder data.
 - **Settings**: Managed via the Settings dialog (persisted in user preferences).
 - **Performance**: In-memory caching ensures fast access to frequently used data.
 
@@ -215,7 +219,7 @@ The "Today" tab provides a visual timeline of all reminders scheduled for the cu
 - **Build Issues**: Ensure JDK is installed. Check for compilation errors in the console.
 - **Runtime Errors**: Verify Java version (`java -version`). Ensure no conflicting JARs.
 - **Data Loss**: Backup XML and properties files regularly.
-- **Checklists Not Appearing**: New checklists appear immediately after creation. If not visible after restart, they may not have tasks.
+- **Checklists Not Appearing**: New checklists appear immediately after creation. Use **Refresh Tasks** (Ctrl+R) if the list needs to be reloaded.
 - **Reminders Not Working**: Ensure the app is running for notifications. Reminders are checked every minute.
 - **Performance Issues**: The app uses efficient caching; restart if UI becomes unresponsive.
 
