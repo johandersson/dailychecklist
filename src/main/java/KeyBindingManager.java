@@ -24,7 +24,17 @@ public class KeyBindingManager {
     public static void bindKeys(JComponent rootPane, java.awt.Component parent, TaskManager taskManager, Runnable updateTasks, DailyChecklist dailyChecklist) {
         KeyStroke keyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK);
         rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(keyStroke, "ADD_NEW_TASK");
-        rootPane.getActionMap().put("ADD_NEW_TASK", new AddTaskAction(parent, taskManager, updateTasks));
+        
+        // Create context-aware provider that delegates based on active tab
+        CustomChecklistContextProvider contextProvider = new TabbedPaneContextProvider(
+            dailyChecklist.getTabbedPane(),
+            dailyChecklist.getCustomChecklistContextProvider()
+        );
+        
+        // Use context-aware action that handles both daily and custom checklists
+        rootPane.getActionMap().put("ADD_NEW_TASK", 
+            new AddTaskActionContextAware(parent, taskManager, updateTasks, contextProvider));
+        
         KeyStroke refreshKeyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK);
         rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(refreshKeyStroke, "REFRESH_TASKS");
         rootPane.getActionMap().put("REFRESH_TASKS", new RefreshTasksAction(updateTasks));
