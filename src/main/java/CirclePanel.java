@@ -34,7 +34,7 @@ public class CirclePanel extends JPanel {
 
             circles[i] = new JLabel("\u25CF"); // Unicode for a filled circle
             circles[i].setFont(new Font("Yu Gothic UI Light", Font.PLAIN, 16));
-            circles[i].setForeground(Color.LIGHT_GRAY);
+            circles[i].setForeground(Color.RED);
             add(circles[i]);
         }
     }
@@ -44,9 +44,8 @@ public class CirclePanel extends JPanel {
             if (i < completedChunks) {
                 circles[i].setForeground(Color.LIGHT_GRAY);
             } else {
-                circles[i].setForeground(Color.PINK);
+                circles[i].setForeground(Color.RED);
             }
         }
     }
 }
-
