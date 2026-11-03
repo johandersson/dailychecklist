@@ -252,9 +252,10 @@ public class ChecklistPanel extends JPanel {
     }
 
     private JMenuItem createEditMenuItem(JList<Task> list, int index) {
-        JMenuItem editItem = new JMenuItem("Rename task");
+        Task task = list.getModel().getElementAt(index);
+        String menuLabel = (task.getType() == TaskType.HEADING) ? "Rename heading" : "Rename task";
+        JMenuItem editItem = new JMenuItem(menuLabel);
         editItem.addActionListener(event -> {
-            Task task = list.getModel().getElementAt(index);
             String prompt;
             if (task.getType() == TaskType.HEADING) prompt = "Enter heading text:";
             else prompt = (task.getParentId() != null) ? "Enter new name for subtask:" : "Enter new name for task:";
@@ -441,7 +442,9 @@ public class ChecklistPanel extends JPanel {
     }
 
     private JMenuItem createRemoveMenuItem(JList<Task> list, int index) {
-        JMenuItem removeItem = new JMenuItem("Remove task");
+        Task task = list.getModel().getElementAt(index);
+        String menuLabel = (task.getType() == TaskType.HEADING) ? "Remove heading" : "Remove task";
+        JMenuItem removeItem = new JMenuItem(menuLabel);
         removeItem.addActionListener(event -> removeTask(list, index));
         return removeItem;
     }

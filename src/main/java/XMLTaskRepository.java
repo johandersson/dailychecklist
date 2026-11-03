@@ -465,6 +465,9 @@ public class XMLTaskRepository implements TaskRepository {
                 if (MemorySafetyManager.checkTaskLimit(cachedTasks.size())) {
                     cachedTasks = cachedTasks.subList(0, Math.min(MemorySafetyManager.MAX_TASKS, cachedTasks.size()));
                 }
+                // Defensive: remove any invalid HEADINGs (those with null parentId)
+                cachedTasks = new ArrayList<>(cachedTasks);
+                cachedTasks.removeIf(task -> task.getType() == TaskType.HEADING && task.getParentId() == null);
                 rebuildMapsFromCachedTasks();
                 tasksCacheDirty = false;
                 lastModifiedTime = currentModified;
