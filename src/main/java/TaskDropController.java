@@ -38,7 +38,111 @@ public final class TaskDropController {
 
     private record Context(TaskManager manager, Supplier<TaskMovePlanner.Destination> destination) {}
 
+    // Immutable state used to compute drop intent - enables stable, replayable state handling
+    private record IntentState(
+        String parent,
+        String before,
+        boolean forceTopLevel) {}
+
     private TaskDropController() {}
+
+    /**
+     * FP-based state management for drag-drop intent building.
+     *
+     * This class uses functional programming concepts for stable, reproducible state handling:
+     * - IntentState record: Immutable value object (unmodifiable by design) represents computed
+     *   drop intent state, enabling deterministic replay and testing
+     * - Pure functions: Helper methods (anyDraggedTaskVisibleInRows, calculateIntentState) have no
+     *   side effects and are easily testable; they take parameters and return computed values
+     * - Stream API: Used extensively for predicates and filters to express intent declaratively
+     *   (e.g., tasks.stream().allMatch(belongsToDestination))
+     * - Immutability: All intermediate computations are read-only, preventing accidental state corruption
+     *
+     * The fix addresses the drag-drop regression where:
+     * - Moving a top-level task to become a subtask: WORKS
+     * - Moving a subtask back to top-level: FAILED (forceTopLevel logic was too broad)
+     * - Moving a subtask to a different parent: FAILED (same cause)
+     *
+     * Root cause: forceTopLevel incorrectly forced all top-level tasks in the same destination
+     * to remain top-level. The fix distinguishes between visible tasks (in rows) which can be
+     * nested, and tasks from outside the view which should maintain top-level status for consistency.
+     */
+
+    // Pure FP helper: Check if any dragged task is visible in the row list
+    private static boolean anyDraggedTaskVisibleInRows(java.util.Set<String> ids, ListModel<Task> rows) {
+        for (int i = 0; i < rows.getSize(); i++) {
+            if (ids.contains(rows.getElementAt(i).getId())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Pure FP helper: Calculate parent and before positions for intent
+    private static IntentState calculateIntentState(java.util.Set<String> ids, 
+            ListModel<Task> rows, int dropIndex, boolean insert, 
+            boolean topLevel, boolean same, boolean crossDaily) {
+        
+        int size = rows.getSize();
+        Task row = dropIndex < size ? rows.getElementAt(dropIndex) : null;
+        
+        // Determine if we should force top-level placement
+        boolean anyDraggedTaskInRows = anyDraggedTaskVisibleInRows(ids, rows);
+        boolean forceTopLevel = (!same && crossDaily) || (same && topLevel && !anyDraggedTaskInRows);
+        
+        String parent = null;
+        String before = null;
+        
+        // Calculate parent based on drop position
+        if (!forceTopLevel && row != null && !(insert && dropIndex == 0)) {
+            if (row.getParentId() != null) {
+                if (!ids.contains(row.getParentId())) {
+                    parent = row.getParentId();
+                    if (row.getType() != TaskType.HEADING) {
+                        before = row.getId();
+                    }
+                }
+            } else if (!insert) {
+                parent = row.getId();
+            }
+        }
+        
+        if (!forceTopLevel && insert && row == null && size > 0) {
+            Task previous = rows.getElementAt(size - 1);
+            if (previous.getParentId() != null && previous.getType() != TaskType.HEADING) {
+                parent = previous.getParentId();
+            }
+        }
+        
+        // Find anchor if no explicit parent
+        if (parent == null) {
+            for (int i = dropIndex; i < size; i++) {
+                Task candidate = rows.getElementAt(i);
+                String group = candidate.getParentId() == null 
+                    ? candidate.getId() : candidate.getParentId();
+                if (!ids.contains(group)) {
+                    before = group;
+                    break;
+                }
+                before = null;
+            }
+        } else if (before != null && ids.contains(before)) {
+            // Adjust before if it's being moved
+            before = null;
+            for (int i = dropIndex + 1; i < size; i++) {
+                Task candidate = rows.getElementAt(i);
+                if (!parent.equals(candidate.getParentId())) {
+                    break;
+                }
+                if (candidate.getType() != TaskType.HEADING && !ids.contains(candidate.getId())) {
+                    before = candidate.getId();
+                    break;
+                }
+            }
+        }
+        
+        return new IntentState(parent, before, forceTopLevel);
+    }
 
     static void register(JList<Task> list, TaskManager manager,
             Supplier<TaskMovePlanner.Destination> destination) {
@@ -105,13 +209,19 @@ public final class TaskDropController {
     static TaskMovePlanner.Intent buildIntent(TaskManager manager, List<String> ids,
             TaskMovePlanner.Destination destination, ListModel<Task> rows,
             int dropIndex, boolean insert) {
-        // Don't validate headings here - TaskMovePlanner.plan() will handle that
-        // Just verify that all tasks exist
+        // Verify that all tasks exist and validate heading constraints at UI level
         List<Task> tasks = new ArrayList<>();
         for (String id : ids) {
             Task task = manager.getTaskById(id);
             if (task == null) {
                 throw new IllegalArgumentException("A dragged task no longer exists");
+            }
+            // Headings cannot be dragged alone if their parent exists and is not being dragged
+            if (task.getType() == TaskType.HEADING && task.getParentId() != null) {
+                Task parent = manager.getTaskById(task.getParentId());
+                if (parent != null && !ids.contains(task.getParentId())) {
+                    throw new IllegalArgumentException("Headings move only with their parent task");
+                }
             }
             tasks.add(task);
         }
@@ -142,56 +252,11 @@ public final class TaskDropController {
             throw new IllegalArgumentException("Invalid task drop location");
         }
         
-        Task row = dropIndex < size ? rows.getElementAt(dropIndex) : null;
-        String parent = null;
-        String before = null;
-        boolean forceTopLevel = (same && topLevel) || (!same && crossDaily);
+        // Use FP helper to compute immutable intent state
+        java.util.Set<String> idSet = new java.util.HashSet<>(ids);
+        IntentState state = calculateIntentState(idSet, rows, dropIndex, insert, topLevel, same, crossDaily);
         
-        if (!forceTopLevel && row != null && !(insert && dropIndex == 0)) {
-            if (row.getParentId() != null) {
-                parent = row.getParentId();
-                if (row.getType() != TaskType.HEADING) {
-                    before = row.getId();
-                }
-            } else if (!insert) {
-                parent = row.getId();
-            }
-        }
-        
-        if (!forceTopLevel && insert && row == null && size > 0) {
-            Task previous = rows.getElementAt(size - 1);
-            if (previous.getParentId() != null && previous.getType() != TaskType.HEADING) {
-                parent = previous.getParentId();
-            }
-        }
-        
-        if (parent == null) {
-            // A visible child is an anchor for its entire canonical parent group.
-            for (int i = dropIndex; i < size; i++) {
-                Task candidate = rows.getElementAt(i);
-                String group = candidate.getParentId() == null
-                        ? candidate.getId() : candidate.getParentId();
-                if (!ids.contains(group)) {
-                    before = group;
-                    break;
-                }
-                before = null;
-            }
-        } else if (before != null && ids.contains(before)) {
-            before = null;
-            for (int i = dropIndex + 1; i < size; i++) {
-                Task candidate = rows.getElementAt(i);
-                if (!parent.equals(candidate.getParentId())) {
-                    break;
-                }
-                if (candidate.getType() != TaskType.HEADING && !ids.contains(candidate.getId())) {
-                    before = candidate.getId();
-                    break;
-                }
-            }
-        }
-        
-        return new TaskMovePlanner.Intent(ids, destination, before, parent);
+        return new TaskMovePlanner.Intent(ids, destination, state.before(), state.parent());
     }
 
     private static boolean belongsTo(Task task, TaskMovePlanner.Destination destination) {
