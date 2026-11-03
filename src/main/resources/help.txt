@@ -13,13 +13,14 @@
 	<h2>Notes</h2>
 	<ul>
 		<li>Icons and visuals have been improved for smoother performance and a more consistent look.</li>
-		<li>When you move a task between checklists the app will switch to the target checklist and show the moved task; use drag-and-drop to move tasks.</li>
+		<li>When you move a task between checklists the app switches to the target checklist and shows the moved task; use drag-and-drop to move tasks.</li>
+		<li>Tasks, subtasks, and headings are saved automatically. Use the File menu to create a backup or restore a previous backup.</li>
 	</ul>
 
 	<h2>Managing Daily Tasks</h2>
 	<h3>Adding a new daily task</h3>
 	<ul>
-		<li>Click the "Add Task" button or press <b>Ctrl+A</b>.</li>
+		<li>Click the "Add Task" button or press <b>Ctrl+N</b>.</li>
 		<li>Enter a name (for example, "Morning Exercise").</li>
 		<li>Choose Morning or Evening and frequency (Daily / Weekday / Specific Day).</li>
 		<li>Click "Add Task" — it appears in the left panel under the chosen time.</li>
@@ -29,7 +30,7 @@
 	<ul>
 		<li>The left panel groups tasks by Morning and Evening.</li>
 		<li>Use the "Show all weekday tasks" option to include weekday-only items.</li>
-		<li>Right-click a task to rename or remove it, or start the focus timer.</li>
+		<li>Right-click a task to rename, remove, add/edit a note, set/edit a reminder, or start the focus timer.</li>
 	</ul>
 
 	<h3>Completing tasks</h3>
@@ -38,6 +39,15 @@
 		<li>Click or double-click task text to select or toggle.</li>
 		<li>Multi-select with <b>Ctrl+click</b>; range-select with <b>Shift+click</b>.</li>
 		<li>Tasks reset daily; completion does not carry over.</li>
+	</ul>
+
+	<h3>Batch entry, subtasks, and headings</h3>
+	<ul>
+		<li>Enter one task per line in a batch-entry area. Empty lines are skipped.</li>
+		<li>Indent a line with a tab or at least two spaces to create a subtask of the preceding task.</li>
+		<li>Prefix a line with <b>#</b> to add a heading to the following task. Prefix an indented line with <b>#</b> to add a heading under the preceding parent.</li>
+		<li>Only one level of subtasks and one heading per parent are supported.</li>
+		<li>Batch-entry areas support <b>Ctrl+Z</b> / <b>Ctrl+Y</b> for undo/redo and <b>Ctrl+S</b> to save.</li>
 	</ul>
 
 	<h2>Custom Checklists</h2>
@@ -52,14 +62,15 @@
 
 	<h3>Manage checklists</h3>
 	<ul>
-		<li>Right-click a checklist to Rename, Delete, Add Reminder or View/Edit Reminders.</li>
+		<li>Right-click a checklist to Rename, Delete, Set/Edit Reminder, Remove Reminder, or Copy Outline to Clipboard.</li>
 		<li>Checklists with reminders display a small clock indicator and a textual status in the UI (e.g. "Due soon", "Overdue").</li>
 	</ul>
 
 	<h3>Editing custom tasks</h3>
 	<ul>
 		<li>Toggle completion with the checkbox; double-click to rename; right-click for more options.</li>
-		<li>Drag and drop tasks to reorder or move between checklists.</li>
+		<li>Right-click a task to add/edit/clear a note or set/edit/remove a task-level reminder.</li>
+		<li>Drag and drop tasks to reorder or move between checklists. Moving a parent includes its subtasks and heading.</li>
 	</ul>
 
 	<h2>Searching Tasks</h2>
@@ -68,8 +79,9 @@
 	<h2>Reminders</h2>
 	<h3>Add and manage</h3>
 	<ul>
-		<li>Right-click a checklist → <i>Add Reminder</i>. Set date and time.</li>
-		<li>Right-click → <i>View/Edit Reminders</i> to modify or delete reminders.</li>
+		<li>Right-click a checklist or task → <i>Set reminder</i>.</li>
+		<li>Choose <i>Date-specific (one-time)</i> or <i>Recurring weekly</i>, then choose the time and weekdays when applicable.</li>
+		<li>Right-click → <i>Edit reminder</i> to modify it, or <i>Remove reminder</i> to delete it.</li>
 	</ul>
 
 	<h3>Notification states</h3>
@@ -131,9 +143,9 @@
 
 	<h2>Keyboard Shortcuts</h2>
 	<ul>
-		<li>Add Task: <b>Ctrl+A</b></li>
+		<li>Add task in the active tab: <b>Ctrl+N</b></li>
 		<li>Search Tasks: <b>Ctrl+F</b></li>
-		<li>Refresh Tasks: <b>F5</b></li>
+		<li>Refresh Tasks: <b>Ctrl+R</b></li>
 		<li>Multi-select: <b>Ctrl+click</b></li>
 		<li>Range-select: <b>Shift+click</b></li>
 		<li>Delete selected tasks: <b>Delete</b></li>
@@ -142,6 +154,9 @@
 		<li>Save dialog contents: <b>Ctrl+S</b> (in text areas like Add Tasks or Add Multiple Subtasks dialogs)</li>
 		<li>Timer pause/resume: <b>Space</b></li>
 	</ul>
+
+	<h2>Notes</h2>
+	<p>Use <i>Add note</i> from a task's context menu to attach supporting text. Notes can contain up to 20,000 characters and support undo/redo. Use <b>Ctrl+S</b> to save, <i>Clear Note</i> to remove the note, or <i>Cancel</i> to discard changes.</p>
 
 	<h2>Reminder Status Guide</h2>
 	<ul>
@@ -219,7 +234,7 @@ Progress review
 	Any blockers?
 Plan afternoon</pre>
 
-	<p>For more details see the <a href="https://github.com/yourrepo/dailychecklist">project repository</a> or the README.md.</p>
+	<p>For more details see the <a href="https://github.com/johandersson/dailychecklist">project repository</a> or the README.md.</p>
 
 	<p>Enjoy staying productive!</p>
 </body>
