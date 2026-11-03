@@ -249,4 +249,27 @@ public class TaskMovePlannerTest {
         assertNotSame(task, copy);
         assertNotSame(task.getSubtasks(), copy.getSubtasks());
     }
+
+    @Test public void headingWithValidParentCanBeMoveAlongWithParent() {
+        // When both a task and its HEADING are selected, the move should be accepted
+        List<Task> tasks = List.of(task("p", TaskType.MORNING, null), task("h", TaskType.HEADING, "p"),
+            task("q", TaskType.MORNING, null));
+        TaskMovePlanner.Result result = plan(tasks, List.of("p", "h"), EVENING, null, null);
+        assertTrue("Moving task with its HEADING should be accepted", result.accepted());
+        assertEquals(List.of("q", "p", "h"), ids(result.snapshot().toTasks()));
+    }
+
+    @Test public void movinJustTaskWithoutHeadingIgnoresMetadata() {
+        // When only the task is selected (not its HEADING), the move should still work
+        // The HEADING will automatically follow as metadata
+        List<Task> tasks = List.of(task("p", TaskType.MORNING, null), task("h", TaskType.HEADING, "p"),
+            task("q", TaskType.MORNING, null));
+        TaskMovePlanner.Result result = plan(tasks, List.of("p"), MORNING, null, "q");
+        assertTrue("Moving just the task should work; HEADING follows as metadata", result.accepted());
+        // After moving p under q, the h should still be under p
+        List<Task> moved = result.snapshot().toTasks();
+        Task movedP = moved.stream().filter(t -> t.getId().equals("p")).findFirst().orElse(null);
+        assertNotNull("Task p should exist after move", movedP);
+        assertEquals("p should now be a subtask of q", "q", movedP.getParentId());
+    }
 }
