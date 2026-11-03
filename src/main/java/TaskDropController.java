@@ -206,6 +206,28 @@ public final class TaskDropController {
         }
     }
 
+    /**
+     * Validates drag operation before building intent.
+     * Returns true if the drag is valid, false if invalid (for silent rejection).
+     * Should be called from canImport() to prevent error dialogs.
+     */
+    static boolean isValidDragOperation(TaskManager manager, List<String> ids) {
+        for (String id : ids) {
+            Task task = manager.getTaskById(id);
+            if (task == null) {
+                return false;
+            }
+            // Headings cannot be dragged alone if their parent exists and is not being dragged
+            if (task.getType() == TaskType.HEADING && task.getParentId() != null) {
+                Task parent = manager.getTaskById(task.getParentId());
+                if (parent != null && !ids.contains(task.getParentId())) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     static TaskMovePlanner.Intent buildIntent(TaskManager manager, List<String> ids,
             TaskMovePlanner.Destination destination, ListModel<Task> rows,
             int dropIndex, boolean insert) {

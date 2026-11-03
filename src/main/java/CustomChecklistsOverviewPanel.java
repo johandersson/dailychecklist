@@ -39,7 +39,7 @@ import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 
 @SuppressWarnings("serial")
-public class CustomChecklistsOverviewPanel extends JPanel {
+public class CustomChecklistsOverviewPanel extends JPanel implements CustomChecklistContextProvider {
     private static final long serialVersionUID = 1L;
     private JList<Checklist> checklistList;
     private DefaultListModel<Checklist> listModel;
@@ -771,5 +771,32 @@ public class CustomChecklistsOverviewPanel extends JPanel {
 
     public Map<String, CustomChecklistPanel> getPanelMap() {
         return panelMap;
+    }
+
+    /**
+     * CustomChecklistContextProvider implementation.
+     * Returns the currently selected checklist in this panel.
+     */
+    @Override
+    public Checklist getSelectedChecklist() {
+        return selectedChecklist;
+    }
+
+    /**
+     * CustomChecklistContextProvider implementation.
+     * Sets and displays the selected checklist.
+     */
+    @Override
+    public void setSelectedChecklistInUI(Checklist checklist) {
+        selectChecklist(checklist);
+    }
+
+    /**
+     * CustomChecklistContextProvider implementation.
+     * Always returns true since this is the custom checklists tab.
+     */
+    @Override
+    public boolean isInCustomChecklistsTab() {
+        return true;
     }
 }

@@ -593,6 +593,22 @@ public class DailyChecklist {
     }
 
     /**
+     * Gets the tabbed pane containing all tabs (Checklist, Custom checklists, Today).
+     * Used for context-aware Ctrl+N handling.
+     */
+    public JTabbedPane getTabbedPane() {
+        return tabbedPane;
+    }
+
+    /**
+     * Gets the custom checklists overview panel, which implements CustomChecklistContextProvider.
+     * Used for context-aware Ctrl+N handling.
+     */
+    public CustomChecklistContextProvider getCustomChecklistContextProvider() {
+        return customChecklistsOverviewPanel;
+    }
+
+    /**
      * Creates a programmatic icon that looks like the checked checkbox from the app.
      */
     public static Image createAppIcon() {

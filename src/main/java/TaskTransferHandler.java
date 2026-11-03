@@ -119,8 +119,18 @@ public class TaskTransferHandler extends TransferHandler {
 
     @Override
     public boolean canImport(TransferSupport support) {
-        return support.isDrop() && support.getComponent() instanceof JList<?>
-                && TaskTransferable.supports(support.getTransferable());
+        if (!support.isDrop() || !(support.getComponent() instanceof JList<?>)
+                || !TaskTransferable.supports(support.getTransferable())) {
+            return false;
+        }
+        
+        // Validate the drag operation early to prevent error dialogs
+        try {
+            List<String> ids = TaskTransferable.readIds(support.getTransferable());
+            return TaskDropController.isValidDragOperation(taskManager, ids);
+        } catch (UnsupportedFlavorException | IOException e) {
+            return false;
+        }
     }
 
     @Override

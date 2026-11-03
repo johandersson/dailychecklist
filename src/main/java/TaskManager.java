@@ -547,6 +547,43 @@ public class TaskManager {
     }
 
     /**
+     * Gets a checklist by its ID.
+     * @param checklistId The ID of the checklist
+     * @return The Checklist, or null if not found
+     */
+    public Checklist getChecklistById(String checklistId) {
+        if (checklistId == null) {
+            return null;
+        }
+        synchronized (repository) {
+            return repository.getChecklists().stream()
+                .filter(c -> checklistId.equals(c.getId()))
+                .findFirst()
+                .orElse(null);
+        }
+    }
+
+    /**
+     * Gets all tasks belonging to a specific checklist.
+     * @param checklistId The ID of the checklist
+     * @return List of tasks in that checklist
+     */
+    public List<Task> getTasksByChecklist(String checklistId) {
+        if (checklistId == null) {
+            return new ArrayList<>();
+        }
+        synchronized (repository) {
+            List<Task> result = new ArrayList<>();
+            for (Task task : repository.getAllTasks()) {
+                if (checklistId.equals(task.getChecklistId())) {
+                    result.add(task);
+                }
+            }
+            return result;
+        }
+    }
+
+    /**
      * Validates input and shows appropriate error message
      * @param input The raw user input
      * @param fieldName Name of the field for error messages
