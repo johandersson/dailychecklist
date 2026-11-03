@@ -46,13 +46,13 @@ public class ReminderManagerTest {
         LocalDateTime t1 = now.plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0);
         LocalDateTime t2 = now.plusDays(2).withHour(8).withMinute(30).withSecond(0).withNano(0);
 
-        Reminder r1 = new Reminder("ListA", t1.getYear(), t1.getMonthValue(), t1.getDayOfMonth(), t1.getHour(), t1.getMinute(), "id1");
-        Reminder r2 = new Reminder("ListB", t2.getYear(), t2.getMonthValue(), t2.getDayOfMonth(), t2.getHour(), t2.getMinute(), "id2");
+        Reminder r1 = new Reminder("MORNING", t1.getYear(), t1.getMonthValue(), t1.getDayOfMonth(), t1.getHour(), t1.getMinute(), "id1");
+        Reminder r2 = new Reminder("EVENING", t2.getYear(), t2.getMonthValue(), t2.getDayOfMonth(), t2.getHour(), t2.getMinute(), "id2");
 
         setCachedReminders(mgr, Arrays.asList(r1, r2));
 
-        // open ListA so next should be ListB's reminder
-        LocalDateTime next = mgr.getNextReminderTime(new HashSet<>(Collections.singletonList("ListA")));
+        // open MORNING so next should be EVENING's reminder
+        LocalDateTime next = mgr.getNextReminderTime(new HashSet<>(Collections.singletonList("MORNING")));
         assertNotNull(next);
         assertEquals(t2.withSecond(0).withNano(0), next.withSecond(0).withNano(0));
     }

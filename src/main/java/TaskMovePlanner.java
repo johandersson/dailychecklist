@@ -101,7 +101,21 @@ public final class TaskMovePlanner {
 
     private static Snapshot snapshotWithIds(List<Task> tasks, Set<String> ids) {
         List<TaskValue> values = new ArrayList<>();
-        for (Task task : tasks) values.add(TaskValue.of(task));
+        if (tasks != null) {
+            Set<String> taskIds = new HashSet<>();
+            for (Task task : tasks) {
+                if (task != null && task.getId() != null) taskIds.add(task.getId());
+            }
+            for (Task task : tasks) {
+                if (task == null) continue;
+                // A heading without a parent is orphaned metadata, not a movable
+                // task. Drop it from the canonical snapshot so one stale entry
+                // cannot reject every later move with INVALID_SNAPSHOT.
+                if (task.getType() == TaskType.HEADING
+                    && (task.getParentId() == null || !taskIds.contains(task.getParentId()))) continue;
+                values.add(TaskValue.of(task));
+            }
+        }
         return new Snapshot(values, ids);
     }
 

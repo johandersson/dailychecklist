@@ -23,7 +23,8 @@ public class ReminderManagerAdditionalTest {
         int hour = now.getHour();
         int minute = (now.getMinute() + 1) % 60;
 
-        String value = "MYCHECK|" + year + "|" + month + "|" + day + "|" + hour + "|" + minute;
+        String value = "MORNING|" + year + "|" + month + "|" + day + "|" + hour + "|" + minute
+            + "|taskId=test-task";
         java.util.Properties props = new java.util.Properties();
         props.setProperty("reminder.0", value);
         try (java.io.OutputStream os = Files.newOutputStream(Path.of(remindersFile))) {

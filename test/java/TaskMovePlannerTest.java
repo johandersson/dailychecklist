@@ -203,6 +203,20 @@ public class TaskMovePlannerTest {
             List.of("a"), EVENING, null, null).accepted());
     }
 
+    @Test public void orphanHeadingIsRemovedBeforePlanningMoves() {
+        List<Task> tasks = List.of(
+            task("parent", TaskType.CUSTOM, null),
+            task("orphan-heading", TaskType.HEADING, "missing-parent"),
+            task("other", TaskType.CUSTOM, null));
+
+        TaskMovePlanner.Snapshot snapshot = TaskMovePlanner.snapshot(tasks);
+        assertEquals(List.of("parent", "other"), ids(snapshot.toTasks()));
+
+        TaskMovePlanner.Result result = TaskMovePlanner.plan(snapshot,
+            new TaskMovePlanner.Intent(List.of("parent"), CUSTOM, "other", null));
+        assertTrue(result.accepted());
+    }
+
     @Test public void rejectsExistingChildMembershipMismatch() {
         assertEquals(TaskMovePlanner.Rejection.INVALID_SNAPSHOT, plan(
             List.of(task("p", TaskType.MORNING, null), task("c", TaskType.EVENING, "p")),
