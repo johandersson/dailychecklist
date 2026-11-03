@@ -44,14 +44,14 @@ public class TaskXmlHandlerTest {
         assertEquals(0, tasks.size());
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void parseMissingIdThrows() throws Exception {
+    @Test
+    public void parseMissingIdSkipsInvalidTask() throws Exception {
         String path = makeTempPath("bad1");
         // write a minimal bad file
         String xml = "<?xml version='1.0' encoding='UTF-8'?><tasks><task><name>n</name><type>CUSTOM</type></task></tasks>";
         java.nio.file.Files.write(java.nio.file.Paths.get(path), xml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         TaskXmlHandler h = new TaskXmlHandler(path);
-        // parseAllTasks will attempt to parse and should skip/throw when encountering invalid element; parseTaskFromElement throws
-        h.parseAllTasks();
+        // The parser preserves the rest of a file by skipping malformed tasks.
+        assertTrue(h.parseAllTasks().isEmpty());
     }
 }

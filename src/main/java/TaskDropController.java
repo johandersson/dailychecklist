@@ -357,7 +357,12 @@ public final class TaskDropController {
         if (!GraphicsEnvironment.isHeadless()) {
             Exception error = new Exception(failure.getMessage() == null
                     ? "The task move failed" : failure.getMessage(), failure);
-            ApplicationErrorHandler.showDataSaveError(parent, "Task move", error);
+            try {
+                ApplicationErrorHandler.showDataSaveError(parent, "Task move", error);
+            } catch (RuntimeException dialogFailure) {
+                System.err.println("Unable to display task move failure: " + dialogFailure.getMessage());
+                dialogFailure.printStackTrace(System.err);
+            }
         }
     }
 }
