@@ -44,19 +44,20 @@ public class TabbedPaneContextProvider implements CustomChecklistContextProvider
         }
         return defaultProvider;
     }
-    
+
     @Override
     public Checklist getSelectedChecklist() {
         return getActiveProvider().getSelectedChecklist();
     }
-    
+
     @Override
     public void setSelectedChecklistInUI(Checklist checklist) {
         getActiveProvider().setSelectedChecklistInUI(checklist);
     }
-    
+
     @Override
     public boolean isInCustomChecklistsTab() {
-        return getActiveProvider().isInCustomChecklistsTab();
+        // Check the tab index directly rather than delegating, to ensure correct behavior
+        return tabbedPane.getSelectedIndex() == CUSTOM_CHECKLISTS_TAB_INDEX;
     }
 }

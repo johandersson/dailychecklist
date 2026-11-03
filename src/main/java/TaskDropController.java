@@ -231,19 +231,12 @@ public final class TaskDropController {
     static TaskMovePlanner.Intent buildIntent(TaskManager manager, List<String> ids,
             TaskMovePlanner.Destination destination, ListModel<Task> rows,
             int dropIndex, boolean insert) {
-        // Verify that all tasks exist and validate heading constraints at UI level
+        // Verify that all tasks exist
         List<Task> tasks = new ArrayList<>();
         for (String id : ids) {
             Task task = manager.getTaskById(id);
             if (task == null) {
                 throw new IllegalArgumentException("A dragged task no longer exists");
-            }
-            // Headings cannot be dragged alone if their parent exists and is not being dragged
-            if (task.getType() == TaskType.HEADING && task.getParentId() != null) {
-                Task parent = manager.getTaskById(task.getParentId());
-                if (parent != null && !ids.contains(task.getParentId())) {
-                    throw new IllegalArgumentException("Headings move only with their parent task");
-                }
             }
             tasks.add(task);
         }
