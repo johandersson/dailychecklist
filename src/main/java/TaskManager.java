@@ -532,7 +532,7 @@ public class TaskManager {
 
         // Allow a broader range of characters including international characters
         // Allow letters (including accented), numbers, spaces, and common symbols
-        if (!trimmed.matches("[\\p{L}\\p{N}\\s\\-_.()!]+")) {
+        if (!trimmed.matches("[\\p{L}\\p{N}\\s\\-_.()!:]+")) {
             return null;
         }
 
@@ -600,7 +600,7 @@ public class TaskManager {
         if (validated == null) {
             javax.swing.JOptionPane.showMessageDialog(null,
                 fieldName + " contains invalid characters or is too long.\n" +
-                "Use only letters (including international characters), numbers, spaces, hyphens, underscores, dots, parentheses, and angle brackets.\n" +
+                "Use only letters (including international characters), numbers, spaces, hyphens, underscores, dots, parentheses, exclamation marks, and colons.\n" +
                 "Maximum length: 100 characters.",
                 "Invalid Input", javax.swing.JOptionPane.ERROR_MESSAGE);
         }
