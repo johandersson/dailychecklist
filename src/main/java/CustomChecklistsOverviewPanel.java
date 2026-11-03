@@ -284,6 +284,17 @@ public class CustomChecklistsOverviewPanel extends JPanel implements CustomCheck
                 break;
             }
         }
+        // The initial checklist load runs asynchronously, so navigation requests
+        // must also work before that cache has been populated.
+        if (checklist == null && checklistName != null) {
+            for (Checklist c : taskManager.getCustomChecklists()) {
+                if (checklistName.equals(c.getName())) {
+                    checklist = c;
+                    allChecklists.add(c);
+                    break;
+                }
+            }
+        }
         selectChecklist(checklist);
         if (checklist != null) {
             checklistList.setSelectedValue(checklist, true);
@@ -450,10 +461,16 @@ public class CustomChecklistsOverviewPanel extends JPanel implements CustomCheck
             }
 
             // Update the checklist name
-            taskManager.getCustomChecklists().stream()
+            Checklist renamedChecklist = taskManager.getCustomChecklists().stream()
                 .filter(c -> selectedChecklist.getId().equals(c.getId()))
                 .findFirst()
-                .ifPresent(c -> taskManager.updateChecklistName(c, newName));
+                .orElse(null);
+            if (renamedChecklist != null) {
+                taskManager.updateChecklistName(renamedChecklist, newName);
+                selectedChecklist = renamedChecklist;
+                allChecklists.remove(renamedChecklist);
+                allChecklists.add(renamedChecklist);
+            }
 
             // Also update reminders
             List<Reminder> reminders = taskManager.getReminders();
@@ -470,7 +487,10 @@ public class CustomChecklistsOverviewPanel extends JPanel implements CustomCheck
                 CustomChecklistPanel panel = panelMap.remove(selectedChecklist.getId());
                 panelMap.put(selectedChecklist.getId(), panel);
             }
+            updateChecklistList();
             selectChecklist(selectedChecklist);
+            checklistList.revalidate();
+            checklistList.repaint();
         }
     }
 

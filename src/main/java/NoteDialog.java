@@ -19,11 +19,14 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -37,26 +40,29 @@ import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 import javax.swing.undo.UndoManager;
+import java.util.Objects;
 
 /**
  * Dialog for adding/editing notes on tasks and subtasks.
- * Supports max 1000 characters with live character count and undo/redo (Ctrl+Z/Ctrl+Y).
+ * Supports max 20,000 characters with live character count and undo/redo (Ctrl+Z/Ctrl+Y).
  * Press Ctrl+S to save and close.
  */
 @SuppressWarnings("serial")
 public class NoteDialog extends JDialog {
     private static final long serialVersionUID = 1L;
-    private static final int MAX_CHARACTERS = 1000;
+    private static final int MAX_CHARACTERS = 20_000;
     
     private JTextArea noteArea;
     private JLabel wordCountLabel;
     private String resultNote;
+    private final String originalNote;
     private boolean confirmed = false;
     private UndoManager undoManager;
 
     @SuppressWarnings("this-escape")
     public NoteDialog(JFrame parent, String taskName, String currentNote) {
         super(parent, "Add/Edit Note", true);
+        this.originalNote = currentNote;
         this.resultNote = currentNote;
         
         setLayout(new BorderLayout());
@@ -75,7 +81,13 @@ public class NoteDialog extends JDialog {
         JPanel buttonPanel = createButtonPanel();
         add(buttonPanel, BorderLayout.SOUTH);
         
-        setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                closeFromWindowButton();
+            }
+        });
     }
 
     private JPanel createTitlePanel(String taskName) {
@@ -238,6 +250,30 @@ public class NoteDialog extends JDialog {
         // No need to validate since DocumentFilter enforces the limit
         resultNote = text.trim().isEmpty() ? null : text;
         confirmed = true;
+        dispose();
+    }
+
+    private void closeFromWindowButton() {
+        if (!Objects.equals(originalNote, noteArea.getText())) {
+            int choice = JOptionPane.showOptionDialog(
+                this,
+                "You have unsaved changes. Do you want to save before closing?",
+                "Unsaved Changes",
+                JOptionPane.YES_NO_CANCEL_OPTION,
+                JOptionPane.WARNING_MESSAGE,
+                null,
+                new Object[] {"Save", "Don't Save", "Cancel"},
+                "Save"
+            );
+            if (choice == JOptionPane.YES_OPTION) {
+                saveAndClose();
+            } else if (choice == JOptionPane.NO_OPTION) {
+                confirmed = false;
+                dispose();
+            }
+            return;
+        }
+        confirmed = false;
         dispose();
     }
 

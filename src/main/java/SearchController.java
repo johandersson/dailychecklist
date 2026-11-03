@@ -17,6 +17,7 @@
  */
 
 import java.util.List;
+import java.util.Locale;
 import javax.swing.DefaultListModel;
 
 /**
@@ -43,7 +44,7 @@ public class SearchController {
      * with a short debounce window to keep typing snappy.
      */
     public void requestUpdateModel(String query, boolean includeAllWeekday, DefaultListModel<Object> unifiedModel) {
-        final String q = query == null ? "" : query.toLowerCase();
+        final String q = query == null ? "" : query.toLowerCase(Locale.ROOT);
         synchronized (lock) {
             if (scheduled != null && !scheduled.isDone()) scheduled.cancel(false);
             scheduled = scheduler.schedule(() -> doSearch(q, includeAllWeekday, unifiedModel), DEBOUNCE_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
@@ -56,8 +57,10 @@ public class SearchController {
         List<Task> results = new java.util.ArrayList<>();
         for (Task task : allTasks) {
             String name = task.getName();
-            if (name == null) continue;
-            if (!name.toLowerCase().contains(q)) continue;
+            String note = task.getNote();
+            boolean nameMatches = name != null && name.toLowerCase(Locale.ROOT).contains(q);
+            boolean noteMatches = note != null && note.toLowerCase(Locale.ROOT).contains(q);
+            if (!nameMatches && !noteMatches) continue;
             if (task.getWeekday() == null || includeAllWeekday || task.getWeekday().toLowerCase().equals(currentWeekday)) {
                 results.add(task);
             }
@@ -65,7 +68,7 @@ public class SearchController {
 
         List<Checklist> allLists = new java.util.ArrayList<>();
         for (Checklist c : taskManager.getCustomChecklists()) {
-            if (c.getName() != null && c.getName().toLowerCase().contains(q)) allLists.add(c);
+            if (c.getName() != null && c.getName().toLowerCase(Locale.ROOT).contains(q)) allLists.add(c);
         }
 
         javax.swing.SwingUtilities.invokeLater(() -> {
