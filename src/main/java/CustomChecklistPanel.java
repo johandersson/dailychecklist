@@ -342,7 +342,6 @@ public class CustomChecklistPanel extends JPanel {
     }
 
     private JMenuItem createEditMenuItem(JList<Task> list, int index) {
-    private JMenuItem createEditMenuItem(JList<Task> list, int index) {
         Task task = list.getModel().getElementAt(index);
         String menuLabel = (task.getType() == TaskType.HEADING) ? "Rename heading" : "Rename task";
         JMenuItem editItem = new JMenuItem(menuLabel);
